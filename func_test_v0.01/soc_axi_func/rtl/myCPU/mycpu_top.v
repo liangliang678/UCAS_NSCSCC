@@ -1,5 +1,5 @@
 module mycpu_top(
-    input  [ 5:0] int,
+    input  [ 5:0] ext_int,
 
     input         aclk,
     input         aresetn,
