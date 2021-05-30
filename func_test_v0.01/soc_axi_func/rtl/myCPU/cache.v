@@ -13,6 +13,7 @@ module cache(
     // Cache and CPU
     input           valid,
     input           op,
+    input           uncache,
     input  [  7:0]  index,
     input  [ 19:0]  tag,
     input  [  3:0]  offset,
@@ -237,14 +238,14 @@ assign data_way1_bank2_en = (state == `IDLE && valid && addr_ok) ||
 assign data_way1_bank3_en = (state == `IDLE && valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b11 && wb_hit_way) || 
                             (state == `REFILL && recv_end && rp_way);
-assign data_way0_bank0_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL) ? 4'b1111 : 4'b0000;
-assign data_way0_bank1_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL) ? 4'b1111 : 4'b0000;
-assign data_way0_bank2_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL) ? 4'b1111 : 4'b0000;
-assign data_way0_bank3_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL) ? 4'b1111 : 4'b0000;
-assign data_way1_bank0_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL) ? 4'b1111 : 4'b0000;
-assign data_way1_bank1_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL) ? 4'b1111 : 4'b0000;
-assign data_way1_bank2_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL) ? 4'b1111 : 4'b0000;
-assign data_way1_bank3_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL) ? 4'b1111 : 4'b0000;
+assign data_way0_bank0_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL && !rb_uncache) ? 4'b1111 : 4'b0000;
+assign data_way0_bank1_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL && !rb_uncache) ? 4'b1111 : 4'b0000;
+assign data_way0_bank2_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL && !rb_uncache) ? 4'b1111 : 4'b0000;
+assign data_way0_bank3_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL && !rb_uncache) ? 4'b1111 : 4'b0000;
+assign data_way1_bank0_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL && !rb_uncache) ? 4'b1111 : 4'b0000;
+assign data_way1_bank1_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL && !rb_uncache) ? 4'b1111 : 4'b0000;
+assign data_way1_bank2_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL && !rb_uncache) ? 4'b1111 : 4'b0000;
+assign data_way1_bank3_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL && !rb_uncache) ? 4'b1111 : 4'b0000;
 assign data_way0_bank0_din = (wstate == `WRITE) ? wb_wdata : (state == `REFILL) ? rd_way_wdata_bank0 : 32'b0;
 assign data_way0_bank1_din = (wstate == `WRITE) ? wb_wdata : (state == `REFILL) ? rd_way_wdata_bank1 : 32'b0;
 assign data_way0_bank2_din = (wstate == `WRITE) ? wb_wdata : (state == `REFILL) ? rd_way_wdata_bank2 : 32'b0;
@@ -261,6 +262,7 @@ assign data_addr = (wstate == `WRITE) ? wb_index :
 
 // Request Buffer
 reg          rb_op;
+reg          rb_uncache;   
 reg  [  7:0] rb_index;
 reg  [ 19:0] rb_tag;
 reg  [  3:0] rb_offset;
@@ -278,6 +280,7 @@ wire [127:0] way1_data;
 always @(posedge clk_g) begin
     if (valid && addr_ok) begin
         rb_op     <= op;
+        rb_uncache<= uncache;
         rb_index  <= index;
         rb_tag    <= tag;
         rb_offset <= offset;
@@ -304,7 +307,7 @@ wire         cache_hit;
 
 assign way0_hit = way0_v && (way0_tag == rb_tag);
 assign way1_hit = way1_v && (way1_tag == rb_tag);
-assign cache_hit = way0_hit || way1_hit;
+assign cache_hit = rb_uncache ? 0 : (way0_hit || way1_hit);
 assign data_ok = (state == `LOOKUP) && cache_hit || (state == `REFILL) && recv_end;
 
 // Data Select
@@ -372,7 +375,10 @@ always @(posedge clk_g) begin
     if (!resetn) begin
         wr_req_reg <= 1'b0;
     end
-    else if (state == `MISS && wr_rdy && rp_way_d && rp_way_v) begin
+    else if (state == `MISS && !rb_uncache && wr_rdy && rp_way_d && rp_way_v) begin
+        wr_req_reg <= 1'b1;
+    end
+    else if (state == `MISS && rb_uncache && rb_op) begin
         wr_req_reg <= 1'b1;
     end
     else if (wr_req_reg == 1'b1) begin
@@ -381,10 +387,10 @@ always @(posedge clk_g) begin
 end
 
 assign wr_req = wr_req_reg;
-assign wr_type = 3'b100;
-assign wr_addr = {rp_way_tag, rb_index, 4'b0};
-assign wr_wstrb = 4'b1;
-assign wr_data = rp_way_data;
+assign wr_type = rb_uncache ? 3'b010 : 3'b100;
+assign wr_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rp_way_tag, rb_index, 4'b0};
+assign wr_wstrb = rb_wstrb;
+assign wr_data = rb_uncache ? rb_wdata : rp_way_data;
 
 
 reg          recv_end;
@@ -402,7 +408,7 @@ wire [ 31:0] rd_way_rdata;
 
 assign rd_req = (state == `REFILL) && !recv_end;
 assign rd_type = 3'b010;
-assign rd_addr = {rb_tag, rb_index, count, 2'b0};
+assign rd_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, count, 2'b0};
 
 always @(posedge clk_g) begin
 	if (!resetn)
@@ -437,7 +443,10 @@ always @(posedge clk_g) begin
 		recv_end <= 1'b0;
 	else begin
 		if(state == `REFILL) begin
-            if (rd_req && ret_valid && count == 2'b11)
+            if(rd_req && ret_valid && rb_uncache) begin
+                recv_end <= 1'b1;
+            end
+            else if (rd_req && ret_valid && count == 2'b11)
 				recv_end <= 1'b1;
 			else
 				recv_end <= recv_end;
@@ -467,10 +476,11 @@ assign rd_way_wdata_bank3[ 7: 0] = (rb_op && rb_offset[3:2] == 2'b11 && rb_wstrb
 assign rd_way_wdata_bank3[15: 8] = (rb_op && rb_offset[3:2] == 2'b11 && rb_wstrb[1]) ? rb_wdata[15: 8] : rd_way_data_bank3[15: 8];
 assign rd_way_wdata_bank3[23:16] = (rb_op && rb_offset[3:2] == 2'b11 && rb_wstrb[2]) ? rb_wdata[23:16] : rd_way_data_bank3[23:16];
 assign rd_way_wdata_bank3[31:24] = (rb_op && rb_offset[3:2] == 2'b11 && rb_wstrb[3]) ? rb_wdata[31:24] : rd_way_data_bank3[31:24];
-assign rd_way_rdata = {32{rb_offset[3:2] == 2'b00}} & rd_way_data_bank0 | 
-                      {32{rb_offset[3:2] == 2'b01}} & rd_way_data_bank1 | 
-                      {32{rb_offset[3:2] == 2'b10}} & rd_way_data_bank2 | 
-                      {32{rb_offset[3:2] == 2'b11}} & rd_way_data_bank3;
+assign rd_way_rdata = {32{rb_uncache}} & rd_way_data_bank0 | 
+                      {32{!rb_uncache && rb_offset[3:2] == 2'b00}} & rd_way_data_bank0 | 
+                      {32{!rb_uncache && rb_offset[3:2] == 2'b01}} & rd_way_data_bank1 | 
+                      {32{!rb_uncache && rb_offset[3:2] == 2'b10}} & rd_way_data_bank2 | 
+                      {32{!rb_uncache && rb_offset[3:2] == 2'b11}} & rd_way_data_bank3;
 
 
 // Main FSM
@@ -502,9 +512,15 @@ always@(*) begin
 			next_state = `MISS;
 		end
     `MISS:
-        if (wr_rdy || !rp_way_d || !rp_way_v) begin
+        if (!rb_uncache && (!rp_way_d || !rp_way_v)) begin
 			next_state = `REPLACE;
 		end
+        else if (rb_uncache && !rb_op) begin
+            next_state = `REPLACE;
+        end
+        else if (wr_rdy) begin
+            next_state = `REPLACE;
+        end
 		else begin
 			next_state = `MISS;
 		end
