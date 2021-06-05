@@ -5,3 +5,7 @@
 | 日期 | func | perf |
 | :--: | :--: | :--: |
 | 2021-05-28 | 36216295ns | 38402500ps | 
+
+## 参考资料
+
+[AXI总线概述](https://blog.csdn.net/bleauchat/article/details/96891619)
