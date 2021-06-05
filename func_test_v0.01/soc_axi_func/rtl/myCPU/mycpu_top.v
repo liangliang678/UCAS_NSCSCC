@@ -82,7 +82,7 @@ wire [7:0]   c0_addr;
 wire         mtc0_we;       
 
 wire         ex_begin;          
-wire [ 4:0]  ex_type;        
+wire [13:0]  ex_type;        
 wire         wb_bd;    
 wire [31:0]  wb_pc; 
 wire [31:0]  wb_badvaddr; 
@@ -118,6 +118,9 @@ wire [31:0] data_sram_rdata;
 wire        data_sram_addr_ok;
 wire        data_sram_data_ok;
 
+//cache
+wire i_cached_or_not;
+wire d_cached_or_not;
 // TLB
     // search port 0
 wire [18:0] s0_vpn2;
@@ -207,6 +210,7 @@ if_stage if_stage(
     .inst_sram_addr_ok(inst_sram_addr_ok),
     .inst_sram_data_ok(inst_sram_data_ok),
     .inst_sram_rdata  (inst_sram_rdata  ),
+    .i_cached_or_not  (i_cached_or_not  ),
 
     .fs_ex          (ex_begin       ),
 
@@ -279,6 +283,7 @@ exe_stage exe_stage(
     .data_sram_wstrb  (data_sram_wstrb  ),
     .data_sram_addr   (data_sram_addr   ),
     .data_sram_wdata  (data_sram_wdata  ),
+    .d_cached_or_not  (d_cached_or_not  ),
     .data_sram_addr_ok(data_sram_addr_ok),
 
     //multiper result
