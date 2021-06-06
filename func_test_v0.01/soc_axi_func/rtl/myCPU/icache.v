@@ -152,10 +152,10 @@ Data_RAM Data_RAM_Way1_Bank3(
     .douta  (data_way1_bank3_dout)
 );
 
-assign tagv_way0_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid && !rp_way);
-assign tagv_way1_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid &&  rp_way);
-assign tagv_way0_we = (state == `REFILL && ret_valid && !rp_way);
-assign tagv_way1_we = (state == `REFILL && ret_valid &&  rp_way);
+assign tagv_way0_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
+assign tagv_way1_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
+assign tagv_way0_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
+assign tagv_way1_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
 assign tagv_way0_din = {1'b1, rb_tag};
 assign tagv_way1_din = {1'b1, rb_tag};
 assign tagv_addr = (state == `IDLE && valid && addr_ok) ? index : 
@@ -291,7 +291,7 @@ wire [ 31:0] rd_way_data_bank2;
 wire [ 31:0] rd_way_data_bank3;
 wire [ 31:0] rd_way_rdata;
 
-assign rd_req = (state == `REFILL);
+assign rd_req = (state == `REPLACE);
 assign rd_type = rb_uncache ? 3'b010 : 3'b100;
 assign rd_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 4'b0};
 
@@ -334,7 +334,7 @@ always @(*) begin
 			next_state = `REPLACE;
 		end
     `REPLACE:
-        if (rd_rdy) begin
+        if (rd_rdy && rd_req) begin
 			next_state = `REFILL;
 		end
 		else begin

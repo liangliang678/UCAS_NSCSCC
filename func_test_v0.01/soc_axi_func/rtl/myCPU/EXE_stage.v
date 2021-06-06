@@ -12,16 +12,18 @@ module exe_stage(
     //to ms
     output                         es_to_ms_valid,
     output [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus  ,
-    // data sram interface
+    // data cache interface
+    output           data_cache_valid,
+    output           data_cache_op,
+    output           data_cache_uncache,
+    output  [ 19:0]  data_cache_tag,
+    output  [  7:0]  data_cache_index,
+    output  [  3:0]  data_cache_offset,
+    output  [  3:0]  data_cache_wstrb,
+    output  [ 31:0]  data_cache_wdata,
+    input            data_cache_addr_ok,
 
-    output        data_sram_req,
-    output        data_sram_wr,
-    output [ 1:0] data_sram_size,
-    output [ 3:0] data_sram_wstrb,
-    output [31:0] data_sram_addr,
-    output [31:0] data_sram_wdata,
-    output        d_cached_or_not,
-    input         data_sram_addr_ok,
+    // output [ 1:0] data_sram_size, ?
 
     //multiper
     output [63:0] mul_res,
@@ -50,6 +52,7 @@ module exe_stage(
     input         es_cancel_in
 );
 
+wire [31:0] data_addr     ;  
 wire        es_use_tlb    ;
 wire [31:0] es_VA         ;
 
@@ -229,7 +232,7 @@ assign es_to_ms_bus = {exception_is_tlb_refill, //250:250
                       };
 
 assign es_ready_go = ~( ((es_alu_op[14] | es_alu_op[15]) & ~complete) |                                                 //div not complete 
-                        (!es_has_exception & (es_res_from_mem | es_mem_we) & ~(data_sram_req & data_sram_addr_ok)) |    //wait for data sram  
+                        (!es_has_exception & (es_res_from_mem | es_mem_we) & ~(data_cache_valid & data_cache_addr_ok)) |    //wait for data sram  
                         ((wb_mtc0_index | mem_mtc0_index) & es_tlbp & es_valid)                                         //MEM/WB mtc0 write index and EXE is TLBP  
                       );          
                          
@@ -350,20 +353,22 @@ assign s1_asid = cp0_entryhi[7:0];
 assign es_use_tlb = ~(es_VA[31] && ~es_VA[30]) && es_valid && (es_res_from_mem | es_mem_we);
 
 
-assign data_sram_req   = (es_res_from_mem | es_mem_we) & ms_allowin & es_valid & ~es_has_exception;        //only enable when LOAD/STORE
-assign data_sram_wstrb = (es_mem_we && es_valid && !es_has_exception) ? write_strb : 4'h0;   
-assign data_sram_wr    = (es_mem_we && es_valid && !es_has_exception);                                   
+assign data_cache_valid   = (es_res_from_mem | es_mem_we) & ms_allowin & es_valid & ~es_has_exception;        //only enable when LOAD/STORE
+assign data_cache_wstrb = (es_mem_we && es_valid && !es_has_exception) ? write_strb : 4'h0;   
+assign data_cache_op    = (es_mem_we && es_valid && !es_has_exception);                                   
 
-assign data_sram_addr  = es_use_tlb ? {s1_pfn, es_VA[11:0]} : {3'b0, es_VA[28:0]};
-
-assign data_sram_wdata = mem_write_data;
+assign data_addr  = es_use_tlb ? {s1_pfn, es_VA[11:0]} : {3'b0, es_VA[28:0]};
+assign data_cache_tag    = data_addr[31:12];
+assign data_cache_index  = data_addr[11: 4];
+assign data_cache_offset = data_addr[ 3: 0];
+assign data_cache_wdata = mem_write_data;
 
 //kseg 1
-// 1: cached; 0: uncached
-assign d_cached_or_not = ~(es_VA[31] && ~es_VA[30] && es_VA[29]);
+// 1: uncached; 0: cached
+assign data_cache_uncache = es_VA[31] && ~es_VA[30] && es_VA[29];
 
 
-assign stall_es_bus = { data_sram_req,                                            //49:49
+assign stall_es_bus = { data_cache_valid,                                            //49:49
                         es_cp0_addr,                                              //48:41
                        (es_cp0_we && es_valid),                                   //40:40
                         es_alu_result,                                            //39:8

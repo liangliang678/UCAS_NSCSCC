@@ -22,35 +22,4 @@
     `define EXCEPTION_RESERVE       5
     `define EXCEPTION_INT           6
 
-    `define AR_IDLE          0
-    `define AR_INST_OK       1
-    `define AR_DATA_OK       2
-    `define AR_REQ           3
-    `define S_AR_IDLE        4'b0001
-    `define S_AR_INST_OK     4'b0010
-    `define S_AR_DATA_OK     4'b0100
-    `define S_AR_REQ         4'b1000
-
-    `define R_IDLE           0
-    `define R_INST_RESP      1
-    `define R_DATA_RESP      2
-    `define S_R_IDLE         3'b001
-    `define S_R_INST_RESP    3'b010
-    `define S_R_DATA_RESP    3'b100
-
-    `define W_IDLE           0
-    `define W_REQ_OK         1
-    `define W_REQ            2
-    `define W_ADDR_REQ       3
-    `define W_DATA_REQ       4
-    `define S_W_IDLE         5'b00001
-    `define S_W_REQ_OK       5'b00010
-    `define S_W_REQ          5'b00100
-    `define S_W_ADDR_REQ     5'b01000
-    `define S_W_DATA_REQ     5'b10000
-
-    `define B_IDLE           0
-    `define B_RESP           1
-    `define S_B_IDLE         2'b01
-    `define S_B_RESP         2'b10
 `endif

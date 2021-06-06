@@ -204,10 +204,10 @@ generate for (i1=0; i1<256; i1=i1+1) begin :gen_for_D_Way1
     end
 end endgenerate
 
-assign tagv_way0_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid && !rp_way);
-assign tagv_way1_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid &&  rp_way);
-assign tagv_way0_we = (state == `REFILL && ret_valid && !rp_way);
-assign tagv_way1_we = (state == `REFILL && ret_valid &&  rp_way);
+assign tagv_way0_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
+assign tagv_way1_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
+assign tagv_way0_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
+assign tagv_way1_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
 assign tagv_way0_din = {1'b1, rb_tag};
 assign tagv_way1_din = {1'b1, rb_tag};
 assign tagv_addr = (state == `IDLE && valid && addr_ok) ? index : 
@@ -307,7 +307,7 @@ wire         cache_hit;
 assign way0_hit = way0_v && (way0_tag == rb_tag);
 assign way1_hit = way1_v && (way1_tag == rb_tag);
 assign cache_hit = rb_uncache ? 0 : (way0_hit || way1_hit);
-assign data_ok = (state == `LOOKUP) && cache_hit || (state == `REFILL) && ret_valid;
+assign data_ok = (state == `LOOKUP) && cache_hit || (state == `REFILL) && ret_valid || (state == `REFILL) && rb_uncache && rb_op;
 
 // Data Select
 wire [ 31:0] way0_load_word;
@@ -401,7 +401,7 @@ wire [ 31:0] rd_way_wdata_bank2;
 wire [ 31:0] rd_way_wdata_bank3;
 wire [ 31:0] rd_way_rdata;
 
-assign rd_req = (state == `REFILL);
+assign rd_req = (state == `REPLACE) && !(rb_uncache && rb_op);
 assign rd_type = rb_uncache ? 3'b010 : 3'b100;
 assign rd_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 4'b0};
 
@@ -473,14 +473,14 @@ always@(*) begin
 			next_state = `MISS;
 		end
     `REPLACE:
-        if (rd_rdy) begin
+        if (rb_uncache && rb_op || rd_rdy && rd_req) begin
 			next_state = `REFILL;
 		end
 		else begin
 			next_state = `REPLACE;
 		end
     `REFILL:
-        if (ret_valid) begin
+        if (rb_uncache && rb_op || ret_valid) begin
             next_state = `IDLE;
         end
         else begin

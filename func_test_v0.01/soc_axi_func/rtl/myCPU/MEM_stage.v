@@ -15,9 +15,9 @@ module mem_stage(
     output                         ms_to_ws_valid,
     output [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus  ,
     //from data-sram
-    //input  [31                 :0] data_sram_rdata,
-    input         data_sram_data_ok,
-    input  [31:0] data_sram_rdata,  
+    //input  [31                 :0] data_cache_rdata,
+    input         data_cache_data_ok,
+    input  [31:0] data_cache_rdata,  
 
     //data relevant
     output [`STALL_MS_BUS_WD -1:0] stall_ms_bus,
@@ -132,7 +132,7 @@ assign ms_to_ws_bus = {exception_is_tlb_refill,//139:139
                        ms_pc                  //31:0
                       };
 
-assign ms_ready_go    = (~(ms_res_from_mem | ms_mem_we)) | data_sram_data_ok | ms_has_exception;//1'b1;
+assign ms_ready_go    = (~(ms_res_from_mem | ms_mem_we)) | data_cache_data_ok | ms_has_exception;//1'b1;
 assign ms_allowin     = !ms_valid || ms_ready_go && ws_allowin;
 assign ms_to_ws_valid = ms_valid && ms_ready_go;
 always @(posedge clk) begin
@@ -200,27 +200,27 @@ assign {
         lwr_mem_res    //0
         } = ms_load_store_type;
 
-assign mem_result = {32{lb_mem_res  & mem_align_off_0}} & { {24{data_sram_rdata[ 7]}}, data_sram_rdata[ 7: 0] } |  //lb
-                    {32{lb_mem_res  & mem_align_off_1}} & { {24{data_sram_rdata[15]}}, data_sram_rdata[15: 8] } |
-                    {32{lb_mem_res  & mem_align_off_2}} & { {24{data_sram_rdata[23]}}, data_sram_rdata[23:16] } |
-                    {32{lb_mem_res  & mem_align_off_3}} & { {24{data_sram_rdata[31]}}, data_sram_rdata[31:24] } |
-                    {32{lbu_mem_res & mem_align_off_0}} & { 24'b0, data_sram_rdata[ 7: 0] } |                      //lbu
-                    {32{lbu_mem_res & mem_align_off_1}} & { 24'b0, data_sram_rdata[15: 8] } |
-                    {32{lbu_mem_res & mem_align_off_2}} & { 24'b0, data_sram_rdata[23:16] } |
-                    {32{lbu_mem_res & mem_align_off_3}} & { 24'b0, data_sram_rdata[31:24] } |
-                    {32{lh_mem_res  & (mem_align_off_0 | mem_align_off_1)}} & { {16{data_sram_rdata[15]}}, data_sram_rdata[15: 0] } |   //lh
-                    {32{lh_mem_res  & (mem_align_off_2 | mem_align_off_3)}} & { {16{data_sram_rdata[31]}}, data_sram_rdata[31:16] } |
-                    {32{lhu_mem_res & (mem_align_off_0 | mem_align_off_1)}} & { 16'b0, data_sram_rdata[15: 0] } |                       //lhu
-                    {32{lhu_mem_res & (mem_align_off_2 | mem_align_off_3)}} & { 16'b0, data_sram_rdata[31:16] } |      
-                    {32{lw_mem_res}} & data_sram_rdata |                                                                                //lw
-                    {32{lwl_mem_res & mem_align_off_0}} & { data_sram_rdata[ 7: 0], ms_rt_value[23: 0] } |                              //lwl
-                    {32{lwl_mem_res & mem_align_off_1}} & { data_sram_rdata[15: 0], ms_rt_value[15: 0] } |
-                    {32{lwl_mem_res & mem_align_off_2}} & { data_sram_rdata[23: 0], ms_rt_value[ 7: 0] } |
-                    {32{lwl_mem_res & mem_align_off_3}} & data_sram_rdata |
-                    {32{lwr_mem_res & mem_align_off_0}} & data_sram_rdata |                                                             //lwr
-                    {32{lwr_mem_res & mem_align_off_1}} & { ms_rt_value[31:24], data_sram_rdata[31: 8] } |
-                    {32{lwr_mem_res & mem_align_off_2}} & { ms_rt_value[31:16], data_sram_rdata[31:16] } |
-                    {32{lwr_mem_res & mem_align_off_3}} & { ms_rt_value[31: 8], data_sram_rdata[31:24] };
+assign mem_result = {32{lb_mem_res  & mem_align_off_0}} & { {24{data_cache_rdata[ 7]}}, data_cache_rdata[ 7: 0] } |  //lb
+                    {32{lb_mem_res  & mem_align_off_1}} & { {24{data_cache_rdata[15]}}, data_cache_rdata[15: 8] } |
+                    {32{lb_mem_res  & mem_align_off_2}} & { {24{data_cache_rdata[23]}}, data_cache_rdata[23:16] } |
+                    {32{lb_mem_res  & mem_align_off_3}} & { {24{data_cache_rdata[31]}}, data_cache_rdata[31:24] } |
+                    {32{lbu_mem_res & mem_align_off_0}} & { 24'b0, data_cache_rdata[ 7: 0] } |                      //lbu
+                    {32{lbu_mem_res & mem_align_off_1}} & { 24'b0, data_cache_rdata[15: 8] } |
+                    {32{lbu_mem_res & mem_align_off_2}} & { 24'b0, data_cache_rdata[23:16] } |
+                    {32{lbu_mem_res & mem_align_off_3}} & { 24'b0, data_cache_rdata[31:24] } |
+                    {32{lh_mem_res  & (mem_align_off_0 | mem_align_off_1)}} & { {16{data_cache_rdata[15]}}, data_cache_rdata[15: 0] } |   //lh
+                    {32{lh_mem_res  & (mem_align_off_2 | mem_align_off_3)}} & { {16{data_cache_rdata[31]}}, data_cache_rdata[31:16] } |
+                    {32{lhu_mem_res & (mem_align_off_0 | mem_align_off_1)}} & { 16'b0, data_cache_rdata[15: 0] } |                       //lhu
+                    {32{lhu_mem_res & (mem_align_off_2 | mem_align_off_3)}} & { 16'b0, data_cache_rdata[31:16] } |      
+                    {32{lw_mem_res}} & data_cache_rdata |                                                                                //lw
+                    {32{lwl_mem_res & mem_align_off_0}} & { data_cache_rdata[ 7: 0], ms_rt_value[23: 0] } |                              //lwl
+                    {32{lwl_mem_res & mem_align_off_1}} & { data_cache_rdata[15: 0], ms_rt_value[15: 0] } |
+                    {32{lwl_mem_res & mem_align_off_2}} & { data_cache_rdata[23: 0], ms_rt_value[ 7: 0] } |
+                    {32{lwl_mem_res & mem_align_off_3}} & data_cache_rdata |
+                    {32{lwr_mem_res & mem_align_off_0}} & data_cache_rdata |                                                             //lwr
+                    {32{lwr_mem_res & mem_align_off_1}} & { ms_rt_value[31:24], data_cache_rdata[31: 8] } |
+                    {32{lwr_mem_res & mem_align_off_2}} & { ms_rt_value[31:16], data_cache_rdata[31:16] } |
+                    {32{lwr_mem_res & mem_align_off_3}} & { ms_rt_value[31: 8], data_cache_rdata[31:24] };
 
 
 assign ms_final_result = ms_res_from_mem ? mem_result :
@@ -249,7 +249,7 @@ always @(posedge clk) begin
     end
 end
 
-assign stall_ms_bus = {data_sram_data_ok,     //48:48
+assign stall_ms_bus = {data_cache_data_ok,     //48:48
                        ms_cp0_addr,           //47:40
                        ms_cp0_we && ms_to_ws_valid, //39:39
                        ms_final_result     ,  //38:7

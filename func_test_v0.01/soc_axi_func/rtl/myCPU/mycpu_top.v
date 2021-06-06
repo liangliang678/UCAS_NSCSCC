@@ -98,29 +98,48 @@ wire [31:0]  cp0_entryhi;
 wire [31:0]  cp0_entrylo0;
 wire [31:0]  cp0_entrylo1;
 
-// sram
-wire        inst_sram_req;
-wire        inst_sram_wr;
-wire [ 1:0] inst_sram_size;
-wire [31:0] inst_sram_addr;
-wire [31:0] inst_sram_wstrb;
-wire [31:0] inst_sram_wdata;
-wire [31:0] inst_sram_rdata;
-wire        inst_sram_addr_ok;
-wire        inst_sram_data_ok;
-wire        data_sram_req;
-wire        data_sram_wr;
-wire [ 1:0] data_sram_size;
-wire [31:0] data_sram_addr;
-wire [31:0] data_sram_wstrb;
-wire [31:0] data_sram_wdata;
-wire [31:0] data_sram_rdata;
-wire        data_sram_addr_ok;
-wire        data_sram_data_ok;
-
 //cache
-wire i_cached_or_not;
-wire d_cached_or_not;
+wire           inst_cache_valid;
+wire           inst_cache_uncache;
+wire  [ 19:0]  inst_cache_tag;
+wire  [  7:0]  inst_cache_index;
+wire  [  3:0]  inst_cache_offset;
+wire           inst_cache_addr_ok;
+wire           inst_cache_data_ok;
+wire [ 31:0]   inst_cache_rdata;
+
+wire          inst_cache_rd_req;
+wire [  2:0]  inst_cache_rd_type;
+wire [ 31:0]  inst_cache_rd_addr;
+wire          inst_cache_rd_rdy;
+wire          inst_cache_ret_valid;
+wire  [127:0] inst_cache_ret_data;
+
+wire           data_cache_valid;
+wire           data_cache_op;
+wire           data_cache_uncache;
+wire  [ 19:0]  data_cache_tag;
+wire  [  7:0]  data_cache_index;
+wire  [  3:0]  data_cache_offset;
+wire  [  3:0]  data_cache_wstrb;
+wire  [ 31:0]  data_cache_wdata;
+wire           data_cache_addr_ok;
+wire           data_cache_data_ok;
+wire [ 31:0]   data_cache_rdata;
+
+wire          data_cache_rd_req;
+wire [  2:0]  data_cache_rd_type;
+wire [ 31:0]  data_cache_rd_addr;
+wire          data_cache_rd_rdy;
+wire          data_cache_ret_valid;
+wire  [127:0] data_cache_ret_data;
+wire          data_cache_wr_req;
+wire [  2:0]  data_cache_wr_type;
+wire [ 31:0]  data_cache_wr_addr;
+wire [  3:0]  data_cache_wr_wstrb;
+wire [127:0]  data_cache_wr_data;
+wire          data_cache_wr_rdy;
+
 // TLB
     // search port 0
 wire [18:0] s0_vpn2;
@@ -194,23 +213,15 @@ if_stage if_stage(
     //outputs
     .fs_to_ds_valid (fs_to_ds_valid ),
     .fs_to_ds_bus   (fs_to_ds_bus   ),
-    // inst sram interface
-    
-    //.inst_sram_en   (inst_sram_en   ),
-    //.inst_sram_wen  (inst_sram_wen  ),
-    //.inst_sram_addr (inst_sram_addr ),
-    //.inst_sram_wdata(inst_sram_wdata),
-    //.inst_sram_rdata(inst_sram_rdata),
-    .inst_sram_req    (inst_sram_req   ),
-    .inst_sram_wr     (inst_sram_wr    ),
-    .inst_sram_size   (inst_sram_size  ),
-    .inst_sram_wstrb  (inst_sram_wstrb ),
-    .inst_sram_addr   (inst_sram_addr   ),
-    .inst_sram_wdata  (inst_sram_wdata  ),
-    .inst_sram_addr_ok(inst_sram_addr_ok),
-    .inst_sram_data_ok(inst_sram_data_ok),
-    .inst_sram_rdata  (inst_sram_rdata  ),
-    .i_cached_or_not  (i_cached_or_not  ),
+    // inst cache interface
+    .inst_cache_valid       (inst_cache_valid   ),
+    .inst_cache_uncache     (inst_cache_uncache ),
+    .inst_cache_tag         (inst_cache_tag     ),
+    .inst_cache_index       (inst_cache_index   ),
+    .inst_cache_offset      (inst_cache_offset  ),
+    .inst_cache_addr_ok     (inst_cache_addr_ok ),
+    .inst_cache_data_ok     (inst_cache_data_ok ),
+    .inst_cache_rdata       (inst_cache_rdata   ),
 
     .fs_ex          (ex_begin       ),
 
@@ -232,7 +243,7 @@ if_stage if_stage(
 );
 // ID stage
 id_stage id_stage(
-    .clk            (aclk            ),
+    .clk            (aclk           ),
     .reset          (reset          ),
     //allowin
     .es_allowin     (es_allowin     ),
@@ -271,20 +282,17 @@ exe_stage exe_stage(
     //to ms
     .es_to_ms_valid (es_to_ms_valid ),
     .es_to_ms_bus   (es_to_ms_bus   ),
-    // data sram interface
+    // data cache interface
+    .data_cache_valid  (data_cache_valid   ),
+    .data_cache_op     (data_cache_op      ),
+    .data_cache_uncache(data_cache_uncache ),
+    .data_cache_tag    (data_cache_tag     ),
+    .data_cache_index  (data_cache_index   ),
+    .data_cache_offset (data_cache_offset  ),
+    .data_cache_wstrb  (data_cache_wstrb   ),
+    .data_cache_wdata  (data_cache_wdata   ),
+    .data_cache_addr_ok(data_cache_addr_ok ),
 
-    //.data_sram_en   (data_sram_en   ),
-    //.data_sram_wen  (data_sram_wen  ),
-    //.data_sram_addr (data_sram_addr ),
-    //.data_sram_wdata(data_sram_wdata),
-    .data_sram_req    (data_sram_req    ),
-    .data_sram_wr     (data_sram_wr     ),
-    .data_sram_size   (data_sram_size   ),
-    .data_sram_wstrb  (data_sram_wstrb  ),
-    .data_sram_addr   (data_sram_addr   ),
-    .data_sram_wdata  (data_sram_wdata  ),
-    .d_cached_or_not  (d_cached_or_not  ),
-    .data_sram_addr_ok(data_sram_addr_ok),
 
     //multiper result
     .mul_res        (mul_res        ),
@@ -324,11 +332,9 @@ mem_stage mem_stage(
     //to ws
     .ms_to_ws_valid (ms_to_ws_valid ),
     .ms_to_ws_bus   (ms_to_ws_bus   ),
-    //from data-sram
-
-    //.data_sram_rdata(data_sram_rdata),
-    .data_sram_data_ok(data_sram_data_ok),
-    .data_sram_rdata  (data_sram_rdata  ),
+    //from data cache
+    .data_cache_data_ok(data_cache_data_ok),
+    .data_cache_rdata  (data_cache_rdata  ),
 
     //data relevant
     .stall_ms_bus   (stall_ms_bus   ),
@@ -450,30 +456,84 @@ cp0 cp0(
     .index_write_index  (index_write_index)    
 );
 
-// bridge to axi
-bridge_axi_1x2_sram bridge_axi_1x2_sram(
+icache icache(
+    .clk        (aclk   ),
+    .resetn     (aresetn),
+
+    .valid      (inst_cache_valid    ),
+    .uncache    (inst_cache_uncache  ),
+    .tag        (inst_cache_tag      ),
+    .index      (inst_cache_index    ),
+    .offset     (inst_cache_offset   ),
+    .addr_ok    (inst_cache_addr_ok  ),
+    .data_ok    (inst_cache_data_ok  ),
+    .rdata      (inst_cache_rdata    ),
+
+    .rd_req     (inst_cache_rd_req   ),
+    .rd_type    (inst_cache_rd_type  ),
+    .rd_addr    (inst_cache_rd_addr  ),
+    .rd_rdy     (inst_cache_rd_rdy   ),
+    .ret_valid  (inst_cache_ret_valid),
+    .ret_data   (inst_cache_ret_data )
+);
+
+dcache dcache(
+    .clk        (aclk   ),
+    .resetn     (aresetn),
+
+    .valid      (data_cache_valid    ),
+    .op         (data_cache_op       ),
+    .uncache    (data_cache_uncache  ),
+    .tag        (data_cache_tag      ),
+    .index      (data_cache_index    ),
+    .offset     (data_cache_offset   ),
+    .wstrb      (data_cache_wstrb    ),
+    .wdata      (data_cache_wdata    ),
+    .addr_ok    (data_cache_addr_ok  ),
+    .data_ok    (data_cache_data_ok  ),
+    .rdata      (data_cache_rdata    ),
+
+    .rd_req     (data_cache_rd_req   ),
+    .rd_type    (data_cache_rd_type  ),
+    .rd_addr    (data_cache_rd_addr  ),
+    .rd_rdy     (data_cache_rd_rdy   ),
+    .ret_valid  (data_cache_ret_valid),
+    .ret_data   (data_cache_ret_data ),
+
+    .wr_req     (data_cache_wr_req   ),
+    .wr_type    (data_cache_wr_type  ),
+    .wr_addr    (data_cache_wr_addr  ),
+    .wr_wstrb   (data_cache_wr_wstrb ),
+    .wr_data    (data_cache_wr_data  ),
+    .wr_rdy     (data_cache_wr_rdy   )
+);
+
+
+// cache to axi
+cache2axi cache2axi(
     .clk              (aclk            ),
     .resetn           (aresetn         ),
 
-    .inst_sram_req    (inst_sram_req   ),
-    .inst_sram_wr     (inst_sram_wr    ),
-    .inst_sram_size   (inst_sram_size  ),
-    .inst_sram_wstrb  (inst_sram_wstrb ),
-    .inst_sram_addr   (inst_sram_addr   ),
-    .inst_sram_wdata  (inst_sram_wdata  ),
-    .inst_sram_addr_ok(inst_sram_addr_ok),
-    .inst_sram_data_ok(inst_sram_data_ok),
-    .inst_sram_rdata  (inst_sram_rdata  ),
+    .inst_rd_req        (inst_cache_rd_req    ),
+    .inst_rd_type       (inst_cache_rd_type   ),
+    .inst_rd_addr       (inst_cache_rd_addr   ),
+    .inst_rd_rdy        (inst_cache_rd_rdy    ),
+    .inst_ret_valid     (inst_cache_ret_valid ),
+    .inst_ret_data      (inst_cache_ret_data  ),
 
-    .data_sram_req    (data_sram_req    ),
-    .data_sram_wr     (data_sram_wr     ),
-    .data_sram_size   (data_sram_size   ),
-    .data_sram_wstrb  (data_sram_wstrb  ),
-    .data_sram_addr   (data_sram_addr   ),
-    .data_sram_wdata  (data_sram_wdata  ),
-    .data_sram_addr_ok(data_sram_addr_ok),
-    .data_sram_data_ok(data_sram_data_ok),
-    .data_sram_rdata  (data_sram_rdata  ),
+
+    .data_rd_req        (data_cache_rd_req    ),
+    .data_rd_type       (data_cache_rd_type   ),
+    .data_rd_addr       (data_cache_rd_addr   ),
+    .data_rd_rdy        (data_cache_rd_rdy    ),
+    .data_ret_valid     (data_cache_ret_valid ),
+    .data_ret_data      (data_cache_ret_data  ),
+    .data_wr_req        (data_cache_wr_req    ),
+    .data_wr_type       (data_cache_wr_type   ),
+    .data_wr_addr       (data_cache_wr_addr   ),
+    .data_wr_wstrb      (data_cache_wr_wstrb  ),
+    .data_wr_data       (data_cache_wr_data   ),
+    .data_wr_rdy        (data_cache_wr_rdy    ),
 
     .axi_arid         (arid      ),
     .axi_araddr       (araddr    ),
