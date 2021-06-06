@@ -3,8 +3,9 @@
 `define AR_RECV_DATA     4'b0100
 `define AR_SEND_REQ      4'b1000
 
-`define R_IDLE           2'b01
-`define R_RESP           2'b10
+`define R_IDLE           3'b001
+`define R_DATA_RESP      3'b010
+`define R_INST_RESP      3'b100
 
 `define W_IDLE           4'b0001
 `define W_RECV_REQ       4'b0010
@@ -83,11 +84,11 @@ module cache2axi(
 );
 
     reg    [ 3:0] ar_state;
-    reg    [ 1:0] r_state;
+    reg    [ 2:0] r_state;
     reg    [ 4:0] w_state;
     reg    [ 1:0] b_state;
     reg    [ 3:0] ar_next_state;
-    reg    [ 1:0] r_next_state;
+    reg    [ 2:0] r_next_state;
     reg    [ 4:0] w_next_state;
     reg    [ 1:0] b_next_state;
     
@@ -201,8 +202,10 @@ module cache2axi(
     assign data_rd_rdy = (ar_state == `AR_IDLE) && !r_stall;
     
     // R
-    reg [127:0] rdata;
-    reg [  1:0] rcount;
+    reg [127:0] data_rdata;
+    reg [  1:0] data_rcount;
+    reg [127:0] inst_rdata;
+    reg [  1:0] inst_rcount;
 
     assign axi_rready = 1'b1;
 
@@ -219,35 +222,61 @@ module cache2axi(
             `R_IDLE:
                 if (axi_rready && axi_rvalid && axi_rlast) begin
                     r_next_state = `R_IDLE;
-                end else if (axi_rready && axi_rvalid) begin
-                    r_next_state = `R_RESP;
+                end else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
+                    r_next_state = `R_DATA_RESP;
+                end else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
+                    r_next_state = `R_INST_RESP;
                 end else begin
                     r_next_state = `R_IDLE;
                 end
-            `R_RESP:
-                if (axi_rready && axi_rvalid && axi_rlast) begin
+            `R_DATA_RESP:
+                if (axi_rready && axi_rvalid && axi_rlast && axi_rid == 1'b1) begin
                     r_next_state = `R_IDLE;
                 end else begin
-                    r_next_state = `R_RESP;
+                    r_next_state = `R_DATA_RESP;
+                end
+            `R_INST_RESP:
+                if (axi_rready && axi_rvalid && axi_rlast && axi_rid == 1'b0) begin
+                    r_next_state = `R_IDLE;
+                end else begin
+                    r_next_state = `R_INST_RESP;
                 end
         endcase
     end
 
     always @(posedge clk) begin
         if (!resetn) begin
-            rcount <= 2'b0;
-        end else if (axi_rready && axi_rvalid) begin
-            rcount <= rcount + 2'b1;
+            data_rcount <= 2'b0;
+        end else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
+            data_rcount <= data_rcount + 2'b1;
         end else if (r_state == `R_IDLE) begin
-            rcount <= 2'b0;
+            data_rcount <= 2'b0;
         end
     end
 
     always @(posedge clk) begin
         if (!resetn) begin
-            rdata <= 128'b0;
-        end else if (axi_rready && axi_rvalid) begin
-            rdata[rcount*32 +: 32] <= axi_rdata;
+            data_rdata <= 128'b0;
+        end else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
+            data_rdata[data_rcount*32 +: 32] <= axi_rdata;
+        end
+    end
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            inst_rcount <= 2'b0;
+        end else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
+            inst_rcount <= inst_rcount + 2'b1;
+        end else if (r_state == `R_IDLE) begin
+            inst_rcount <= 2'b0;
+        end
+    end
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            inst_rdata <= 128'b0;
+        end else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
+            inst_rdata[inst_rcount*32 +: 32] <= axi_rdata;
         end
     end
 
@@ -278,8 +307,8 @@ module cache2axi(
     end
     assign inst_ret_valid = to_icache_valid;
     assign data_ret_valid = to_dcache_valid;
-    assign inst_ret_data = rdata;
-    assign data_ret_data = rdata;
+    assign inst_ret_data = inst_rdata;
+    assign data_ret_data = data_rdata;
     
     // W
     reg  [31:0] awaddr;
