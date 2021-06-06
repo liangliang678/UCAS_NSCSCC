@@ -10,17 +10,15 @@ module if_stage(
     //to ds
     output                         fs_to_ds_valid ,
     output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus   ,
-    // inst sram interface
-
-    output        inst_sram_req,
-    output        inst_sram_wr,
-    output [ 1:0] inst_sram_size,
-    output [ 3:0] inst_sram_wstrb,
-    output [31:0] inst_sram_addr,
-    output [31:0] inst_sram_wdata,
-    input         inst_sram_addr_ok,
-    input         inst_sram_data_ok,
-    input  [31:0] inst_sram_rdata,
+    // inst cache interface
+    output           inst_cache_valid,
+    output           inst_cache_uncache,
+    output  [ 19:0]  inst_cache_tag,
+    output  [  7:0]  inst_cache_index,
+    output  [  3:0]  inst_cache_offset,
+    input            inst_cache_addr_ok,
+    input            inst_cache_data_ok,
+    input [ 31:0]    inst_cache_rdata,
 
     //clear stage
     input         fs_ex,
@@ -41,6 +39,8 @@ module if_stage(
     input  [31:0] cancel_pc,  //actually pc of TLBR/TLBWI
     input         exception_is_tlb_refill_in
 );
+
+wire [31:0] inst_addr;  
 wire        fs_use_tlb;  //mapped addr
 
 wire        preif_ready_go;
@@ -57,7 +57,7 @@ wire        preif_has_exception;
 reg         preif_has_exception_r;
 
 wire        fs_has_exception;
-wire [ 4:0] fs_exception_type;
+wire [13:0] fs_exception_type;
 
 reg [31:0] received_inst;
 reg [31:0] cancel_pc_r;
@@ -69,11 +69,11 @@ reg        fs_go_cancel_pc;
 reg        fs_go_tlb_refill_pc;
 
 reg  [`BR_BUS_WD-1:0] br_bus_r;
-reg                   br_bus_r_valid;
-wire         br_valid, br_valid_r;  //means brance inst is ID -> EXE...     br_valid_r is useless and not used here
-wire         br_taken, br_taken_r;
+
+wire         br_valid;                 //means brance inst is ID -> EXE...   
+wire         br_taken;
 wire [ 31:0] br_target, br_target_r;
-wire         br_stall, br_stall_r;
+wire         br_stall;
 
 wire         delay_slot_in_preif;
 reg          delay_slot_in_preif_r;
@@ -120,15 +120,16 @@ always @(posedge clk) begin
         br_bus_r[33] <= br_taken;
 end
 
-always @(posedge clk) begin
-    if(reset)
-        br_bus_r_valid <= 1'b0;
-    else if(~(delay_slot_in_preif_r | delay_slot_in_preif) & preif_ready_go & fs_allowin)   //br_target from preif to IF, so do not need br_target
-        br_bus_r_valid <= 1'b0;
-    else if(br_valid)
-        br_bus_r_valid <= 1'b1;
-end
-assign {br_valid_r,br_taken_r,br_target_r,br_stall_r} = br_bus_r;
+// always @(posedge clk) begin
+//     if(reset)
+//         br_bus_r_valid <= 1'b0;
+//     else if(~(delay_slot_in_preif_r | delay_slot_in_preif) & preif_ready_go & fs_allowin)   //br_target from preif to IF, so do not need br_target
+//         br_bus_r_valid <= 1'b0;
+//     else if(br_valid)
+//         br_bus_r_valid <= 1'b1;
+// end
+//assign {br_valid_r,br_taken_r,br_target_r,br_stall_r} = br_bus_r;
+assign br_target_r = br_bus_r[32:1];
 
 wire [31:0] fs_inst;
 reg  [31:0] fs_pc;
@@ -139,10 +140,10 @@ wire        fs_exception_tlb_invalid;
 wire [31:0] fs_badvaddr;
 wire        exception_is_tlb_refill;
 
-assign fs_to_ds_bus = {exception_is_tlb_refill, //102:102
-                       fs_badvaddr      ,  //101:70
-                       fs_has_exception ,  //69:69
-                       fs_exception_type,  //68:64
+assign fs_to_ds_bus = {exception_is_tlb_refill, //111:111
+                       fs_badvaddr      ,  //110:79
+                       fs_has_exception ,  //78:78
+                       fs_exception_type,  //77:64
                        fs_inst          ,  //63:32
                        fs_pc               //31:0
                        };
@@ -154,7 +155,7 @@ always @(posedge clk) begin                                //we need a register 
     else if (fs_ex) begin
         fs_go_exception_pc <= 1'b1;
     end
-    else if(inst_sram_req & inst_sram_addr_ok) begin       //read request accepted, no need to hold nextpc=380 now
+    else if(inst_cache_valid & inst_cache_addr_ok) begin       //read request accepted, no need to hold nextpc=380 now
         fs_go_exception_pc <= 1'b0;
     end
 end
@@ -166,7 +167,7 @@ always @(posedge clk) begin
     else if (fs_cancel_in) begin
         fs_go_cancel_pc <= 1'b1;
     end
-    else if(inst_sram_req & inst_sram_addr_ok) begin      
+    else if(inst_cache_valid & inst_cache_addr_ok) begin      
         fs_go_cancel_pc <= 1'b0;
     end
 end
@@ -178,13 +179,13 @@ always @(posedge clk) begin
     else if (fs_ex & exception_is_tlb_refill_in) begin
         fs_go_tlb_refill_pc <= 1'b1;
     end
-    else if(inst_sram_req & inst_sram_addr_ok) begin      
+    else if(inst_cache_valid & inst_cache_addr_ok) begin      
         fs_go_tlb_refill_pc <= 1'b0;
     end
 end
 
 // pre-IF stage
-assign preif_ready_go = (~br_stall) && (inst_sram_req & inst_sram_addr_ok);  //read request accepted
+assign preif_ready_go = (~br_stall) && (inst_cache_valid & inst_cache_addr_ok);  //read request accepted
 assign to_fs_valid    = ~reset && preif_ready_go;
 assign seq_pc         = fs_pc + 3'h4;
 assign nextpc         = ((fs_ex & exception_is_tlb_refill_in) | (fs_go_tlb_refill_pc)) ? 32'hbfc00200 :
@@ -202,7 +203,7 @@ assign nextpc         = ((fs_ex & exception_is_tlb_refill_in) | (fs_go_tlb_refil
 
 
 assign fs_ready_go    = ~(fs_exception_handle | fs_cancel_handle)  &&       //exception
-                       (inst_sram_data_ok || inst_valid);                   //receive read data
+                       (inst_cache_data_ok || inst_valid);                   //receive read data
                        //~((br_valid || br_bus_r_valid) && ~preif_ready_go);  //branch delay slot
                        //~((br_bus_r_valid) && ~preif_ready_go);
 assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
@@ -212,8 +213,8 @@ always @(posedge clk) begin                              //we need a register to
     if(reset) begin
         received_inst <= 32'b0;
     end
-    else if(inst_sram_data_ok) begin
-        received_inst <= inst_sram_rdata;
+    else if(inst_cache_data_ok) begin
+        received_inst <= inst_cache_rdata;
     end
 end
 
@@ -237,7 +238,7 @@ always @(posedge clk) begin                             //and a register to indi
     else if(fs_ready_go && ds_allowin) begin
         inst_valid <= 1'b0;
     end
-    else if(inst_sram_data_ok) begin
+    else if(inst_cache_data_ok) begin
         inst_valid <= 1'b1;
     end    
 end
@@ -251,7 +252,7 @@ always @(posedge clk) begin                             //this register is to ha
             fs_exception_handle <= 1'b1;
         end
     end 
-    else if (inst_sram_data_ok) begin
+    else if (inst_cache_data_ok) begin
         fs_exception_handle <= 1'b0;
     end
 end
@@ -265,7 +266,7 @@ always @(posedge clk) begin
             fs_cancel_handle <= 1'b1;
         end
     end 
-    else if (inst_sram_data_ok) begin
+    else if (inst_cache_data_ok) begin
         fs_cancel_handle <= 1'b0;
     end
 end
@@ -274,12 +275,12 @@ always @(posedge clk) begin
     if (reset) begin
         fs_valid <= 1'b0;
     end
-    else if (fs_ex) begin
+    else if (fs_ex | fs_cancel_in) begin
         fs_valid <= 1'b0;
     end
-    else if (fs_cancel_in) begin
-        fs_valid <= 1'b0;
-    end
+    // else if (fs_cancel_in) begin
+    //     fs_valid <= 1'b0;
+    // end
     else if (fs_allowin) begin
         fs_valid <= to_fs_valid;
     end
@@ -298,16 +299,18 @@ assign s0_asid = cp0_entryhi[7:0];
 
 assign fs_use_tlb = ~(nextpc[31] && ~nextpc[30]);
 
-assign inst_sram_req     = fs_allowin && ~reset && (~fs_ex) && (~br_stall);  //to_fs_valid && fs_allowin;
-assign inst_sram_wr      = 1'b0;
-assign inst_sram_size    = 2'b10;
-assign inst_sram_wstrb   = 4'h0;
+//cache valid
+assign inst_cache_valid     = fs_allowin && ~reset && (~fs_ex) && (~br_stall);  //to_fs_valid && fs_allowin;
+//[tag,index,offset] 20:8:4
+assign inst_addr    = fs_use_tlb ? {s0_pfn, nextpc[11:0]} : {3'b0, nextpc[28:0]};  
+assign inst_cache_tag   = inst_addr[31:12];
+assign inst_cache_index = inst_addr[11: 4];
+assign inst_cache_offset= inst_addr[ 3: 0];
+//kseg 1
+// 1: uncached; 0: cached
+assign inst_cache_uncache = nextpc[31] && ~nextpc[30] && nextpc[29];
 
-assign inst_sram_addr    = fs_use_tlb ? {s0_pfn, nextpc[11:0]} : {3'b0, nextpc[28:0]};  //TODO: what if tlb didnt hit? which addr to use?
-
-assign inst_sram_wdata   = 32'b0;
-
-assign fs_inst           = inst_sram_data_ok       ?  inst_sram_rdata :
+assign fs_inst           = inst_cache_data_ok       ?  inst_cache_rdata :
                           (inst_valid & fs_valid   ?  received_inst : 32'b0);
 
 assign preif_has_exception  = fs_exception_tlb_refill || fs_exception_tlb_invalid;
@@ -325,9 +328,24 @@ assign exception_adel    = ~(seq_pc[1:0] == 0);
 assign fs_exception_tlb_refill = ~s0_found & fs_use_tlb;
 assign fs_exception_tlb_invalid = s0_found & ~s0_v & fs_use_tlb;
 assign fs_has_exception  = exception_adel | preif_has_exception_r;
-assign fs_exception_type = exception_adel ?        5'h4 :
-                           preif_has_exception_r ? 5'h2 : 
-                                                   5'h9 ;
+
+assign fs_exception_type[0] = 1'b0;
+assign fs_exception_type[1] = exception_adel ? 1'b1 : 1'b0;
+assign fs_exception_type[2] = preif_has_exception_r ? 1'b1: 1'b0;
+assign fs_exception_type[3] = 1'b0;
+assign fs_exception_type[4] = 1'b0;
+assign fs_exception_type[5] = 1'b0;
+assign fs_exception_type[6] = 1'b0;
+assign fs_exception_type[7] = 1'b0;
+assign fs_exception_type[8] = 1'b0;
+assign fs_exception_type[9] = 1'b0;
+assign fs_exception_type[10] = 1'b0;
+assign fs_exception_type[11] = 1'b0;
+assign fs_exception_type[12] = 1'b0;
+assign fs_exception_type[13] = 1'b0;
+// assign fs_exception_type = exception_adel ?        14'b00000000010000 :
+//                            preif_has_exception_r ? 5'h2 : 
+//                                                    5'h9 ;
 
 assign fs_badvaddr = exception_adel ? seq_pc - 3'h4 : 
                      (fs_exception_tlb_refill || fs_exception_tlb_invalid) ? nextpc : 32'b0 ;

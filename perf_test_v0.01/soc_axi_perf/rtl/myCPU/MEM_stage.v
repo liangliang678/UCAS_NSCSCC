@@ -15,9 +15,9 @@ module mem_stage(
     output                         ms_to_ws_valid,
     output [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus  ,
     //from data-sram
-    //input  [31                 :0] data_sram_rdata,
-    input         data_sram_data_ok,
-    input  [31:0] data_sram_rdata,  
+    //input  [31                 :0] data_cache_rdata,
+    input         data_cache_data_ok,
+    input  [31:0] data_cache_rdata,  
 
     //data relevant
     output [`STALL_MS_BUS_WD -1:0] stall_ms_bus,
@@ -46,7 +46,7 @@ wire        ms_eret       ;
 wire [31:0] ms_badvaddr   ;
 wire        ms_bd         ;
 wire        es_has_exception;
-wire [ 4:0] es_exception_type;
+wire [13:0] es_exception_type;
 wire        ms_cp0_op     ;
 wire        ms_cp0_we     ;
 wire [ 7:0] ms_cp0_addr   ;
@@ -68,18 +68,18 @@ wire        ms_res_from_wb;
 wire [31:0] ms_alu_result;
 wire [31:0] ms_pc;
 wire        exception_is_tlb_refill;
-assign {exception_is_tlb_refill, //241:241
-        ms_s1_index           ,  //240:237
-        ms_s1_found           ,  //236:236
-        ms_tlbp               ,  //235:235
-        ms_tlbr               ,  //234:234
-        ms_tlbwi              ,  //233:233
-        ms_mem_we             ,  //232:232
-        ms_eret               ,  //231:231
-        ms_badvaddr           ,  //230:199
-        ms_bd                 ,  //198:198
-        es_has_exception      ,  //197:197
-        es_exception_type     ,  //196:192
+assign {exception_is_tlb_refill, //250:250
+        ms_s1_index           ,  //249:246
+        ms_s1_found           ,  //245:245
+        ms_tlbp               ,  //244:244
+        ms_tlbr               ,  //243:243
+        ms_tlbwi              ,  //242:242
+        ms_mem_we             ,  //241:241
+        ms_eret               ,  //240:240
+        ms_badvaddr           ,  //239:208
+        ms_bd                 ,  //207:207
+        es_has_exception      ,  //206:206
+        es_exception_type     ,  //205:192
         ms_cp0_op             ,  //191:191
         ms_cp0_we             ,  //190:190
         ms_cp0_addr           ,  //189:182
@@ -106,22 +106,22 @@ wire [31:0] mem_result;
 wire [31:0] ms_final_result;
 
 wire        ms_has_exception;
-wire [ 4:0] ms_exception_type;
+wire [13:0] ms_exception_type;
 reg         ms_exception_appear;
 
 reg         ms_cancel;
 
-assign ms_to_ws_bus = {exception_is_tlb_refill,//130:130
-                       ms_s1_index         ,  //129:126
-                       ms_s1_found         ,  //125:125
-                       ms_tlbp             ,  //124:124
-                       ms_tlbr             ,  //123:123
-                       ms_tlbwi            ,  //122:122
-                       ms_eret             ,  //121:121
-                       ms_badvaddr         ,  //120:89
-                       ms_bd               ,  //88:88
-                       ms_has_exception    ,  //87:87
-                       ms_exception_type   ,  //86:82
+assign ms_to_ws_bus = {exception_is_tlb_refill,//139:139
+                       ms_s1_index         ,  //138:135
+                       ms_s1_found         ,  //134:134
+                       ms_tlbp             ,  //133:133
+                       ms_tlbr             ,  //132:132
+                       ms_tlbwi            ,  //131:131
+                       ms_eret             ,  //130:130
+                       ms_badvaddr         ,  //129:98
+                       ms_bd               ,  //97:97
+                       ms_has_exception    ,  //96:96
+                       ms_exception_type   ,  //95:82
                        ms_cp0_op           ,  //81:81
                        ms_cp0_we           ,  //80:80
                        ms_cp0_addr         ,  //79:72
@@ -132,7 +132,7 @@ assign ms_to_ws_bus = {exception_is_tlb_refill,//130:130
                        ms_pc                  //31:0
                       };
 
-assign ms_ready_go    = (~(ms_res_from_mem | ms_mem_we)) | data_sram_data_ok | ms_has_exception;//1'b1;
+assign ms_ready_go    = (~(ms_res_from_mem | ms_mem_we)) | data_cache_data_ok | ms_has_exception;//1'b1;
 assign ms_allowin     = !ms_valid || ms_ready_go && ws_allowin;
 assign ms_to_ws_valid = ms_valid && ms_ready_go;
 always @(posedge clk) begin
@@ -200,27 +200,27 @@ assign {
         lwr_mem_res    //0
         } = ms_load_store_type;
 
-assign mem_result = {32{lb_mem_res  & mem_align_off_0}} & { {24{data_sram_rdata[ 7]}}, data_sram_rdata[ 7: 0] } |  //lb
-                    {32{lb_mem_res  & mem_align_off_1}} & { {24{data_sram_rdata[15]}}, data_sram_rdata[15: 8] } |
-                    {32{lb_mem_res  & mem_align_off_2}} & { {24{data_sram_rdata[23]}}, data_sram_rdata[23:16] } |
-                    {32{lb_mem_res  & mem_align_off_3}} & { {24{data_sram_rdata[31]}}, data_sram_rdata[31:24] } |
-                    {32{lbu_mem_res & mem_align_off_0}} & { 24'b0, data_sram_rdata[ 7: 0] } |                      //lbu
-                    {32{lbu_mem_res & mem_align_off_1}} & { 24'b0, data_sram_rdata[15: 8] } |
-                    {32{lbu_mem_res & mem_align_off_2}} & { 24'b0, data_sram_rdata[23:16] } |
-                    {32{lbu_mem_res & mem_align_off_3}} & { 24'b0, data_sram_rdata[31:24] } |
-                    {32{lh_mem_res  & (mem_align_off_0 | mem_align_off_1)}} & { {16{data_sram_rdata[15]}}, data_sram_rdata[15: 0] } |   //lh
-                    {32{lh_mem_res  & (mem_align_off_2 | mem_align_off_3)}} & { {16{data_sram_rdata[31]}}, data_sram_rdata[31:16] } |
-                    {32{lhu_mem_res & (mem_align_off_0 | mem_align_off_1)}} & { 16'b0, data_sram_rdata[15: 0] } |                       //lhu
-                    {32{lhu_mem_res & (mem_align_off_2 | mem_align_off_3)}} & { 16'b0, data_sram_rdata[31:16] } |      
-                    {32{lw_mem_res}} & data_sram_rdata |                                                                                //lw
-                    {32{lwl_mem_res & mem_align_off_0}} & { data_sram_rdata[ 7: 0], ms_rt_value[23: 0] } |                              //lwl
-                    {32{lwl_mem_res & mem_align_off_1}} & { data_sram_rdata[15: 0], ms_rt_value[15: 0] } |
-                    {32{lwl_mem_res & mem_align_off_2}} & { data_sram_rdata[23: 0], ms_rt_value[ 7: 0] } |
-                    {32{lwl_mem_res & mem_align_off_3}} & data_sram_rdata |
-                    {32{lwr_mem_res & mem_align_off_0}} & data_sram_rdata |                                                             //lwr
-                    {32{lwr_mem_res & mem_align_off_1}} & { ms_rt_value[31:24], data_sram_rdata[31: 8] } |
-                    {32{lwr_mem_res & mem_align_off_2}} & { ms_rt_value[31:16], data_sram_rdata[31:16] } |
-                    {32{lwr_mem_res & mem_align_off_3}} & { ms_rt_value[31: 8], data_sram_rdata[31:24] };
+assign mem_result = {32{lb_mem_res  & mem_align_off_0}} & { {24{data_cache_rdata[ 7]}}, data_cache_rdata[ 7: 0] } |  //lb
+                    {32{lb_mem_res  & mem_align_off_1}} & { {24{data_cache_rdata[15]}}, data_cache_rdata[15: 8] } |
+                    {32{lb_mem_res  & mem_align_off_2}} & { {24{data_cache_rdata[23]}}, data_cache_rdata[23:16] } |
+                    {32{lb_mem_res  & mem_align_off_3}} & { {24{data_cache_rdata[31]}}, data_cache_rdata[31:24] } |
+                    {32{lbu_mem_res & mem_align_off_0}} & { 24'b0, data_cache_rdata[ 7: 0] } |                      //lbu
+                    {32{lbu_mem_res & mem_align_off_1}} & { 24'b0, data_cache_rdata[15: 8] } |
+                    {32{lbu_mem_res & mem_align_off_2}} & { 24'b0, data_cache_rdata[23:16] } |
+                    {32{lbu_mem_res & mem_align_off_3}} & { 24'b0, data_cache_rdata[31:24] } |
+                    {32{lh_mem_res  & (mem_align_off_0 | mem_align_off_1)}} & { {16{data_cache_rdata[15]}}, data_cache_rdata[15: 0] } |   //lh
+                    {32{lh_mem_res  & (mem_align_off_2 | mem_align_off_3)}} & { {16{data_cache_rdata[31]}}, data_cache_rdata[31:16] } |
+                    {32{lhu_mem_res & (mem_align_off_0 | mem_align_off_1)}} & { 16'b0, data_cache_rdata[15: 0] } |                       //lhu
+                    {32{lhu_mem_res & (mem_align_off_2 | mem_align_off_3)}} & { 16'b0, data_cache_rdata[31:16] } |      
+                    {32{lw_mem_res}} & data_cache_rdata |                                                                                //lw
+                    {32{lwl_mem_res & mem_align_off_0}} & { data_cache_rdata[ 7: 0], ms_rt_value[23: 0] } |                              //lwl
+                    {32{lwl_mem_res & mem_align_off_1}} & { data_cache_rdata[15: 0], ms_rt_value[15: 0] } |
+                    {32{lwl_mem_res & mem_align_off_2}} & { data_cache_rdata[23: 0], ms_rt_value[ 7: 0] } |
+                    {32{lwl_mem_res & mem_align_off_3}} & data_cache_rdata |
+                    {32{lwr_mem_res & mem_align_off_0}} & data_cache_rdata |                                                             //lwr
+                    {32{lwr_mem_res & mem_align_off_1}} & { ms_rt_value[31:24], data_cache_rdata[31: 8] } |
+                    {32{lwr_mem_res & mem_align_off_2}} & { ms_rt_value[31:16], data_cache_rdata[31:16] } |
+                    {32{lwr_mem_res & mem_align_off_3}} & { ms_rt_value[31: 8], data_cache_rdata[31:24] };
 
 
 assign ms_final_result = ms_res_from_mem ? mem_result :
@@ -249,7 +249,7 @@ always @(posedge clk) begin
     end
 end
 
-assign stall_ms_bus = {data_sram_data_ok,     //48:48
+assign stall_ms_bus = {data_cache_data_ok,     //48:48
                        ms_cp0_addr,           //47:40
                        ms_cp0_we && ms_to_ws_valid, //39:39
                        ms_final_result     ,  //38:7

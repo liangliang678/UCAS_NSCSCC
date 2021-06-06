@@ -39,7 +39,7 @@ assign fs_pc = fs_to_ds_bus[31:0];
 
 wire [31:0] ds_badvaddr      ;
 wire        fs_has_exception ;
-wire [ 4:0] fs_exception_type;
+wire [13:0] fs_exception_type;
 wire        exception_syscall;
 wire        exception_break;
 wire        exception_reserve;
@@ -53,10 +53,10 @@ wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
 wire        exception_is_tlb_refill;
 
-assign {exception_is_tlb_refill, //102:102
-        ds_badvaddr      ,  //101:70
-        fs_has_exception ,  //69:69
-        fs_exception_type,  //68:64
+assign {exception_is_tlb_refill, //111:111
+        ds_badvaddr      ,  //110:79
+        fs_has_exception ,  //78:78
+        fs_exception_type,  //77:64
         ds_inst          ,  //63:32
         ds_pc               //31:0
         } = fs_to_ds_bus_r;
@@ -73,6 +73,7 @@ wire        br_valid;
 wire        br_taken;
 wire [31:0] br_target;
 wire        br_stall;
+wire        br_likely;
 
 wire        es_data_sram_req;
 wire [ 7:0] es_cp0_addr;
@@ -277,23 +278,23 @@ wire        rt_eq_ms;
 wire        rt_eq_ws;
 
 wire        ds_has_exception;
-wire [ 4:0] ds_exception_type;
+wire [13:0] ds_exception_type;
 
 reg         ds_was_br_or_jp; // to judge delay slot inst
 wire        ds_bd;           // is delay slot inst
 
 assign br_bus       = {br_valid,br_taken,br_target,br_stall};
 
-assign ds_to_es_bus = {exception_is_tlb_refill, //208:208
-                       ds_tlbp          ,  //207:207
-                       ds_tlbr          ,  //206:206
-                       ds_tlbwi         ,  //205:205
-                       ds_eret          ,  //204:204
-                       ds_badvaddr      ,  //203:172
-                       ds_bd            ,  //171:171
-                       alu_signed       ,  //170:170
-                       ds_has_exception ,  //169:169
-                       ds_exception_type,  //168:164
+assign ds_to_es_bus = {exception_is_tlb_refill, //217:217
+                       ds_tlbp          ,  //216:216
+                       ds_tlbr          ,  //215:215
+                       ds_tlbwi         ,  //214:214
+                       ds_eret          ,  //213:213
+                       ds_badvaddr      ,  //212:181
+                       ds_bd            ,  //180:180
+                       alu_signed       ,  //179:179
+                       ds_has_exception ,  //178:178
+                       ds_exception_type,  //177:164
                        cp0_op           ,  //163:163
                        cp0_we           ,  //162:162
                        cp0_addr         ,  //161:154
@@ -540,6 +541,7 @@ assign rs_le_zero = rs_lt_zero | rs_value == 0;
 assign rs_ge_zero = ~rs_lt_zero;
 
 assign br_valid = ds_ready_go && es_allowin && ds_valid && br_taken;
+//assign br_valid = branch_op && ds_valid && ~ds_has_exception && ds_ready_go;
 assign br_taken = (   inst_beq    &&  rs_eq_rt
                    || inst_bne    && !rs_eq_rt
                    || inst_bgez   &&  rs_ge_zero
@@ -579,11 +581,27 @@ assign exception_break   = inst_break;
 assign exception_reserve = inst_reserve;
 assign exception_int     = has_int;
 assign ds_has_exception  = exception_syscall || exception_break || exception_reserve || exception_int || fs_has_exception;
-assign ds_exception_type = (exception_int     ) ? 5'h0 :
-                           (fs_has_exception  ) ? fs_exception_type :
-                           (exception_reserve ) ? 5'ha :
-                           (exception_syscall ) ? 5'h8 :
-                         /*(exception_break   )*/ 5'h9 ;
+
+assign ds_exception_type[0] = exception_int ? 1'b1 : fs_exception_type[0];
+assign ds_exception_type[1] = fs_exception_type[1];
+assign ds_exception_type[2] = fs_exception_type[2];
+assign ds_exception_type[3] = fs_exception_type[3];
+assign ds_exception_type[4] = exception_reserve ? 1'b1 : fs_exception_type[4];
+assign ds_exception_type[5] = fs_exception_type[5];
+assign ds_exception_type[6] = fs_exception_type[6];
+assign ds_exception_type[7] = exception_syscall ? 1'b1 : fs_exception_type[7];
+assign ds_exception_type[8] = exception_break ? 1'b1 : fs_exception_type[8];
+assign ds_exception_type[9] = fs_exception_type[9];
+assign ds_exception_type[10] = fs_exception_type[10];
+assign ds_exception_type[11] = fs_exception_type[11];
+assign ds_exception_type[12] = fs_exception_type[12];
+assign ds_exception_type[13] = fs_exception_type[13];
+
+// assign ds_exception_type = (exception_int     ) ? 5'h0 :
+//                            (fs_has_exception  ) ? fs_exception_type :
+//                            (exception_reserve ) ? 5'ha :
+//                            (exception_syscall ) ? 5'h8 :
+//                          /*(exception_break   )*/ 5'h9 ;
 
 assign epc_relevant = inst_eret & es_cp0_we & (es_cp0_addr == 8'b01110000) |
                       inst_eret & ms_cp0_we & (ms_cp0_addr == 8'b01110000) |

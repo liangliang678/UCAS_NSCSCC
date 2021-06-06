@@ -12,15 +12,18 @@ module exe_stage(
     //to ms
     output                         es_to_ms_valid,
     output [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus  ,
-    // data sram interface
+    // data cache interface
+    output           data_cache_valid,
+    output           data_cache_op,
+    output           data_cache_uncache,
+    output  [ 19:0]  data_cache_tag,
+    output  [  7:0]  data_cache_index,
+    output  [  3:0]  data_cache_offset,
+    output  [  3:0]  data_cache_wstrb,
+    output  [ 31:0]  data_cache_wdata,
+    input            data_cache_addr_ok,
 
-    output        data_sram_req,
-    output        data_sram_wr,
-    output [ 1:0] data_sram_size,
-    output [ 3:0] data_sram_wstrb,
-    output [31:0] data_sram_addr,
-    output [31:0] data_sram_wdata,
-    input         data_sram_addr_ok,
+    // output [ 1:0] data_sram_size, ?
 
     //multiper
     output [63:0] mul_res,
@@ -49,6 +52,7 @@ module exe_stage(
     input         es_cancel_in
 );
 
+wire [31:0] data_addr     ;  
 wire        es_use_tlb    ;
 wire [31:0] es_VA         ;
 
@@ -69,7 +73,7 @@ wire [31:0] es_badvaddr   ;
 wire        es_bd         ;
 wire        es_alu_signed ;
 wire        ds_has_exception;
-wire [ 4:0] ds_exception_type;
+wire [13:0] ds_exception_type;
 wire        es_cp0_op     ;
 wire        es_cp0_we     ;
 wire [ 7:0] es_cp0_addr   ;
@@ -98,16 +102,16 @@ wire [31:0] es_pc         ;
 wire        exception_is_tlb_refill;
 wire        exception_is_tlb_refill_temp;
 
-assign {exception_is_tlb_refill_temp,//208:208
-        es_tlbp             ,  //207:207
-        es_tlbr             ,  //206:206
-        es_tlbwi            ,  //205:205
-        es_eret             ,  //204:204
-        es_badvaddr_temp    ,  //203:172
-        es_bd               ,  //171:171
-        es_alu_signed       ,  //170:170
-        ds_has_exception    ,  //169:169
-        ds_exception_type   ,  //168:164
+assign {exception_is_tlb_refill_temp,//217:217
+        es_tlbp             ,  //216:216
+        es_tlbr             ,  //215:215
+        es_tlbwi            ,  //214:214
+        es_eret             ,  //213:213
+        es_badvaddr_temp    ,  //212:181
+        es_bd               ,  //180:180
+        es_alu_signed       ,  //179:179
+        ds_has_exception    ,  //178:178
+        ds_exception_type   ,  //177:164
         es_cp0_op           ,  //163:163
         es_cp0_we           ,  //162:162
         es_cp0_addr         ,  //161:154
@@ -183,7 +187,7 @@ assign es_res_from_lo  = es_lo_op;
 
 
 wire        es_has_exception;
-wire [ 4:0] es_exception_type;
+wire [13:0] es_exception_type;
 wire        exception_adel;
 wire        exception_ades;
 wire        exception_int_overflow;
@@ -194,18 +198,18 @@ reg         es_exception_appear;
 
 reg         es_cancel;
 
-assign es_to_ms_bus = {exception_is_tlb_refill, //241:241
-                       s1_index              ,  //240:237
-                       s1_found              ,  //236:236
-                       es_tlbp               ,  //235:235
-                       es_tlbr               ,  //234:234
-                       es_tlbwi              ,  //233:233
-                       es_mem_we             ,  //232:232
-                       es_eret               ,  //231:231
-                       es_badvaddr           ,  //230:199
-                       es_bd                 ,  //198:198
-                       es_has_exception      ,  //197:197
-                       es_exception_type     ,  //196:192
+assign es_to_ms_bus = {exception_is_tlb_refill, //250:250
+                       s1_index              ,  //249:246
+                       s1_found              ,  //245:245
+                       es_tlbp               ,  //244:244
+                       es_tlbr               ,  //243:243
+                       es_tlbwi              ,  //242:242
+                       es_mem_we             ,  //241:241
+                       es_eret               ,  //240:240
+                       es_badvaddr           ,  //239:208
+                       es_bd                 ,  //207:207
+                       es_has_exception      ,  //206:206
+                       es_exception_type     ,  //205:192
                        es_cp0_op             ,  //191:191
                        es_cp0_we             ,  //190:190
                        es_cp0_addr           ,  //189:182
@@ -228,7 +232,7 @@ assign es_to_ms_bus = {exception_is_tlb_refill, //241:241
                       };
 
 assign es_ready_go = ~( ((es_alu_op[14] | es_alu_op[15]) & ~complete) |                                                 //div not complete 
-                        (!es_has_exception & (es_res_from_mem | es_mem_we) & ~(data_sram_req & data_sram_addr_ok)) |    //wait for data sram  
+                        (!es_has_exception & (es_res_from_mem | es_mem_we) & ~(data_cache_valid & data_cache_addr_ok)) |    //wait for data sram  
                         ((wb_mtc0_index | mem_mtc0_index) & es_tlbp & es_valid)                                         //MEM/WB mtc0 write index and EXE is TLBP  
                       );          
                          
@@ -349,17 +353,22 @@ assign s1_asid = cp0_entryhi[7:0];
 assign es_use_tlb = ~(es_VA[31] && ~es_VA[30]) && es_valid && (es_res_from_mem | es_mem_we);
 
 
-assign data_sram_req   = (es_res_from_mem | es_mem_we) & ms_allowin & es_valid & ~es_has_exception;        //only enable when LOAD/STORE
-assign data_sram_wstrb = (es_mem_we && es_valid && !es_has_exception) ? write_strb : 4'h0;   
-assign data_sram_wr    = (es_mem_we && es_valid && !es_has_exception);                                   
+assign data_cache_valid   = (es_res_from_mem | es_mem_we) & ms_allowin & es_valid & ~es_has_exception;        //only enable when LOAD/STORE
+assign data_cache_wstrb = (es_mem_we && es_valid && !es_has_exception) ? write_strb : 4'h0;   
+assign data_cache_op    = (es_mem_we && es_valid && !es_has_exception);                                   
 
-assign data_sram_addr  = es_use_tlb ? {s1_pfn, es_VA[11:0]} : {3'b0, es_VA[28:0]};
+assign data_addr  = es_use_tlb ? {s1_pfn, es_VA[11:0]} : {3'b0, es_VA[28:0]};
+assign data_cache_tag    = data_addr[31:12];
+assign data_cache_index  = data_addr[11: 4];
+assign data_cache_offset = data_addr[ 3: 0];
+assign data_cache_wdata = mem_write_data;
 
-assign data_sram_wdata = mem_write_data;
+//kseg 1
+// 1: uncached; 0: cached
+assign data_cache_uncache = es_VA[31] && ~es_VA[30] && es_VA[29];
 
 
-
-assign stall_es_bus = { data_sram_req,                                            //49:49
+assign stall_es_bus = { data_cache_valid,                                            //49:49
                         es_cp0_addr,                                              //48:41
                        (es_cp0_we && es_valid),                                   //40:40
                         es_alu_result,                                            //39:8
@@ -381,15 +390,31 @@ assign es_exception_tlb_refill = ~s1_found & es_use_tlb;
 assign es_exception_tlb_invalid = s1_found & ~s1_v & es_use_tlb;
 assign es_exception_modified = es_mem_we & s1_found & s1_v & ~s1_d & es_use_tlb;
 assign es_has_exception       = es_exception_modified || es_exception_tlb_invalid || es_exception_tlb_refill || exception_adel || exception_ades || exception_int_overflow || ds_has_exception;
-assign es_exception_type      = (ds_has_exception      ) ? ds_exception_type :
-                                ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_mem_we) ? 5'h3 :         //store
-                                ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_res_from_mem) ? 5'h2 :   //load
-                                ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_tlbp) ? 5'h2 :          //tlbp
-                                (es_exception_modified) ? 5'h1 :
-                                (exception_int_overflow) ? 5'hc : 
-                                (exception_adel        ) ? 5'h4 :
-                              /*(exception_ades        )*/ 5'h5 ;
-assign es_badvaddr            = (ds_exception_type == 5'h2) ? es_badvaddr_temp :  //tlb refill in IF, dont change
+
+// assign es_exception_type      = (ds_has_exception      ) ? ds_exception_type :
+//                                 ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_mem_we) ? 5'h3 :         //store
+//                                 ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_res_from_mem) ? 5'h2 :   //load
+//                                 ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_tlbp) ? 5'h2 :          //tlbp
+//                                 (es_exception_modified) ? 5'h1 :
+//                                 (exception_int_overflow) ? 5'hc : 
+//                                 (exception_adel        ) ? 5'h4 :
+//                               /*(exception_ades        )*/ 5'h5 ;
+assign es_exception_type[0]   = ds_exception_type[0];
+assign es_exception_type[1]   = ds_exception_type[1];
+assign es_exception_type[2]   = ds_exception_type[2];
+assign es_exception_type[3]   = ds_exception_type[3];
+assign es_exception_type[4]   = ds_exception_type[4];
+assign es_exception_type[5]   = (exception_int_overflow) ? 1'b1 : ds_exception_type[5];
+assign es_exception_type[6]   = ds_exception_type[6];
+assign es_exception_type[7]   = ds_exception_type[7];
+assign es_exception_type[8]   = ds_exception_type[8];
+assign es_exception_type[9]   = (exception_adel) ? 1'b1 : ds_exception_type[9];
+assign es_exception_type[10]  = (exception_ades) ? 1'b1 : ds_exception_type[10];
+assign es_exception_type[11]  = ((es_exception_tlb_invalid | es_exception_tlb_refill) & (es_tlbp | es_res_from_mem)) ? 1'b1 : ds_exception_type[11];
+assign es_exception_type[12]  = ((es_exception_tlb_invalid | es_exception_tlb_refill) & es_mem_we) ? 1'b1 : ds_exception_type[12];
+assign es_exception_type[13]  = (es_exception_modified) ? 1'b1 : ds_exception_type[13];
+
+assign es_badvaddr            = //(ds_exception_type[2]) ? es_badvaddr_temp :  //tlb refill in IF, dont change
                                 ((es_exception_tlb_invalid || es_exception_tlb_refill) & (es_mem_we | es_res_from_mem)) ? es_VA :  //load or store
                                 (es_exception_modified) ? es_VA :
                                 ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_tlbp) ? {s1_vpn2, s1_odd_page, 12'b0} : // tlbp
