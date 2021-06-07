@@ -82,7 +82,7 @@ wire [7:0]   c0_addr;
 wire         mtc0_we;       
 
 wire         ex_begin;          
-wire [13:0]  ex_type;        
+wire [ 4:0]  ex_type;        
 wire         wb_bd;    
 wire [31:0]  wb_pc; 
 wire [31:0]  wb_badvaddr; 

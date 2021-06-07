@@ -46,7 +46,7 @@ wire        ms_eret       ;
 wire [31:0] ms_badvaddr   ;
 wire        ms_bd         ;
 wire        es_has_exception;
-wire [13:0] es_exception_type;
+wire [ 4:0] es_exception_type;
 wire        ms_cp0_op     ;
 wire        ms_cp0_we     ;
 wire [ 7:0] ms_cp0_addr   ;
@@ -106,7 +106,7 @@ wire [31:0] mem_result;
 wire [31:0] ms_final_result;
 
 wire        ms_has_exception;
-wire [13:0] ms_exception_type;
+wire [ 4:0] ms_exception_type;
 reg         ms_exception_appear;
 
 reg         ms_cancel;

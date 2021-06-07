@@ -8,7 +8,8 @@ module alu(
   output [31:0] alu_result_mul_div,
   output [63:0] alu_mul_res,
   output        complete,
-  output        overflow
+  output        overflow,
+  input         exception
 );
 
 wire op_add;   //�ӷ�����
@@ -136,7 +137,8 @@ div u_div(
     .y          (alu_src2         ),
     .s          (div_result[63:32]),
     .r          (div_result[31:0] ),
-    .complete   (div_complete     )
+    .complete   (div_complete     ),
+    .exception  (exception        )
     );
 
 // final result mux

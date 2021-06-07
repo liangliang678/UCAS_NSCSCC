@@ -72,7 +72,7 @@ wire [31:0] es_badvaddr   ;
 wire        es_bd         ;
 wire        es_alu_signed ;
 wire        ds_has_exception;
-wire [13:0] ds_exception_type;
+wire [ 4:0] ds_exception_type;
 wire        es_cp0_op     ;
 wire        es_cp0_we     ;
 wire [ 7:0] es_cp0_addr   ;
@@ -186,7 +186,7 @@ assign es_res_from_lo  = es_lo_op;
 
 
 wire        es_has_exception;
-wire [13:0] es_exception_type;
+wire [ 4:0] es_exception_type;
 wire        exception_adel;
 wire        exception_ades;
 wire        exception_int_overflow;
@@ -294,7 +294,8 @@ alu u_alu(
     .alu_result_mul_div (es_alu_result_mul_div),
     .alu_mul_res        (mul_res              ),
     .complete           (complete             ),
-    .overflow           (int_overflow         )
+    .overflow           (int_overflow         ),
+    .exception          (es_ex | es_cancel_in )
     );
 
 assign es_load_store_offset = es_alu_result[1:0];
@@ -390,28 +391,28 @@ assign es_exception_tlb_invalid = s1_found & ~s1_v & es_use_tlb;
 assign es_exception_modified = es_mem_we & s1_found & s1_v & ~s1_d & es_use_tlb;
 assign es_has_exception       = es_exception_modified || es_exception_tlb_invalid || es_exception_tlb_refill || exception_adel || exception_ades || exception_int_overflow || ds_has_exception;
 
-// assign es_exception_type      = (ds_has_exception      ) ? ds_exception_type :
-//                                 ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_mem_we) ? 5'h3 :         //store
-//                                 ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_res_from_mem) ? 5'h2 :   //load
-//                                 ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_tlbp) ? 5'h2 :          //tlbp
-//                                 (es_exception_modified) ? 5'h1 :
-//                                 (exception_int_overflow) ? 5'hc : 
-//                                 (exception_adel        ) ? 5'h4 :
-//                               /*(exception_ades        )*/ 5'h5 ;
-assign es_exception_type[0]   = ds_exception_type[0];
-assign es_exception_type[1]   = ds_exception_type[1];
-assign es_exception_type[2]   = ds_exception_type[2];
-assign es_exception_type[3]   = ds_exception_type[3];
-assign es_exception_type[4]   = ds_exception_type[4];
-assign es_exception_type[5]   = (exception_int_overflow) ? 1'b1 : ds_exception_type[5];
-assign es_exception_type[6]   = ds_exception_type[6];
-assign es_exception_type[7]   = ds_exception_type[7];
-assign es_exception_type[8]   = ds_exception_type[8];
-assign es_exception_type[9]   = (exception_adel) ? 1'b1 : ds_exception_type[9];
-assign es_exception_type[10]  = (exception_ades) ? 1'b1 : ds_exception_type[10];
-assign es_exception_type[11]  = ((es_exception_tlb_invalid | es_exception_tlb_refill) & (es_tlbp | es_res_from_mem)) ? 1'b1 : ds_exception_type[11];
-assign es_exception_type[12]  = ((es_exception_tlb_invalid | es_exception_tlb_refill) & es_mem_we) ? 1'b1 : ds_exception_type[12];
-assign es_exception_type[13]  = (es_exception_modified) ? 1'b1 : ds_exception_type[13];
+assign es_exception_type      = (ds_has_exception      ) ? ds_exception_type :
+                                ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_mem_we) ? 5'h3 :         //store
+                                ((es_exception_tlb_invalid || es_exception_tlb_refill) & (es_res_from_mem || es_tlbp)) ? 5'h2 :   //load or tlbp
+                                //((es_exception_tlb_invalid || es_exception_tlb_refill) & es_tlbp) ? 5'h2 :          //tlbp
+                                (es_exception_modified) ? 5'h1 :
+                                (exception_int_overflow) ? 5'hc : 
+                                (exception_adel        ) ? 5'h4 :
+                              /*(exception_ades        )*/ 5'h5 ;
+// assign es_exception_type[0]   = ds_exception_type[0];
+// assign es_exception_type[1]   = ds_exception_type[1];
+// assign es_exception_type[2]   = ds_exception_type[2];
+// assign es_exception_type[3]   = ds_exception_type[3];
+// assign es_exception_type[4]   = ds_exception_type[4];
+// assign es_exception_type[5]   = (exception_int_overflow) ? 1'b1 : ds_exception_type[5];
+// assign es_exception_type[6]   = ds_exception_type[6];
+// assign es_exception_type[7]   = ds_exception_type[7];
+// assign es_exception_type[8]   = ds_exception_type[8];
+// assign es_exception_type[9]   = (exception_adel) ? 1'b1 : ds_exception_type[9];
+// assign es_exception_type[10]  = (exception_ades) ? 1'b1 : ds_exception_type[10];
+// assign es_exception_type[11]  = ((es_exception_tlb_invalid | es_exception_tlb_refill) & (es_tlbp | es_res_from_mem)) ? 1'b1 : ds_exception_type[11];
+// assign es_exception_type[12]  = ((es_exception_tlb_invalid | es_exception_tlb_refill) & es_mem_we) ? 1'b1 : ds_exception_type[12];
+// assign es_exception_type[13]  = (es_exception_modified) ? 1'b1 : ds_exception_type[13];
 
 assign es_badvaddr            = //(ds_exception_type[2]) ? es_badvaddr_temp :  //tlb refill in IF, dont change
                                 ((es_exception_tlb_invalid || es_exception_tlb_refill) & (es_mem_we | es_res_from_mem)) ? es_VA :  //load or store
