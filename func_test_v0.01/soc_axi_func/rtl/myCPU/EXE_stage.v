@@ -19,11 +19,10 @@ module exe_stage(
     output  [ 19:0]  data_cache_tag,
     output  [  7:0]  data_cache_index,
     output  [  3:0]  data_cache_offset,
+    output  [  1:0]  data_cache_size, 
     output  [  3:0]  data_cache_wstrb,
     output  [ 31:0]  data_cache_wdata,
     input            data_cache_addr_ok,
-
-    // output [ 1:0] data_sram_size, ?
 
     //multiper
     output [63:0] mul_res,
@@ -316,7 +315,7 @@ assign write_strb = {4{sb_mem_res & mem_align_off_0}} & 4'b0001 |               
                     {4{swr_mem_res & mem_align_off_2}} & 4'b1100 |
                     {4{swr_mem_res & mem_align_off_3}} & 4'b1000 ;
                     
-assign data_sram_size = {2{sw_mem_res}} & 2'b10 |                                          //sw,lw
+assign data_cache_size= {2{sw_mem_res}} & 2'b10 |                                          //sw,lw
                         {2{(sh_mem_res | shu_mem_res) & (mem_align_off_0 | mem_align_off_1)}} & 2'b01 |   //sh lh lhu             //wrong in handbook
                         {2{(sh_mem_res | shu_mem_res) & (mem_align_off_2 | mem_align_off_3)}} & 2'b01 |
                         {2{(sb_mem_res | sbu_mem_res) & (mem_align_off_0)}} & 2'b00 |      //sb  lb  lbu
