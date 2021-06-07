@@ -39,7 +39,7 @@ assign fs_pc = fs_to_ds_bus[31:0];
 
 wire [31:0] ds_badvaddr      ;
 wire        fs_has_exception ;
-wire [13:0] fs_exception_type;
+wire [ 4:0] fs_exception_type;
 wire        exception_syscall;
 wire        exception_break;
 wire        exception_reserve;
@@ -278,7 +278,7 @@ wire        rt_eq_ms;
 wire        rt_eq_ws;
 
 wire        ds_has_exception;
-wire [13:0] ds_exception_type;
+wire [ 4:0] ds_exception_type;
 
 reg         ds_was_br_or_jp; // to judge delay slot inst
 wire        ds_bd;           // is delay slot inst
@@ -541,7 +541,6 @@ assign rs_le_zero = rs_lt_zero | rs_value == 0;
 assign rs_ge_zero = ~rs_lt_zero;
 
 assign br_valid = ds_ready_go && es_allowin && ds_valid && br_taken;
-//assign br_valid = branch_op && ds_valid && ~ds_has_exception && ds_ready_go;
 assign br_taken = (   inst_beq    &&  rs_eq_rt
                    || inst_bne    && !rs_eq_rt
                    || inst_bgez   &&  rs_ge_zero
@@ -582,26 +581,26 @@ assign exception_reserve = inst_reserve;
 assign exception_int     = has_int;
 assign ds_has_exception  = exception_syscall || exception_break || exception_reserve || exception_int || fs_has_exception;
 
-assign ds_exception_type[0] = exception_int ? 1'b1 : fs_exception_type[0];
-assign ds_exception_type[1] = fs_exception_type[1];
-assign ds_exception_type[2] = fs_exception_type[2];
-assign ds_exception_type[3] = fs_exception_type[3];
-assign ds_exception_type[4] = exception_reserve ? 1'b1 : fs_exception_type[4];
-assign ds_exception_type[5] = fs_exception_type[5];
-assign ds_exception_type[6] = fs_exception_type[6];
-assign ds_exception_type[7] = exception_syscall ? 1'b1 : fs_exception_type[7];
-assign ds_exception_type[8] = exception_break ? 1'b1 : fs_exception_type[8];
-assign ds_exception_type[9] = fs_exception_type[9];
-assign ds_exception_type[10] = fs_exception_type[10];
-assign ds_exception_type[11] = fs_exception_type[11];
-assign ds_exception_type[12] = fs_exception_type[12];
-assign ds_exception_type[13] = fs_exception_type[13];
+// assign ds_exception_type[0] = exception_int ? 1'b1 : fs_exception_type[0];
+// assign ds_exception_type[1] = fs_exception_type[1];
+// assign ds_exception_type[2] = fs_exception_type[2];
+// assign ds_exception_type[3] = fs_exception_type[3];
+// assign ds_exception_type[4] = exception_reserve ? 1'b1 : fs_exception_type[4];
+// assign ds_exception_type[5] = fs_exception_type[5];
+// assign ds_exception_type[6] = fs_exception_type[6];
+// assign ds_exception_type[7] = exception_syscall ? 1'b1 : fs_exception_type[7];
+// assign ds_exception_type[8] = exception_break ? 1'b1 : fs_exception_type[8];
+// assign ds_exception_type[9] = fs_exception_type[9];
+// assign ds_exception_type[10] = fs_exception_type[10];
+// assign ds_exception_type[11] = fs_exception_type[11];
+// assign ds_exception_type[12] = fs_exception_type[12];
+// assign ds_exception_type[13] = fs_exception_type[13];
 
-// assign ds_exception_type = (exception_int     ) ? 5'h0 :
-//                            (fs_has_exception  ) ? fs_exception_type :
-//                            (exception_reserve ) ? 5'ha :
-//                            (exception_syscall ) ? 5'h8 :
-//                          /*(exception_break   )*/ 5'h9 ;
+assign ds_exception_type = (exception_int     ) ? 5'h0 :
+                           (fs_has_exception  ) ? fs_exception_type :
+                           (exception_reserve ) ? 5'ha :
+                           (exception_syscall ) ? 5'h8 :
+                         /*(exception_break   )*/ 5'h9 ;
 
 assign epc_relevant = inst_eret & es_cp0_we & (es_cp0_addr == 8'b01110000) |
                       inst_eret & ms_cp0_we & (ms_cp0_addr == 8'b01110000) |

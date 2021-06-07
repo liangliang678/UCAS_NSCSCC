@@ -29,7 +29,8 @@ module div(
     input  [31:0] y,
     output [31:0] s,
     output [31:0] r,
-    output        complete
+    output        complete,
+    input         exception
     );
 
     reg [63:0] A;
@@ -58,7 +59,11 @@ module div(
     always @(posedge div_clk) begin
         if (!resetn) begin
             count <= 0;
-        end else if (complete) begin
+        end
+        else if (exception)begin
+            count <= 0;
+        end
+        else if (complete) begin
             count <= 0;
         end else if (div & start) begin
             count <= 1;
@@ -73,7 +78,11 @@ module div(
     always @(posedge div_clk) begin
         if (!resetn) begin
             B <= 0;
-        end else if(div & start) begin
+        end 
+        else if (exception)begin
+            B <= 0;
+        end        
+        else if(div & start) begin
             B <= y_neg ? {1'b0 , ~y + 1} : {1'b0 , y};
         end
     end
@@ -81,7 +90,11 @@ module div(
     always @(posedge div_clk) begin
         if (!resetn) begin
             A <= 0;
-        end else if (div & start) begin
+        end 
+        else if (exception)begin
+            A <= 0;
+        end
+        else if (div & start) begin
             A <= x_neg ? {32'b0, ~x + 1} : {32'b0, x};
         end else if (~start) begin
             A <= partial_quotient ? {partial_sum[31:0], A[30:0], 1'b0}:
@@ -92,7 +105,11 @@ module div(
     always @(posedge div_clk) begin
         if (!resetn) begin
             S <= 0;
-        end else if (div & start) begin
+        end 
+        else if (exception)begin
+            S <= 0;
+        end        
+        else if (div & start) begin
             S <= 0;
         end else if (~start) begin
             S <= {S[30:0], partial_quotient};

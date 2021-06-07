@@ -24,7 +24,7 @@ module wb_stage(
     output        mtc0_we,
 
     output        wb_ex,       //has exception
-    output [13:0] ex_type,     //type of exception
+    output [ 4:0] ex_type,     //type of exception
     output        wb_bd,       //is delay slot
     output [31:0] wb_pc,       //pc
     output [31:0] wb_badvaddr, //bad vaddr
@@ -94,7 +94,7 @@ wire        ws_eret       ;
 wire [31:0] ws_badvaddr   ;
 wire        ws_bd         ;
 wire        ms_has_exception;
-wire [13:0] ms_exception_type;
+wire [ 4:0] ms_exception_type;
 wire        ws_cp0_op     ;
 wire        ws_cp0_we     ;
 wire [ 7:0] ws_cp0_addr   ;
@@ -155,7 +155,7 @@ always @(posedge clk) begin
 end
 
 wire        ws_has_exception;
-wire [13:0] ws_exception_type;
+wire [ 4:0] ws_exception_type;
 
 assign rf_we    = ws_gr_we && ws_valid && !ws_has_exception;
 assign rf_waddr = ws_dest;
