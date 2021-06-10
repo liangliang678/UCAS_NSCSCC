@@ -7,7 +7,7 @@ module cp0(
     input         mtc0_we     ,
     //signals of the exception, from WB
     input         wb_ex       , //has exception
-    input  [13:0] ex_type     , //type of exception
+    input  [ 4:0] ex_type     , //type of exception
     input         wb_bd       , //is delay slot
     input  [31:0] wb_pc       , //pc
     input  [31:0] wb_badvaddr , //bad vaddr
@@ -61,21 +61,21 @@ localparam     CR_INDEX    = 8'b00000000;
 
 wire [4:0] wb_excode;
 //encode ...
-assign wb_excode = (ex_type[0] == 1'b1) ? 5'h0 :  
-                   (ex_type[1] == 1'b1) ? 5'h4 :
-                   (ex_type[2] == 1'b1) ? 5'h2 :
-                   (ex_type[3] == 1'b1) ? 5'hb :
-                   (ex_type[4] == 1'b1) ? 5'ha :
-                   (ex_type[5] == 1'b1) ? 5'hc :
-                   (ex_type[6] == 1'b1) ? 5'hd :
-                   (ex_type[7] == 1'b1) ? 5'h8 :
-                   (ex_type[8] == 1'b1) ? 5'h9 :
-                   (ex_type[9] == 1'b1) ? 5'h4 :
-                   (ex_type[10] == 1'b1) ? 5'h5 :
-                   (ex_type[11] == 1'b1) ? 5'h2 :
-                   (ex_type[12] == 1'b1) ? 5'h3 :
-                   (ex_type[13] == 1'b1) ? 5'h1 : 5'h7;
-
+// assign wb_excode = (ex_type[0] == 1'b1) ? 5'h0 :  
+//                    (ex_type[1] == 1'b1) ? 5'h4 :
+//                    (ex_type[2] == 1'b1) ? 5'h2 :
+//                    (ex_type[3] == 1'b1) ? 5'hb :
+//                    (ex_type[4] == 1'b1) ? 5'ha :
+//                    (ex_type[5] == 1'b1) ? 5'hc :
+//                    (ex_type[6] == 1'b1) ? 5'hd :
+//                    (ex_type[7] == 1'b1) ? 5'h8 :
+//                    (ex_type[8] == 1'b1) ? 5'h9 :
+//                    (ex_type[9] == 1'b1) ? 5'h4 :
+//                    (ex_type[10] == 1'b1) ? 5'h5 :
+//                    (ex_type[11] == 1'b1) ? 5'h2 :
+//                    (ex_type[12] == 1'b1) ? 5'h3 :
+//                    (ex_type[13] == 1'b1) ? 5'h1 : 5'h7;
+assign wb_excode = ex_type;
 
 wire count_eq_compare;
 

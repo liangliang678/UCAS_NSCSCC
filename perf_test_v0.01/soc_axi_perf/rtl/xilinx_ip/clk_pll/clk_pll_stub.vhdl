@@ -1,10 +1,10 @@
 -- Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
--- Date        : Sat Jun  5 15:02:57 2021
--- Host        : SURFACE running 64-bit major release  (build 9200)
+-- Date        : Fri Jun 11 15:34:23 2021
+-- Host        : DESKTOP-Q45UAV2 running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode synth_stub
---               C:/Users/liang/Desktop/nscscc2021_group_v0.01/perf_test_v0.01/soc_axi_perf/rtl/xilinx_ip/clk_pll/clk_pll_stub.vhdl
+--               D:/nscscc/NSCSCC2021/NSCSCC/perf_test_v0.01/soc_axi_perf/rtl/xilinx_ip/clk_pll/clk_pll_stub.vhdl
 -- Design      : clk_pll
 -- Purpose     : Stub declaration of top-level module interface
 -- Device      : xc7a200tfbg676-2

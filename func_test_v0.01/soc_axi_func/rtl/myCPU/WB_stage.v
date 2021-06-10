@@ -105,17 +105,17 @@ wire        ws_res_from_wb;
 wire [31:0] ws_final_result;
 wire [31:0] ws_pc;
 
-assign {exception_is_tlb_refill,//139:139
-        ws_s1_index         ,  //138:135
-        ws_s1_found         ,  //134:134
-        ws_tlbp             ,  //133:133
-        ws_tlbr             ,  //132:132
-        ws_tlbwi            ,  //131:131
-        ws_eret             ,  //130:130
-        ws_badvaddr         ,  //129:98
-        ws_bd               ,  //97:97
-        ms_has_exception    ,  //96:96
-        ms_exception_type   ,  //95:82
+assign {exception_is_tlb_refill,//130:130
+        ws_s1_index         ,  //129:126
+        ws_s1_found         ,  //125:125
+        ws_tlbp             ,  //124:124
+        ws_tlbr             ,  //123:123
+        ws_tlbwi            ,  //122:122
+        ws_eret             ,  //121:121
+        ws_badvaddr         ,  //120:89
+        ws_bd               ,  //88:88
+        ms_has_exception    ,  //87:87
+        ms_exception_type   ,  //86:82
         ws_cp0_op           ,  //81:81
         ws_cp0_we           ,  //80:80
         ws_cp0_addr         ,  //79:72

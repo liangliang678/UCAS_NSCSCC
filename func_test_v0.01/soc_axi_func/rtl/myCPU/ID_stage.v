@@ -53,10 +53,10 @@ wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
 wire        exception_is_tlb_refill;
 
-assign {exception_is_tlb_refill, //111:111
-        ds_badvaddr      ,  //110:79
-        fs_has_exception ,  //78:78
-        fs_exception_type,  //77:64
+assign {exception_is_tlb_refill, //102:102
+        ds_badvaddr      ,  //101:70
+        fs_has_exception ,  //69:69
+        fs_exception_type,  //68:64
         ds_inst          ,  //63:32
         ds_pc               //31:0
         } = fs_to_ds_bus_r;
@@ -285,16 +285,16 @@ wire        ds_bd;           // is delay slot inst
 
 assign br_bus       = {br_valid,br_taken,br_target,br_stall};
 
-assign ds_to_es_bus = {exception_is_tlb_refill, //217:217
-                       ds_tlbp          ,  //216:216
-                       ds_tlbr          ,  //215:215
-                       ds_tlbwi         ,  //214:214
-                       ds_eret          ,  //213:213
-                       ds_badvaddr      ,  //212:181
-                       ds_bd            ,  //180:180
-                       alu_signed       ,  //179:179
-                       ds_has_exception ,  //178:178
-                       ds_exception_type,  //177:164
+assign ds_to_es_bus = {exception_is_tlb_refill, //208:208
+                       ds_tlbp          ,  //207:207
+                       ds_tlbr          ,  //206:206
+                       ds_tlbwi         ,  //205:205
+                       ds_eret          ,  //204:204
+                       ds_badvaddr      ,  //203:172
+                       ds_bd            ,  //171:171
+                       alu_signed       ,  //170:170
+                       ds_has_exception ,  //169:169
+                       ds_exception_type,  //168:164
                        cp0_op           ,  //163:163
                        cp0_we           ,  //162:162
                        cp0_addr         ,  //161:154

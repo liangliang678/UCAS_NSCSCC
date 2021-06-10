@@ -5,7 +5,7 @@ module alu(
   input  [31:0] alu_src1,
   input  [31:0] alu_src2,
   output [31:0] alu_result,
-  output [31:0] alu_result_mul_div,
+  output [63:0] alu_div_res,
   output [63:0] alu_mul_res,
   output        complete,
   output        overflow,
@@ -151,12 +151,14 @@ assign alu_result = ({32{op_add|op_sub }}   & add_sub_result)
                   | ({32{op_xor        }}   & xor_result)
                   | ({32{op_lui        }}   & lui_result)
                   | ({32{op_sll        }}   & sll_result)
-                  | ({32{op_srl|op_sra }}   & sr_result)
-                  | ({32{op_mult|op_multu}} & mult_result[31:0])
-                  | ({32{op_div|op_divu}}   & div_result[31:0]);
+                  | ({32{op_srl|op_sra }}   & sr_result);
+                  // | ({32{op_mult|op_multu}} & mult_result[31:0])
+                  // | ({32{op_div|op_divu}}   & div_result[31:0]);
 
-assign alu_result_mul_div = ({32{op_mult|op_multu}} & mult_result[63:32]) |
-                            ({32{op_div|op_divu}} & div_result[63:32]);
+assign alu_div_res = div_result;
+// ({64{op_mult|op_multu}} & mult_result) |
+//                             ({64{op_div|op_divu}} & div_result);
+
 assign alu_mul_res = mult_result;
 
 assign complete = ~(op_div | op_divu) | div_complete;

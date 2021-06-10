@@ -3,9 +3,10 @@
 
     `define BR_BUS_WD       35
 
+    `define PF_TO_FS_BUS_WD 75
     `define FS_TO_DS_BUS_WD 129
     `define DS_TO_ES_BUS_WD 232
-    `define ES_TO_MS_BUS_WD 259
+    `define ES_TO_MS_BUS_WD 291
     `define MS_TO_WS_BUS_WD 149
 
     `define WS_TO_RF_BUS_WD 38
