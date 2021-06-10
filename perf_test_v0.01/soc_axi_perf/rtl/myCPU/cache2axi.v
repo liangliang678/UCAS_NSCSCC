@@ -28,6 +28,7 @@ module cache2axi(
     input           data_rd_req,
     input   [  2:0] data_rd_type,
     input   [ 31:0] data_rd_addr,
+    input   [  2:0] data_rd_size,
     output          data_rd_rdy,
     output          data_ret_valid,
     output  [127:0] data_ret_data,
@@ -35,9 +36,11 @@ module cache2axi(
     input           data_wr_req,
     input   [  2:0] data_wr_type,
     input   [ 31:0] data_wr_addr,
+    input   [  2:0] data_wr_size,
     input   [  3:0] data_wr_wstrb,
     input   [127:0] data_wr_data,
     output          data_wr_rdy,
+    output          data_wr_ok,
     // axi interface - master
     // read request
     output [ 3:0] axi_arid,
@@ -91,39 +94,16 @@ module cache2axi(
     reg    [ 4:0] w_next_state;
     reg    [ 1:0] b_next_state;
     
-    // 为避免RAW，读写不能并行
-    reg         r_stall;
-    reg         w_stall;
-
-    always @(posedge clk) begin
-        if (!resetn) begin
-            r_stall <= 1'b0;
-        end else if (data_wr_req && data_wr_rdy) begin
-            r_stall <= 1'b1;
-        end else if (axi_bready && axi_bvalid) begin
-            r_stall <= 1'b0;
-        end
-    end
-
-    always @(posedge clk) begin
-        if (!resetn) begin
-            w_stall <= 1'b0;
-        end else if (data_rd_req && data_rd_rdy) begin
-            w_stall <= 1'b1;
-        end else if (axi_rready && axi_rvalid && axi_rid == 4'b1) begin
-            w_stall <= 1'b0;
-        end
-    end
-
     // AR
     reg  [ 3:0] arid;
     reg  [31:0] araddr;
     reg  [ 7:0] arlen;
+    reg  [ 2:0] arsize;
 
     assign axi_arid    = arid;
     assign axi_araddr  = araddr;
     assign axi_arlen   = arlen;
-    assign axi_arsize  = 3'd2;
+    assign axi_arsize  = arsize;
     assign axi_arburst = 2'b1;
     assign axi_arlock  = 2'b0;
     assign axi_arcache = 4'b0;
@@ -141,9 +121,9 @@ module cache2axi(
     always @(*) begin
         case(ar_state)
             `AR_IDLE:
-                if (data_rd_req && data_rd_rdy && ~r_stall) begin
+                if (data_rd_req && data_rd_rdy) begin
                     ar_next_state = `AR_RECV_DATA;
-                end else if (inst_rd_req && inst_rd_rdy && ~r_stall) begin
+                end else if (inst_rd_req && inst_rd_rdy) begin
                     ar_next_state = `AR_RECV_INST;
                 end else begin
                     ar_next_state = `AR_IDLE;
@@ -197,12 +177,27 @@ module cache2axi(
         end
     end
 
-    assign inst_rd_rdy = (ar_state == `AR_IDLE) && !r_stall;
-    assign data_rd_rdy = (ar_state == `AR_IDLE) && !r_stall;
+    always @(posedge clk) begin
+        if (!resetn) begin
+            arsize <= 3'b0;
+        end else if (data_rd_req && data_rd_rdy) begin
+            if (data_rd_type == 3'b010)
+                arsize <= data_rd_size;
+            else if (data_rd_type == 3'b100)
+                arsize <= 3'd2;
+        end else if (inst_rd_req && inst_rd_rdy) begin
+            arsize <= 3'd2;
+        end
+    end
+
+    assign inst_rd_rdy = (ar_state == `AR_IDLE);
+    assign data_rd_rdy = (ar_state == `AR_IDLE);
     
     // R
-    reg [127:0] rdata;
-    reg [  1:0] rcount;
+    reg [127:0] data_rdata;
+    reg [  1:0] data_rcount;
+    reg [127:0] inst_rdata;
+    reg [  1:0] inst_rcount;
 
     assign axi_rready = 1'b1;
 
@@ -235,19 +230,37 @@ module cache2axi(
 
     always @(posedge clk) begin
         if (!resetn) begin
-            rcount <= 2'b0;
-        end else if (axi_rready && axi_rvalid) begin
-            rcount <= rcount + 2'b1;
+            data_rcount <= 2'b0;
+        end else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
+            data_rcount <= data_rcount + 2'b1;
         end else if (r_state == `R_IDLE) begin
-            rcount <= 2'b0;
+            data_rcount <= 2'b0;
         end
     end
 
     always @(posedge clk) begin
         if (!resetn) begin
-            rdata <= 128'b0;
-        end else if (axi_rready && axi_rvalid) begin
-            rdata[rcount*32 +: 32] <= axi_rdata;
+            data_rdata <= 128'b0;
+        end else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
+            data_rdata[data_rcount*32 +: 32] <= axi_rdata;
+        end
+    end
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            inst_rcount <= 2'b0;
+        end else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
+            inst_rcount <= inst_rcount + 2'b1;
+        end else if (r_state == `R_IDLE) begin
+            inst_rcount <= 2'b0;
+        end
+    end
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            inst_rdata <= 128'b0;
+        end else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
+            inst_rdata[inst_rcount*32 +: 32] <= axi_rdata;
         end
     end
 
@@ -269,7 +282,7 @@ module cache2axi(
         if (!resetn) begin
             to_dcache_valid <= 1'b0;
         end
-        else if (axi_rready && axi_rvalid && axi_rlast&& axi_rid == 4'b1) begin
+        else if (axi_rready && axi_rvalid && axi_rlast && axi_rid == 4'b1) begin
             to_dcache_valid <= 1'b1;
         end
         else if (to_dcache_valid == 1'b1) begin
@@ -278,12 +291,13 @@ module cache2axi(
     end
     assign inst_ret_valid = to_icache_valid;
     assign data_ret_valid = to_dcache_valid;
-    assign inst_ret_data = rdata;
-    assign data_ret_data = rdata;
+    assign inst_ret_data = inst_rdata;
+    assign data_ret_data = data_rdata;
     
     // W
     reg  [31:0] awaddr;
     reg  [ 7:0] awlen;
+    reg  [ 2:0] awsize;
     reg  [31:0] wdata;
     reg  [ 3:0] wstrb;
 
@@ -293,7 +307,7 @@ module cache2axi(
     assign axi_awid    = 4'b1;
     assign axi_awaddr  = awaddr;
     assign axi_awlen   = awlen;
-    assign axi_awsize  = 3'd2;
+    assign axi_awsize  = awsize;
     assign axi_awburst = 2'b1;
     assign axi_awlock  = 2'b0;
     assign axi_awcache = 4'b0;
@@ -360,7 +374,7 @@ module cache2axi(
 
     always @(posedge clk) begin
         if (!resetn) begin
-            wdata <= 128'b0;
+            wdata <= 32'b0;
         end else begin
             wdata <= cache_data[wcount*32 +: 32];
         end
@@ -374,6 +388,17 @@ module cache2axi(
                 wstrb <= data_wr_wstrb;
             else if (data_wr_type == 3'b100)
                 wstrb <= 4'b1111;
+        end
+    end
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            awsize <= 3'b0;
+        end else if (data_wr_req && data_wr_rdy) begin
+            if (data_wr_type == 3'b010)
+                awsize <= data_wr_size;
+            else if (data_wr_type == 3'b100)
+                awsize <= 3'd2;
         end
     end
 
@@ -418,6 +443,7 @@ module cache2axi(
     end
 
     // to cache
-    assign data_wr_rdy = (w_state == `W_IDLE) && !w_stall;
+    assign data_wr_rdy = (w_state == `W_IDLE);
+    assign data_wr_ok = (b_state == `B_RESP);
 
 endmodule

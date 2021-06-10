@@ -140,10 +140,10 @@ wire        fs_exception_tlb_invalid;
 wire [31:0] fs_badvaddr;
 wire        exception_is_tlb_refill;
 
-assign fs_to_ds_bus = {exception_is_tlb_refill, //111:111
-                       fs_badvaddr      ,  //110:79
-                       fs_has_exception ,  //78:78
-                       fs_exception_type,  //77:64
+assign fs_to_ds_bus = {exception_is_tlb_refill, //102:102
+                       fs_badvaddr      ,  //101:70
+                       fs_has_exception ,  //69:69
+                       fs_exception_type,  //68:64
                        fs_inst          ,  //63:32
                        fs_pc               //31:0
                        };

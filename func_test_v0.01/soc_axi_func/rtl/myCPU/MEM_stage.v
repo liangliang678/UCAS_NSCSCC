@@ -10,7 +10,7 @@ module mem_stage(
     input                          es_to_ms_valid,
     input  [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus  ,
     //multiper res
-    input  [63                 :0] mul_res       ,                 
+    input  [63                 :0] mul_res    ,                 
     //to ws
     output                         ms_to_ws_valid,
     output [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus  ,
@@ -58,7 +58,7 @@ wire        ms_hi_we;
 wire        ms_lo_we;
 wire        ms_hl_src_from_mul;
 wire        ms_hl_src_from_div;
-wire [31:0] ms_alu_result_mul_div;
+wire [63:0] ms_alu_div_res;
 wire        ms_res_from_hi;
 wire        ms_res_from_lo;
 wire        ms_res_from_mem;
@@ -68,30 +68,30 @@ wire        ms_res_from_wb;
 wire [31:0] ms_alu_result;
 wire [31:0] ms_pc;
 wire        exception_is_tlb_refill;
-assign {exception_is_tlb_refill, //250:250
-        ms_s1_index           ,  //249:246
-        ms_s1_found           ,  //245:245
-        ms_tlbp               ,  //244:244
-        ms_tlbr               ,  //243:243
-        ms_tlbwi              ,  //242:242
-        ms_mem_we             ,  //241:241
-        ms_eret               ,  //240:240
-        ms_badvaddr           ,  //239:208
-        ms_bd                 ,  //207:207
-        es_has_exception      ,  //206:206
-        es_exception_type     ,  //205:192
-        ms_cp0_op             ,  //191:191
-        ms_cp0_we             ,  //190:190
-        ms_cp0_addr           ,  //189:182
-        ms_load_store_type    ,  //181:175
-        ms_load_store_offset  ,  //174:173
-        ms_rt_value           ,  //172:141
-        ms_rs_value           ,  //140:109
-        ms_hi_we              ,  //108:108
-        ms_lo_we              ,  //107:107
-        ms_hl_src_from_mul    ,  //106:106
-        ms_hl_src_from_div    ,  //105:105
-        ms_alu_result_mul_div ,  //104:73
+assign {exception_is_tlb_refill, //273:273
+        ms_s1_index           ,  //272:269
+        ms_s1_found           ,  //268:268
+        ms_tlbp               ,  //267:267
+        ms_tlbr               ,  //266:266
+        ms_tlbwi              ,  //265:265
+        ms_mem_we             ,  //264:264
+        ms_eret               ,  //263:263
+        ms_badvaddr           ,  //262:231
+        ms_bd                 ,  //230:230
+        es_has_exception      ,  //229:229
+        es_exception_type     ,  //228:224
+        ms_cp0_op             ,  //223:223
+        ms_cp0_we             ,  //222:222
+        ms_cp0_addr           ,  //221:214
+        ms_load_store_type    ,  //213:207
+        ms_load_store_offset  ,  //206:205
+        ms_rt_value           ,  //204:173
+        ms_rs_value           ,  //172:141
+        ms_hi_we              ,  //140:140
+        ms_lo_we              ,  //139:139
+        ms_hl_src_from_mul    ,  //138:138
+        ms_hl_src_from_div    ,  //137:137
+        ms_alu_div_res        ,  //136:73
         ms_res_from_mem       ,  //72:72
         ms_res_from_hi        ,  //71:71
         ms_res_from_lo        ,  //70:70
@@ -111,17 +111,17 @@ reg         ms_exception_appear;
 
 reg         ms_cancel;
 
-assign ms_to_ws_bus = {exception_is_tlb_refill,//139:139
-                       ms_s1_index         ,  //138:135
-                       ms_s1_found         ,  //134:134
-                       ms_tlbp             ,  //133:133
-                       ms_tlbr             ,  //132:132
-                       ms_tlbwi            ,  //131:131
-                       ms_eret             ,  //130:130
-                       ms_badvaddr         ,  //129:98
-                       ms_bd               ,  //97:97
-                       ms_has_exception    ,  //96:96
-                       ms_exception_type   ,  //95:82
+assign ms_to_ws_bus = {exception_is_tlb_refill,//130:130
+                       ms_s1_index         ,  //129:126
+                       ms_s1_found         ,  //125:125
+                       ms_tlbp             ,  //124:124
+                       ms_tlbr             ,  //123:123
+                       ms_tlbwi            ,  //122:122
+                       ms_eret             ,  //121:121
+                       ms_badvaddr         ,  //120:89
+                       ms_bd               ,  //88:88
+                       ms_has_exception    ,  //87:87
+                       ms_exception_type   ,  //86:82
                        ms_cp0_op           ,  //81:81
                        ms_cp0_we           ,  //80:80
                        ms_cp0_addr         ,  //79:72
@@ -234,7 +234,7 @@ always @(posedge clk) begin
         HI <= 0;
     end else if (ms_hi_we && ms_valid) begin
         HI <= ms_hl_src_from_mul ? mul_res[63:32]:
-              ms_hl_src_from_div ? ms_alu_result :
+              ms_hl_src_from_div ? ms_alu_div_res[31: 0]:
                                    ms_rs_value;
     end
 end
@@ -244,7 +244,7 @@ always @(posedge clk) begin
         LO <= 0;
     end else if (ms_lo_we && ms_valid) begin
         LO <= ms_hl_src_from_mul ? mul_res[31: 0]:
-              ms_hl_src_from_div ? ms_alu_result_mul_div : 
+              ms_hl_src_from_div ? ms_alu_div_res[63:32]: 
                                    ms_rs_value;
     end
 end

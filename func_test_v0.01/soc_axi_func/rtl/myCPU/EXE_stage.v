@@ -101,16 +101,16 @@ wire [31:0] es_pc         ;
 wire        exception_is_tlb_refill;
 wire        exception_is_tlb_refill_temp;
 
-assign {exception_is_tlb_refill_temp,//217:217
-        es_tlbp             ,  //216:216
-        es_tlbr             ,  //215:215
-        es_tlbwi            ,  //214:214
-        es_eret             ,  //213:213
-        es_badvaddr_temp    ,  //212:181
-        es_bd               ,  //180:180
-        es_alu_signed       ,  //179:179
-        ds_has_exception    ,  //178:178
-        ds_exception_type   ,  //177:164
+assign {exception_is_tlb_refill_temp,//208:208
+        es_tlbp             ,  //207:207
+        es_tlbr             ,  //206:206
+        es_tlbwi            ,  //205:205
+        es_eret             ,  //204:204
+        es_badvaddr_temp    ,  //203:172
+        es_bd               ,  //171:171
+        es_alu_signed       ,  //170:170
+        ds_has_exception    ,  //169:169
+        ds_exception_type   ,  //168:164
         es_cp0_op           ,  //163:163
         es_cp0_we           ,  //162:162
         es_cp0_addr         ,  //161:154
@@ -141,7 +141,7 @@ assign es_res_from_wb = es_cp0_op;
 wire [31:0] es_alu_src1   ;
 wire [31:0] es_alu_src2   ;
 wire [31:0] es_alu_result ;
-wire [31:0] es_alu_result_mul_div;
+wire [63:0] es_alu_div_res;
 wire [15:0] alu_op        ;
 
 wire        es_res_from_mem;
@@ -197,30 +197,30 @@ reg         es_exception_appear;
 
 reg         es_cancel;
 
-assign es_to_ms_bus = {exception_is_tlb_refill, //250:250
-                       s1_index              ,  //249:246
-                       s1_found              ,  //245:245
-                       es_tlbp               ,  //244:244
-                       es_tlbr               ,  //243:243
-                       es_tlbwi              ,  //242:242
-                       es_mem_we             ,  //241:241
-                       es_eret               ,  //240:240
-                       es_badvaddr           ,  //239:208
-                       es_bd                 ,  //207:207
-                       es_has_exception      ,  //206:206
-                       es_exception_type     ,  //205:192
-                       es_cp0_op             ,  //191:191
-                       es_cp0_we             ,  //190:190
-                       es_cp0_addr           ,  //189:182
-                       es_load_store_type    ,  //181:175
-                       es_load_store_offset  ,  //174:173
-                       es_rt_value           ,  //172:141
-                       es_rs_value           ,  //140:109
-                       es_hi_we              ,  //108:108
-                       es_lo_we              ,  //107:107
-                       es_hl_src_from_mul    ,  //106:106
-                       es_hl_src_from_div    ,  //105:105
-                       es_alu_result_mul_div ,  //104:73
+assign es_to_ms_bus = {exception_is_tlb_refill, //273:273
+                       s1_index              ,  //272:269
+                       s1_found              ,  //268:268
+                       es_tlbp               ,  //267:267
+                       es_tlbr               ,  //266:266
+                       es_tlbwi              ,  //265:265
+                       es_mem_we             ,  //264:264
+                       es_eret               ,  //263:263
+                       es_badvaddr           ,  //262:231
+                       es_bd                 ,  //230:230
+                       es_has_exception      ,  //229:229
+                       es_exception_type     ,  //228:224
+                       es_cp0_op             ,  //223:223
+                       es_cp0_we             ,  //222:222
+                       es_cp0_addr           ,  //221:214
+                       es_load_store_type    ,  //213:207
+                       es_load_store_offset  ,  //206:205
+                       es_rt_value           ,  //204:173
+                       es_rs_value           ,  //172:141
+                       es_hi_we              ,  //140:140
+                       es_lo_we              ,  //139:139
+                       es_hl_src_from_mul    ,  //138:138
+                       es_hl_src_from_div    ,  //137:137
+                       es_alu_div_res        ,  //136:73
                        es_res_from_mem       ,  //72:72
                        es_res_from_hi        ,  //71:71
                        es_res_from_lo        ,  //70:70
@@ -291,12 +291,13 @@ alu u_alu(
     .alu_src1           (es_alu_src1          ),
     .alu_src2           (es_alu_src2          ),
     .alu_result         (es_alu_result        ),
-    .alu_result_mul_div (es_alu_result_mul_div),
+    .alu_div_res        (es_alu_div_res       ),
     .alu_mul_res        (mul_res              ),
     .complete           (complete             ),
     .overflow           (int_overflow         ),
     .exception          (es_ex | es_cancel_in )
     );
+
 
 assign es_load_store_offset = es_alu_result[1:0];
 
@@ -391,14 +392,15 @@ assign es_exception_tlb_invalid = s1_found & ~s1_v & es_use_tlb;
 assign es_exception_modified = es_mem_we & s1_found & s1_v & ~s1_d & es_use_tlb;
 assign es_has_exception       = es_exception_modified || es_exception_tlb_invalid || es_exception_tlb_refill || exception_adel || exception_ades || exception_int_overflow || ds_has_exception;
 
-assign es_exception_type      = (ds_has_exception      ) ? ds_exception_type :
-                                ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_mem_we) ? 5'h3 :         //store
-                                ((es_exception_tlb_invalid || es_exception_tlb_refill) & (es_res_from_mem || es_tlbp)) ? 5'h2 :   //load or tlbp
-                                //((es_exception_tlb_invalid || es_exception_tlb_refill) & es_tlbp) ? 5'h2 :          //tlbp
-                                (es_exception_modified) ? 5'h1 :
+assign es_exception_type      = //((exception_int_overflow) && (((ds_has_exception) && ((ds_exception_type == 5'h8) || (ds_exception_type == 5'h9))) || (!ds_has_exception))) ? 5'hc :
+                                (ds_has_exception      ) ? ds_exception_type :
                                 (exception_int_overflow) ? 5'hc : 
                                 (exception_adel        ) ? 5'h4 :
-                              /*(exception_ades        )*/ 5'h5 ;
+                                (exception_ades        ) ? 5'h5 :
+                                ((es_exception_tlb_invalid || es_exception_tlb_refill) & es_mem_we) ? 5'h3 :         //store
+                                ((es_exception_tlb_invalid || es_exception_tlb_refill) & (es_res_from_mem || es_tlbp)) ? 5'h2 :   //load or tlbp           
+                                /*(es_exception_modified)*/  5'h1 ;
+
 // assign es_exception_type[0]   = ds_exception_type[0];
 // assign es_exception_type[1]   = ds_exception_type[1];
 // assign es_exception_type[2]   = ds_exception_type[2];

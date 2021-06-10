@@ -300,7 +300,7 @@ exe_stage exe_stage(
 
 
     //multiper result
-    .mul_res        (mul_res        ),
+    .mul_res     (mul_res     ),
     //data relevant
     .stall_es_bus   (stall_es_bus   ),
     .es_ex          (ex_begin       ),
@@ -333,7 +333,7 @@ mem_stage mem_stage(
     .es_to_ms_valid (es_to_ms_valid ),
     .es_to_ms_bus   (es_to_ms_bus   ),
     //multiper result
-    .mul_res        (mul_res        ),
+    .mul_res     (mul_res     ),
     //to ws
     .ms_to_ws_valid (ms_to_ws_valid ),
     .ms_to_ws_bus   (ms_to_ws_bus   ),

@@ -17,6 +17,7 @@ module dcache(
     input  [ 19:0]  tag,
     input  [  7:0]  index,
     input  [  3:0]  offset,
+    input  [  1:0]  size,
     input  [  3:0]  wstrb,
     input  [ 31:0]  wdata,
 
@@ -28,6 +29,7 @@ module dcache(
     output          rd_req,
     output [  2:0]  rd_type,
     output [ 31:0]  rd_addr,
+    output [  2:0]  rd_size,
     input           rd_rdy,
     input           ret_valid,
     input  [127:0]  ret_data,
@@ -35,9 +37,11 @@ module dcache(
     output          wr_req,
     output [  2:0]  wr_type,
     output [ 31:0]  wr_addr,
+    output [  2:0]  wr_size,
     output [  3:0]  wr_wstrb,
     output [127:0]  wr_data,
-    input           wr_rdy
+    input           wr_rdy,
+    input           wr_ok
 );
 
 wire        tagv_way0_en;
@@ -264,6 +268,7 @@ reg          rb_uncache;
 reg  [ 19:0] rb_tag;
 reg  [  7:0] rb_index;
 reg  [  3:0] rb_offset;
+reg  [  1:0] rb_size;
 reg  [  3:0] rb_wstrb;
 reg  [ 31:0] rb_wdata;
 
@@ -283,6 +288,7 @@ always @(posedge clk) begin
         rb_tag    <= tag;
         rb_index  <= index;      
         rb_offset <= offset;
+        rb_size   <= size;
         rb_wstrb  <= wstrb;
         rb_wdata  <= wdata;
     end
@@ -307,7 +313,7 @@ wire         cache_hit;
 assign way0_hit = way0_v && (way0_tag == rb_tag);
 assign way1_hit = way1_v && (way1_tag == rb_tag);
 assign cache_hit = rb_uncache ? 0 : (way0_hit || way1_hit);
-assign data_ok = (state == `LOOKUP) && cache_hit || (state == `REFILL) && ret_valid || (state == `REFILL) && rb_uncache && rb_op;
+assign data_ok = (state == `LOOKUP) && cache_hit || (state == `REFILL) && ret_valid || (state == `REFILL) && rb_uncache && rb_op && wr_ok;
 
 // Data Select
 wire [ 31:0] way0_load_word;
@@ -360,7 +366,6 @@ reg         rp_way_v;
 reg         rp_way_d;
 reg [ 19:0] rp_way_tag;
 reg [127:0] rp_way_data;
-reg         wr_req_reg;
 
 always @(posedge clk) begin
     if ((state == `LOOKUP) && !cache_hit) begin
@@ -370,24 +375,11 @@ always @(posedge clk) begin
         rp_way_data <= rp_way ? way1_data : way0_data;
     end
 end
-always @(posedge clk) begin
-    if (!resetn) begin
-        wr_req_reg <= 1'b0;
-    end
-    else if (state == `MISS && !rb_uncache && wr_rdy && rp_way_d && rp_way_v) begin
-        wr_req_reg <= 1'b1;
-    end
-    else if (state == `MISS && rb_uncache && rb_op) begin
-        wr_req_reg <= 1'b1;
-    end
-    else if (wr_req_reg == 1'b1) begin
-        wr_req_reg <= 1'b0;
-    end
-end
 
-assign wr_req = wr_req_reg;
+assign wr_req = (state == `MISS) && !(rb_uncache && !rb_op) && !(!rb_uncache && (!rp_way_d || !rp_way_v));
 assign wr_type = rb_uncache ? 3'b010 : 3'b100;
 assign wr_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rp_way_tag, rb_index, 4'b0};
+assign wr_size = rb_uncache ? {1'b0, rb_size} : 3'd2;
 assign wr_wstrb = rb_wstrb;
 assign wr_data = rb_uncache ? {96'b0, rb_wdata} : rp_way_data;
 
@@ -404,6 +396,7 @@ wire [ 31:0] rd_way_rdata;
 assign rd_req = (state == `REPLACE) && !(rb_uncache && rb_op);
 assign rd_type = rb_uncache ? 3'b010 : 3'b100;
 assign rd_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 4'b0};
+assign rd_size = rb_uncache ? {1'b0, rb_size} : 3'd2;
 
 assign rd_way_data_bank0 = ret_data[31:0];
 assign rd_way_data_bank1 = ret_data[63:32];
@@ -466,7 +459,7 @@ always@(*) begin
         else if (rb_uncache && !rb_op) begin
             next_state = `REPLACE;
         end
-        else if (wr_rdy) begin
+        else if (wr_rdy && wr_req) begin
             next_state = `REPLACE;
         end
 		else begin
@@ -480,7 +473,7 @@ always@(*) begin
 			next_state = `REPLACE;
 		end
     `REFILL:
-        if (rb_uncache && rb_op || ret_valid) begin
+        if (rb_uncache && rb_op && wr_ok || ret_valid) begin
             next_state = `IDLE;
         end
         else begin
