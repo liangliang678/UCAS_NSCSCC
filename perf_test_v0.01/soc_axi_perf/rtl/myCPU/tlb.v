@@ -1,6 +1,6 @@
 module tlb #
 (
-    parameter TLBNUM = 8
+    parameter TLBNUM = 16
 )
 (     
     input                       clk, 

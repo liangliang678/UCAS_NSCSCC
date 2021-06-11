@@ -233,7 +233,6 @@ module cache2axi(
             data_rcount <= 2'b0;
         end else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
             data_rcount <= data_rcount + 2'b1;
-<<<<<<< HEAD
         end else if (r_state == `R_IDLE) begin
             data_rcount <= 2'b0;
         end
@@ -254,36 +253,11 @@ module cache2axi(
             inst_rcount <= inst_rcount + 2'b1;
         end else if (r_state == `R_IDLE) begin
             inst_rcount <= 2'b0;
-=======
-        end else if (r_state == `R_IDLE) begin
-            data_rcount <= 2'b0;
->>>>>>> d7a5d57c27b21ad1581b12ac28f4c8506dea149b
         end
     end
 
     always @(posedge clk) begin
         if (!resetn) begin
-<<<<<<< HEAD
-=======
-            data_rdata <= 128'b0;
-        end else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
-            data_rdata[data_rcount*32 +: 32] <= axi_rdata;
-        end
-    end
-
-    always @(posedge clk) begin
-        if (!resetn) begin
-            inst_rcount <= 2'b0;
-        end else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
-            inst_rcount <= inst_rcount + 2'b1;
-        end else if (r_state == `R_IDLE) begin
-            inst_rcount <= 2'b0;
-        end
-    end
-
-    always @(posedge clk) begin
-        if (!resetn) begin
->>>>>>> d7a5d57c27b21ad1581b12ac28f4c8506dea149b
             inst_rdata <= 128'b0;
         end else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
             inst_rdata[inst_rcount*32 +: 32] <= axi_rdata;
@@ -324,10 +298,7 @@ module cache2axi(
     reg  [31:0] awaddr;
     reg  [ 7:0] awlen;
     reg  [ 2:0] awsize;
-<<<<<<< HEAD
     reg  [31:0] wdata;
-=======
->>>>>>> d7a5d57c27b21ad1581b12ac28f4c8506dea149b
     reg  [ 3:0] wstrb;
 
     reg  [ 1:0] wcount;
@@ -344,7 +315,7 @@ module cache2axi(
     assign axi_awvalid = (w_state == `W_SEND_ADDR);
 
     assign axi_wid     = 4'b1;
-    assign axi_wdata   = cache_data[wcount*32 +: 32];
+    assign axi_wdata   = wdata;
     assign axi_wstrb   = wstrb;
     assign axi_wlast   = (w_state == `W_SEND_DATA) && (awlen == wcount);
     assign axi_wvalid  = (w_state == `W_SEND_DATA);
@@ -403,29 +374,20 @@ module cache2axi(
 
     always @(posedge clk) begin
         if (!resetn) begin
-<<<<<<< HEAD
             wdata <= 32'b0;
         end else begin
             wdata <= cache_data[wcount*32 +: 32];
-=======
+        end
+    end
+
+    always @(posedge clk) begin
+        if (!resetn) begin
             wstrb <= 4'b0;
         end else if (data_wr_req && data_wr_rdy) begin
             if (data_wr_type == 3'b010)
                 wstrb <= data_wr_wstrb;
             else if (data_wr_type == 3'b100)
                 wstrb <= 4'b1111;
->>>>>>> d7a5d57c27b21ad1581b12ac28f4c8506dea149b
-        end
-    end
-
-    always @(posedge clk) begin
-        if (!resetn) begin
-            awsize <= 3'b0;
-        end else if (data_wr_req && data_wr_rdy) begin
-            if (data_wr_type == 3'b010)
-                awsize <= data_wr_size;
-            else if (data_wr_type == 3'b100)
-                awsize <= 3'd2;
         end
     end
 

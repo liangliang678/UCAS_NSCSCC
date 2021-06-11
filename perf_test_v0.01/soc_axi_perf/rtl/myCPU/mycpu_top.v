@@ -54,14 +54,17 @@ module mycpu_top(
 reg         reset;
 always @(posedge aclk) reset <= ~aresetn;
 
+wire         fs_allowin;
 wire         ds_allowin;
 wire         es_allowin;
 wire         ms_allowin;
 wire         ws_allowin;
+wire         to_fs_valid;
 wire         fs_to_ds_valid;
 wire         ds_to_es_valid;
 wire         es_to_ms_valid;
 wire         ms_to_ws_valid;
+wire [`PF_TO_FS_BUS_WD -1:0] preif_to_fs_bus;
 wire [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus;
 wire [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus;
 wire [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus;
@@ -71,6 +74,8 @@ wire [`BR_BUS_WD       -1:0] br_bus;
 wire [`STALL_ES_BUS_WD -1:0] stall_es_bus;
 wire [`STALL_MS_BUS_WD -1:0] stall_ms_bus;
 wire [`STALL_WS_BUS_WD -1:0] stall_ws_bus;
+
+wire fs_has_inst;
 
 wire [63:0]  mul_res;
 
@@ -206,28 +211,27 @@ wire        wb_mtc0_index;
 wire        cancel_to_all;
 wire [31:0] cancel_pc;
 wire        exception_is_tlb_refill;
-// IF stage
-if_stage if_stage(
-    .clk            (aclk            ),
+
+// preIF stage
+preif_stage preif_stage(
+    .clk            (aclk           ),
     .reset          (reset          ),
-    //allowin
-    .ds_allowin     (ds_allowin     ),
+    //allwoin
+    .fs_allowin     (fs_allowin     ),   
     //brbus
     .br_bus         (br_bus         ),
-    //outputs
-    .fs_to_ds_valid (fs_to_ds_valid ),
-    .fs_to_ds_bus   (fs_to_ds_bus   ),
+    //to fs
+    .to_fs_valid    (to_fs_valid    ),
+    .preif_to_fs_bus(preif_to_fs_bus),
+    .fs_has_inst    (fs_has_inst    ),
+
     // inst cache interface
     .inst_cache_valid       (inst_cache_valid   ),
     .inst_cache_uncache     (inst_cache_uncache ),
     .inst_cache_tag         (inst_cache_tag     ),
     .inst_cache_index       (inst_cache_index   ),
-    .inst_cache_offset      (inst_cache_offset  ),
+    .inst_cache_offset      (inst_cache_offset  ),    
     .inst_cache_addr_ok     (inst_cache_addr_ok ),
-    .inst_cache_data_ok     (inst_cache_data_ok ),
-    .inst_cache_rdata       (inst_cache_rdata   ),
-
-    .fs_ex          (ex_begin       ),
 
     //TLB search port 0
     .s0_vpn2          (s0_vpn2      ),
@@ -240,10 +244,79 @@ if_stage if_stage(
     .s0_d             (s0_d         ),
     .s0_v             (s0_v         ),
 
-    .cp0_entryhi    (cp0_entryhi    ),
-    .fs_cancel_in   (cancel_to_all  ),
-    .cancel_pc      (cancel_pc      ),
+    .cp0_entryhi      (cp0_entryhi  ),
+
+    //clear stage
+    .pfs_ex           (ex_begin     ),
+
+    //reflush
+    .pfs_cancel_in    (cancel_to_all),
+    .cancel_pc        (cancel_pc    ),  //actually pc of TLBR/TLBWI
     .exception_is_tlb_refill_in(exception_is_tlb_refill)
+);
+
+
+// IF stage
+if_stage if_stage(
+    .clk            (aclk           ),
+    .reset          (reset          ),
+
+    //preIF
+    .to_fs_valid    (to_fs_valid    ),
+    .fs_has_inst    (fs_has_inst    ),
+    .fs_allowin     (fs_allowin     ),
+    .preif_to_fs_bus(preif_to_fs_bus),
+    //allwoin
+    .ds_allowin     (ds_allowin     ),
+    //to ds
+    .fs_to_ds_valid (fs_to_ds_valid ),
+    .fs_to_ds_bus   (fs_to_ds_bus   ),
+
+    //icache output
+    .inst_cache_data_ok(inst_cache_data_ok ),
+    .inst_cache_rdata  (inst_cache_rdata   ),
+
+    //clear stage
+    .fs_ex          (ex_begin       ),
+    //reflush
+    .fs_cancel_in   (cancel_to_all  )
+
+    // .clk            (aclk           ),
+    // .reset          (reset          ),
+    // //allowin
+    // .ds_allowin     (ds_allowin     ),
+    // //brbus
+    // .br_bus         (br_bus         ),
+    // //outputs
+    // .fs_to_ds_valid (fs_to_ds_valid ),
+    // .fs_to_ds_bus   (fs_to_ds_bus   ),
+    // // inst cache interface
+    // .inst_cache_valid       (inst_cache_valid   ),
+    // .inst_cache_uncache     (inst_cache_uncache ),
+    // .inst_cache_tag         (inst_cache_tag     ),
+    // .inst_cache_index       (inst_cache_index   ),
+    // .inst_cache_offset      (inst_cache_offset  ),
+    // .inst_cache_addr_ok     (inst_cache_addr_ok ),
+    // .inst_cache_data_ok     (inst_cache_data_ok ),
+    // .inst_cache_rdata       (inst_cache_rdata   ),
+
+    // .fs_ex          (ex_begin       ),
+
+    // //TLB search port 0
+    // .s0_vpn2          (s0_vpn2      ),
+    // .s0_odd_page      (s0_odd_page  ),
+    // .s0_asid          (s0_asid      ),
+    // .s0_found         (s0_found     ),
+    // .s0_index         (s0_index     ),
+    // .s0_pfn           (s0_pfn       ),
+    // .s0_c             (s0_c         ),
+    // .s0_d             (s0_d         ),
+    // .s0_v             (s0_v         ),
+
+    // .cp0_entryhi    (cp0_entryhi    ),
+    // .fs_cancel_in   (cancel_to_all  ),
+    // .cancel_pc      (cancel_pc      ),
+    // .exception_is_tlb_refill_in(exception_is_tlb_refill)
 );
 // ID stage
 id_stage id_stage(

@@ -144,8 +144,6 @@ wire [31:0] es_alu_result ;
 wire [63:0] es_alu_div_res;
 wire [15:0] alu_op        ;
 
-wire [31:0] es_pc8        ;
-
 wire        es_res_from_mem;
 wire        es_res_from_hi;
 wire        es_res_from_lo;
@@ -199,13 +197,7 @@ reg         es_exception_appear;
 
 reg         es_cancel;
 
-<<<<<<< HEAD
-assign es_to_ms_bus = {es_src2_is_8          ,
-                       es_pc8                 ,
-                       exception_is_tlb_refill, //273:273
-=======
 assign es_to_ms_bus = {exception_is_tlb_refill, //273:273
->>>>>>> d7a5d57c27b21ad1581b12ac28f4c8506dea149b
                        s1_index              ,  //272:269
                        s1_found              ,  //268:268
                        es_tlbp               ,  //267:267
@@ -291,8 +283,6 @@ assign es_alu_src2 = es_src2_is_imm   ? {{16{es_imm[15]}}, es_imm[15:0]} :
                      es_src2_is_imm16 ? {16'b0, es_imm[15:0]} :
                      es_src2_is_8     ? 32'd8 :
                                       es_rt_value;
-
-assign es_pc8 = es_pc + 32'h8;
 
 alu u_alu(
     .clk                (clk                  ),
