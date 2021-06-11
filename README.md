@@ -20,13 +20,10 @@
 
 ## 性能数据
 
-func中的时间为通过最后一个测试点的时间；perf中的时间为调用结束时的时间。
 
-| 日期       | 修改        | func       | perf       |
-| :--        | :--        | :--:       | :--:       |
-| 2021-05-28 | -          | 36216295ns | 38402500ps | 
-| 2021-06-06 | 增加了cache | 40871735ns | 26808500ps |
-| 2021-06-11 | 修改通路，减少延迟，wns为0.134|40738315ns | -  |
+| date       | modification | bitcount | bubble_sort | coremark | crc32 | dhrystone | quick_sort | select_sort | sha    | stream_copy | stringsearch | all    |
+| :--        | :--          | :--:     | :--:        | :--:     | :--:  | :--:      | :--:       | :--:        | :--:   | :--:        | :--:         | :--:   |
+| 2021-06-11 | -            | 556c7    | 1ec5f8      | 4bcf9b   | 2dd2f3| b18dc     | 1ecd39     | 1cce45      | 1ea656 | 2478e       | 199f8d       | 57.297 |
 
 ## 参考资料
 
