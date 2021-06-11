@@ -199,9 +199,13 @@ reg         es_exception_appear;
 
 reg         es_cancel;
 
+<<<<<<< HEAD
 assign es_to_ms_bus = {es_src2_is_8          ,
                        es_pc8                 ,
                        exception_is_tlb_refill, //273:273
+=======
+assign es_to_ms_bus = {exception_is_tlb_refill, //273:273
+>>>>>>> d7a5d57c27b21ad1581b12ac28f4c8506dea149b
                        s1_index              ,  //272:269
                        s1_found              ,  //268:268
                        es_tlbp               ,  //267:267

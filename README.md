@@ -20,14 +20,20 @@
 
 ## 性能数据
 
-func中的时间为通过最后一个测试点的时间；perf中的时间为调用结束时的时间。
 
+<<<<<<< HEAD
 | 日期       | 修改        | func       | perf       |
 | :--        | :--        | :--:       | :--:       |
 | 2021-05-28 | -          | 36216295ns | 38402500ps | 
 | 2021-06-06 | 增加了cache | 40871735ns | 26808500ps |
 | 2021-06-11 | 修改通路，减少延迟，wns为0.134|40738315ns | -  |
-                                            |40685515
+| 2021-06-12 | 切分了preif和if，但是时序似乎变差了|40685515ns| - |
+=======
+| date       | modification | bitcount | bubble_sort | coremark | crc32 | dhrystone | quick_sort | select_sort | sha    | stream_copy | stringsearch | all    |
+| :--        | :--          | :--:     | :--:        | :--:     | :--:  | :--:      | :--:       | :--:        | :--:   | :--:        | :--:         | :--:   |
+| 2021-06-11 | -            | 556c7    | 1ec5f8      | 4bcf9b   | 2dd2f3| b18dc     | 1ecd39     | 1cce45      | 1ea656 | 2478e       | 199f8d       | 57.297 |
+
+>>>>>>> d7a5d57c27b21ad1581b12ac28f4c8506dea149b
 ## 参考资料
 
 [AXI总线概述](https://blog.csdn.net/bleauchat/article/details/96891619)

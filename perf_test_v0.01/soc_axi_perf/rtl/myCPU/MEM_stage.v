@@ -68,12 +68,16 @@ wire        ms_res_from_wb;
 wire [31:0] ms_alu_result;
 wire [31:0] ms_pc;
 wire        exception_is_tlb_refill;
+<<<<<<< HEAD
 wire [31:0] ms_pc8;
 wire        ms_use_pc8;
 
 assign {ms_use_pc8            ,
         ms_pc8                ,
         exception_is_tlb_refill, //273:273
+=======
+assign {exception_is_tlb_refill, //273:273
+>>>>>>> d7a5d57c27b21ad1581b12ac28f4c8506dea149b
         ms_s1_index           ,  //272:269
         ms_s1_found           ,  //268:268
         ms_tlbp               ,  //267:267
