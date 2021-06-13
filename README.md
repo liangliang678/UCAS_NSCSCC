@@ -23,7 +23,8 @@
 
 | date       | modification | clk | bitcount | bubble_sort | coremark | crc32 | dhrystone | quick_sort | select_sort | sha    | stream_copy | stringsearch | all    |
 | :--        | :--          | :--:| :--:     | :--:        | :--:     | :--:  | :--:      | :--:       | :--:        | :--:   | :--:        | :--:         | :--:   |
-| 2021-06-11 | -            | 50  | 1536d6    | 7b1a26     | 12f3bb6  | b749ea| 2c6470    | 7b1488     | 733be4      | 7a9a30 | 9125e       | 66780e       | 14.343 |
+| 2021-06-12 | -            | 50  | 1536d6    | 7b1a26     | 12f3bb6  | b749ea| 2c6470    | 7b1488     | 733be4      | 7a9a30 | 9125e       | 66780e       | 14.343 |
+| 2021-06-12 | opt cache r  | 50  | c629e     | 59cada     | ce6102   | 7a761a| 20e5f4    | 5294c6     | 437758      | 51aa80 | 6cc46       | 4d4f5e       | 21.083 |
 
 ## 参考资料
 

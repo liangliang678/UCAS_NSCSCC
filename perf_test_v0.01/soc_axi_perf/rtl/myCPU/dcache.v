@@ -208,37 +208,37 @@ generate for (i1=0; i1<256; i1=i1+1) begin :gen_for_D_Way1
     end
 end endgenerate
 
-assign tagv_way0_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign tagv_way1_en = (state == `IDLE && valid && addr_ok) || (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
+assign tagv_way0_en = (valid && addr_ok) || (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
+assign tagv_way1_en = (valid && addr_ok) || (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
 assign tagv_way0_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
 assign tagv_way1_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
 assign tagv_way0_din = {1'b1, rb_tag};
 assign tagv_way1_din = {1'b1, rb_tag};
-assign tagv_addr = (state == `IDLE && valid && addr_ok) ? index : 
+assign tagv_addr = (valid && addr_ok) ? index : 
                    (state == `REFILL && ret_valid) ? rb_index : 8'b0;
 
-assign data_way0_bank0_en = (state == `IDLE && valid && addr_ok) || 
+assign data_way0_bank0_en = (valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b00 && !wb_hit_way) || 
                             (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign data_way0_bank1_en = (state == `IDLE && valid && addr_ok) || 
+assign data_way0_bank1_en = (valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b01 && !wb_hit_way) || 
                             (state == `REFILL && ret_valid && !rp_way) && !rb_uncache;
-assign data_way0_bank2_en = (state == `IDLE && valid && addr_ok) || 
+assign data_way0_bank2_en = (valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b10 && !wb_hit_way) || 
                             (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign data_way0_bank3_en = (state == `IDLE && valid && addr_ok) || 
+assign data_way0_bank3_en = (valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b11 && !wb_hit_way) || 
                             (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign data_way1_bank0_en = (state == `IDLE && valid && addr_ok) || 
+assign data_way1_bank0_en = (valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b00 && wb_hit_way) || 
                             (state == `REFILL && ret_valid && rp_way && !rb_uncache);
-assign data_way1_bank1_en = (state == `IDLE && valid && addr_ok) || 
+assign data_way1_bank1_en = (valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b01 && wb_hit_way) || 
                             (state == `REFILL && ret_valid && rp_way && !rb_uncache);
-assign data_way1_bank2_en = (state == `IDLE && valid && addr_ok) || 
+assign data_way1_bank2_en = (valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b10 && wb_hit_way) || 
                             (state == `REFILL && ret_valid && rp_way && !rb_uncache);
-assign data_way1_bank3_en = (state == `IDLE && valid && addr_ok) || 
+assign data_way1_bank3_en = (valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b11 && wb_hit_way) || 
                             (state == `REFILL && ret_valid && rp_way && !rb_uncache);
 assign data_way0_bank0_we = (wstate == `WRITE) ? wb_wstrb : (state == `REFILL && !rb_uncache) ? 4'b1111 : 4'b0000;
@@ -259,7 +259,7 @@ assign data_way1_bank2_din = (wstate == `WRITE) ? wb_wdata : (state == `REFILL) 
 assign data_way1_bank3_din = (wstate == `WRITE) ? wb_wdata : (state == `REFILL) ? rd_way_wdata_bank3 : 32'b0;
 
 assign data_addr = (wstate == `WRITE) ? wb_index : 
-                   (state == `IDLE && valid && addr_ok) ? index : 
+                   (valid && addr_ok) ? index : 
                    (state == `REFILL) ? rb_index : 8'b0;
 
 // Request Buffer
@@ -294,7 +294,7 @@ always @(posedge clk) begin
     end
 end
 
-assign addr_ok = (state == `IDLE) && valid && (wstate == `WIDLE);
+assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid && (wstate == `WIDLE);
 
 assign way0_d = D_Way0[rb_index];
 assign way1_d = D_Way1[rb_index];
@@ -446,8 +446,11 @@ always@(*) begin
 			next_state = `IDLE;
 		end
 	`LOOKUP:
-        if (cache_hit) begin
+        if (cache_hit && !(valid && addr_ok)) begin
 			next_state = `IDLE;
+		end
+        else if (cache_hit && valid && addr_ok) begin
+			next_state = `LOOKUP;
 		end
 		else begin
 			next_state = `MISS;
