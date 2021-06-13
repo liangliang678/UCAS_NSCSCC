@@ -27,7 +27,7 @@ module dcache(
 
     // Cache and AXI
     output          rd_req,
-    output [  2:0]  rd_type,
+    output          rd_type,
     output [ 31:0]  rd_addr,
     output [  2:0]  rd_size,
     input           rd_rdy,
@@ -35,7 +35,7 @@ module dcache(
     input  [127:0]  ret_data,
 
     output          wr_req,
-    output [  2:0]  wr_type,
+    output          wr_type,
     output [ 31:0]  wr_addr,
     output [  2:0]  wr_size,
     output [  3:0]  wr_wstrb,
@@ -377,7 +377,7 @@ always @(posedge clk) begin
 end
 
 assign wr_req = (state == `MISS) && !(rb_uncache && !rb_op) && !(!rb_uncache && (!rp_way_d || !rp_way_v));
-assign wr_type = rb_uncache ? 3'b010 : 3'b100;
+assign wr_type = rb_uncache ? 1'b0 : 1'b1;
 assign wr_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rp_way_tag, rb_index, 4'b0};
 assign wr_size = rb_uncache ? {1'b0, rb_size} : 3'd2;
 assign wr_wstrb = rb_wstrb;
@@ -394,7 +394,7 @@ wire [ 31:0] rd_way_wdata_bank3;
 wire [ 31:0] rd_way_rdata;
 
 assign rd_req = (state == `REPLACE) && !(rb_uncache && rb_op);
-assign rd_type = rb_uncache ? 3'b010 : 3'b100;
+assign rd_type = rb_uncache ? 1'b0 : 1'b1;
 assign rd_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 4'b0};
 assign rd_size = rb_uncache ? {1'b0, rb_size} : 3'd2;
 
