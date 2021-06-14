@@ -287,7 +287,9 @@ always @(posedge clk) begin
     end
 end
 
-assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid;
+wire req_raw;
+assign req_raw = (wstate == `WRITE) && (index == wb_index) && (offset == wb_offset);
+assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid && !req_raw;
 
 assign way0_d = D_Way0[rb_index];
 assign way1_d = D_Way1[rb_index];
@@ -307,22 +309,18 @@ assign way0_hit = way0_v && (way0_tag == rb_tag);
 assign way1_hit = way1_v && (way1_tag == rb_tag);
 assign cache_hit = rb_uncache ? 0 : (way0_hit || way1_hit);
 assign data_ok = (state == `LOOKUP) && cache_hit || (state == `REFILL) && ret_valid || 
-                 (state == `REFILL) && rb_uncache && rb_op && wr_ok; // TODO: uncache w
+                 (state == `REFILL) && rb_uncache && rb_op && uncache_write_go; // TODO: uncache w
 
 // Data Select
 wire [ 31:0] way0_load_word;
 wire [ 31:0] way1_load_word;
 wire [ 31:0] load_res;
 
-wire req_raw;
-assign req_raw = (wstate == `WRITE) && (rb_index == wb_index) && (rb_offset == wb_offset);
-
 assign way0_load_word = way0_data[rb_offset[3:2]*32 +: 32];
 assign way1_load_word = way1_data[rb_offset[3:2]*32 +: 32];
 assign load_res = {32{way0_hit}} & way0_load_word |
                   {32{way1_hit}} & way1_load_word;
-assign rdata = {32{(state == `LOOKUP) && cache_hit && !req_raw}} & load_res | 
-               {32{(state == `LOOKUP) && cache_hit &&  req_raw}} & wb_wdata | 
+assign rdata = {32{(state == `LOOKUP) && cache_hit}} & load_res | 
                {32{(state == `REFILL) && ret_valid}} & rd_way_rdata;
 
 // NRU
@@ -424,7 +422,7 @@ wire [ 31:0] rd_way_wdata_bank2;
 wire [ 31:0] rd_way_wdata_bank3;
 wire [ 31:0] rd_way_rdata;
 
-assign rd_req = (state == `REPLACE) && !(rb_uncache && rb_op);
+assign rd_req = (state == `REPLACE) && !(rb_uncache && rb_op) && !(rb_uncache && uncache_read_stall);
 assign rd_type = rb_uncache ? 1'b0 : 1'b1;
 assign rd_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 4'b0};
 assign rd_size = rb_uncache ? {1'b0, rb_size} : 3'd2;
@@ -454,6 +452,63 @@ assign rd_way_rdata = {32{rb_uncache}} & rd_way_data_bank0 |
                       {32{!rb_uncache && rb_offset[3:2] == 2'b01}} & rd_way_data_bank1 | 
                       {32{!rb_uncache && rb_offset[3:2] == 2'b10}} & rd_way_data_bank2 | 
                       {32{!rb_uncache && rb_offset[3:2] == 2'b11}} & rd_way_data_bank3;
+
+// AXI Write Buffer
+reg [31:0] pending_addr [7:0];
+reg        pending_type [7:0];
+reg        pending_valid[7:0];
+reg [2:0] pending_start;
+reg [2:0] pending_end;
+
+genvar ip;
+generate for (ip=0; ip<256; ip=ip+1) begin :gen_for_valid
+    always @(posedge clk) begin
+        if (!resetn) begin
+            pending_valid[ip] <= 0;
+        end
+        else if (wr_req && wr_rdy && (ip == pending_end + 3'b1)) begin
+            pending_valid[ip] <= 1'b1;
+        end
+        else if (wr_ok && (ip == pending_start + 3'b1)) begin
+            pending_valid[ip] <= 1'b0;
+        end
+    end
+end endgenerate
+
+always @(posedge clk) begin
+    if (!resetn) begin
+        pending_end <= 3'b0;
+    end
+    else if (wr_req && wr_rdy) begin
+        pending_addr[pending_end + 3'b1] <= wr_addr;
+        pending_type[pending_end + 3'b1] <= wr_type; 
+        pending_end <= pending_end + 3'b1;
+    end
+end
+
+always @(posedge clk) begin
+    if (!resetn) begin
+        pending_start <= 3'b0;
+    end
+    else if (wr_ok) begin
+        pending_start <= pending_start + 3'b1;
+    end
+end
+
+wire uncache_write_go;
+wire uncache_read_stall;
+
+assign uncache_write_go = ((pending_end + 3'b1) != pending_start);
+
+wire [2:0] match;
+genvar im;
+generate for (im=0; im<256; im=im+1) begin :gen_for_match
+    assign match[im] = ({rb_tag, rb_index, rb_offset} == pending_addr[im]) && 
+                       (pending_type[im] == 1'b0) &&
+                       (pending_valid[im] == 1'b1);
+end endgenerate
+assign uncache_read_stall = |match;
+
 
 // Main FSM
 reg  [4:0] state;
@@ -507,7 +562,7 @@ always@(*) begin
 			next_state = `REPLACE;
 		end
     `REFILL:
-        if (rb_uncache && rb_op && wr_ok) begin
+        if (rb_uncache && rb_op && uncache_write_go) begin
             next_state = `IDLE;
         end
         else if (ret_valid) begin
