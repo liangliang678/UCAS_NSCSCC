@@ -1,7 +1,7 @@
 // Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
-// Date        : Fri Jun 11 14:07:34 2021
+// Date        : Sun Jun 13 11:51:43 2021
 // Host        : DESKTOP running 64-bit major release  (build 9200)
 // Command     : write_verilog -force -mode synth_stub
 //               E:/NSCSCC/func_test_v0.01/soc_axi_func/rtl/xilinx_ip/axi_ram/axi_ram_stub.v

@@ -114,7 +114,7 @@ wire           inst_cache_data_ok;
 wire [ 31:0]   inst_cache_rdata;
 
 wire          inst_cache_rd_req;
-wire [  2:0]  inst_cache_rd_type;
+wire          inst_cache_rd_type;
 wire [ 31:0]  inst_cache_rd_addr;
 wire          inst_cache_rd_rdy;
 wire          inst_cache_ret_valid;
@@ -134,14 +134,14 @@ wire           data_cache_data_ok;
 wire [ 31:0]   data_cache_rdata;
 
 wire          data_cache_rd_req;
-wire [  2:0]  data_cache_rd_type;
+wire          data_cache_rd_type;
 wire [ 31:0]  data_cache_rd_addr;
 wire [  2:0]  data_cache_rd_size;
 wire          data_cache_rd_rdy;
 wire          data_cache_ret_valid;
 wire  [127:0] data_cache_ret_data;
 wire          data_cache_wr_req;
-wire [  2:0]  data_cache_wr_type;
+wire          data_cache_wr_type;
 wire [ 31:0]  data_cache_wr_addr;
 wire [  2:0]  data_cache_wr_size;
 wire [  3:0]  data_cache_wr_wstrb;

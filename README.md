@@ -21,19 +21,15 @@
 ## 性能数据
 
 
-<<<<<<< HEAD
-| 日期       | 修改        | func       | perf       |
-| :--        | :--        | :--:       | :--:       |
-| 2021-05-28 | -          | 36216295ns | 38402500ps | 
-| 2021-06-06 | 增加了cache | 40871735ns | 26808500ps |
-| 2021-06-11 | 修改通路，减少延迟，wns为0.134|40738315ns | -  |
-| 2021-06-12 | 切分了preif和if，但是时序似乎变差了|40685515ns| - |
-=======
-| date       | modification | bitcount | bubble_sort | coremark | crc32 | dhrystone | quick_sort | select_sort | sha    | stream_copy | stringsearch | all    |
-| :--        | :--          | :--:     | :--:        | :--:     | :--:  | :--:      | :--:       | :--:        | :--:   | :--:        | :--:         | :--:   |
-| 2021-06-11 | -            | 556c7    | 1ec5f8      | 4bcf9b   | 2dd2f3| b18dc     | 1ecd39     | 1cce45      | 1ea656 | 2478e       | 199f8d       | 57.297 |
+| date       | modification | clk | bitcount | bubble_sort | coremark | crc32 | dhrystone | quick_sort | select_sort | sha    | stream_copy | stringsearch | all    |
+| :--        | :--          | :--:| :--:     | :--:        | :--:     | :--:  | :--:      | :--:       | :--:        | :--:   | :--:        | :--:         | :--:   |
+| 2021-06-12 | -            | 50  | 1536d6   | 7b1a26      | 12f3bb6  | b749ea| 2c6470    | 7b1488     | 733be4      | 7a9a30 | 9125e       | 66780e       | 14.343 |
+| 2021-06-13 | opt cache r  | 50  | c629e    | 59cada      | ce6102   | 7a761a| 20e5f4    | 5294c6     | 437758      | 51aa80 | 6cc46       | 4d4f5e       | 21.083 |
+| 2021-06-13 | icache lru   | 50  | c4c3e    | 5977d6      | cd5eb2   | 7a4580| 209b2a    | 51e3fe     | 434300      | 510b76 | 5fc66       | 4cc204       | 21.465 |
+| 2021-06-14 | nru & raw opt| 50  | c4c3e    | 5977d6      | cd5ef8   | 7a4580| 209752    | 50d680     | 4342b6      | 510784 | 5f590       | 4cbf2a       | 21.504 |
+| 2021-06-14 |uncache buffer| 50  | c207e    | 5977d6      | c99278   | 75a700| 17eb56    | 50d680     | 4342b6      | 500244 | 5f590       | 3d22c2       | 22.881 |
+| 2021-06-14 |if 1st reset..| 50  | c452a    | 59b612      | c9ce2e   | 75cd9e| 18396e    | 516f4c     | 437136      | 507dbe | 688e4       | 3d8cf2       | 22.553 |
 
->>>>>>> d7a5d57c27b21ad1581b12ac28f4c8506dea149b
 ## 参考资料
 
 [AXI总线概述](https://blog.csdn.net/bleauchat/article/details/96891619)
