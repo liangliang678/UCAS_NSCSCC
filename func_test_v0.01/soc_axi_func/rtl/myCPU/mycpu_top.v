@@ -92,8 +92,8 @@ wire         wb_bd;
 wire [31:0]  wb_pc; 
 wire [31:0]  wb_badvaddr; 
 wire         eret;
-wire         es_ex;
-
+// wire         es_ex;
+wire ms_has_reflush_to_es;
 wire [31:0]  c0_rdata;
 wire         has_int;
 
@@ -209,8 +209,7 @@ wire        mem_mtc0_index;
 wire        wb_mtc0_index;
 
 wire        cancel_to_all;
-wire [31:0] cancel_pc;
-wire        exception_is_tlb_refill;
+wire [31:0] reflush_pc;
 
 // preIF stage
 preif_stage preif_stage(
@@ -251,8 +250,8 @@ preif_stage preif_stage(
 
     //reflush
     .pfs_cancel_in    (cancel_to_all),
-    .cancel_pc        (cancel_pc    ),  //actually pc of TLBR/TLBWI
-    .exception_is_tlb_refill_in(exception_is_tlb_refill)
+    .pfs_eret_in         (eret         ),
+    .reflush_pc        (reflush_pc    )  //actually pc of TLBR/TLBWI
 );
 
 
@@ -279,44 +278,8 @@ if_stage if_stage(
     //clear stage
     .fs_ex          (ex_begin       ),
     //reflush
-    .fs_cancel_in   (cancel_to_all  )
-
-    // .clk            (aclk           ),
-    // .reset          (reset          ),
-    // //allowin
-    // .ds_allowin     (ds_allowin     ),
-    // //brbus
-    // .br_bus         (br_bus         ),
-    // //outputs
-    // .fs_to_ds_valid (fs_to_ds_valid ),
-    // .fs_to_ds_bus   (fs_to_ds_bus   ),
-    // // inst cache interface
-    // .inst_cache_valid       (inst_cache_valid   ),
-    // .inst_cache_uncache     (inst_cache_uncache ),
-    // .inst_cache_tag         (inst_cache_tag     ),
-    // .inst_cache_index       (inst_cache_index   ),
-    // .inst_cache_offset      (inst_cache_offset  ),
-    // .inst_cache_addr_ok     (inst_cache_addr_ok ),
-    // .inst_cache_data_ok     (inst_cache_data_ok ),
-    // .inst_cache_rdata       (inst_cache_rdata   ),
-
-    // .fs_ex          (ex_begin       ),
-
-    // //TLB search port 0
-    // .s0_vpn2          (s0_vpn2      ),
-    // .s0_odd_page      (s0_odd_page  ),
-    // .s0_asid          (s0_asid      ),
-    // .s0_found         (s0_found     ),
-    // .s0_index         (s0_index     ),
-    // .s0_pfn           (s0_pfn       ),
-    // .s0_c             (s0_c         ),
-    // .s0_d             (s0_d         ),
-    // .s0_v             (s0_v         ),
-
-    // .cp0_entryhi    (cp0_entryhi    ),
-    // .fs_cancel_in   (cancel_to_all  ),
-    // .cancel_pc      (cancel_pc      ),
-    // .exception_is_tlb_refill_in(exception_is_tlb_refill)
+    .fs_cancel_in   (cancel_to_all  ),
+    .fs_eret_in     (eret           )
 );
 // ID stage
 id_stage id_stage(
@@ -343,8 +306,8 @@ id_stage id_stage(
     .ds_epc         (epc            ),
     .ds_ex          (ex_begin       ),
     .has_int        (has_int        ),
-    .es_exception_appear_in(es_ex   ),
-    .ds_cancel_in   (cancel_to_all  )
+    .ds_cancel_in   (cancel_to_all  ),
+    .ds_eret_in     (eret           )
 );
 // EXE stage
 exe_stage exe_stage(
@@ -377,7 +340,7 @@ exe_stage exe_stage(
     //data relevant
     .stall_es_bus   (stall_es_bus   ),
     .es_ex          (ex_begin       ),
-    .es_exception_appear_out(es_ex  ),
+    .ms_has_reflush_to_es(ms_has_reflush_to_es),
 
     //TLB search port 1
     .s1_vpn2          (s1_vpn2      ),
@@ -393,7 +356,8 @@ exe_stage exe_stage(
     .cp0_entryhi    (cp0_entryhi    ),
     .mem_mtc0_index (mem_mtc0_index ),
     .wb_mtc0_index  (wb_mtc0_index  ),
-    .es_cancel_in   (cancel_to_all  )
+    .es_cancel_in   (cancel_to_all  ),
+    .es_eret_in     (eret           )
 );
 // MEM stage
 mem_stage mem_stage(
@@ -417,9 +381,10 @@ mem_stage mem_stage(
     //data relevant
     .stall_ms_bus   (stall_ms_bus   ),
     .ms_ex          (ex_begin       ),
-
+    .ms_has_reflush_to_es(ms_has_reflush_to_es),
     .mem_mtc0_index (mem_mtc0_index ),
-    .ms_cancel_in   (cancel_to_all  )
+    .ms_cancel_in   (cancel_to_all  ),
+    .ms_eret_in     (eret           )
 );
 // WB stage
 wb_stage wb_stage(
@@ -453,7 +418,7 @@ wb_stage wb_stage(
 
     .has_int        (has_int        ),
     .c0_rdata       (c0_rdata       ),
-
+    .ws_epc         (epc            ),
     //TLB write port
     .we               (we           ),
     .w_index          (w_index      ),
@@ -497,8 +462,7 @@ wb_stage wb_stage(
 
     .wb_mtc0_index      (wb_mtc0_index),
     .wb_cancel_to_all   (cancel_to_all),
-    .cancel_pc          (cancel_pc    ),
-    .exception_is_tlb_refill(exception_is_tlb_refill)
+    .reflush_pc         (reflush_pc   )
 );
 
 //cp0 registers
