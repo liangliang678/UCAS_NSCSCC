@@ -155,6 +155,7 @@ wire [ 31:0]  axi_rd_addr;
 wire          axi_rd_rdy;
 wire          axi_ret_valid;
 wire [255:0]  axi_ret_data;
+wire          axi_ret_half;
 
 // TLB
     // search port 0
@@ -577,7 +578,8 @@ prefetcher prefetcher(
     .axi_rd_addr       (axi_rd_addr   ),
     .axi_rd_rdy        (axi_rd_rdy    ),
     .axi_ret_valid     (axi_ret_valid ),
-    .axi_ret_data      (axi_ret_data  )
+    .axi_ret_data      (axi_ret_data  ),
+    .axi_ret_half      (axi_ret_half  )
 );
 
 // cache to axi
@@ -591,6 +593,7 @@ cache2axi cache2axi(
     .inst_rd_rdy        (axi_rd_rdy    ),
     .inst_ret_valid     (axi_ret_valid ),
     .inst_ret_data      (axi_ret_data  ),
+    .inst_ret_half      (axi_ret_half  ),
 
     .data_rd_req        (data_cache_rd_req    ),
     .data_rd_type       (data_cache_rd_type   ),

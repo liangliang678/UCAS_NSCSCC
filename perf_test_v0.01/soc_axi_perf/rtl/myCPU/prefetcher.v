@@ -17,7 +17,8 @@ module prefetcher (
     output  [ 31:0] axi_rd_addr,
     input           axi_rd_rdy,
     input           axi_ret_valid,
-    input   [255:0] axi_ret_data
+    input   [255:0] axi_ret_data,
+    input           axi_ret_half
 );
 
 // Buffer
@@ -51,7 +52,7 @@ always @(posedge clk) begin
     else if (axi_rd_req && axi_rd_rdy && (axi_rd_type == 1'b0)) begin
         uncache <= 1'b1;
     end
-    else if (axi_ret_valid) begin
+    else if (axi_ret_valid_mod) begin
         uncache <= 1'b0;
     end
 end
@@ -71,6 +72,34 @@ end
 wire buffer_hit;
 assign buffer_hit = cache_rd_req && (cache_rd_addr == addr);
 
+reg wait_for_fill;
+always @(posedge clk) begin
+    if(!resetn) begin
+        wait_for_fill <= 1'b0;
+    end
+    else if (axi_ret_half) begin
+        wait_for_fill <= 1'b1;
+    end
+    else if (axi_ret_valid) begin
+        wait_for_fill <= 1'b0;
+    end
+end
+wire axi_ret_valid_mod;
+assign axi_ret_valid_mod = wait_for_fill ? 0 : axi_ret_valid;
+
+/* assign axi_rd_req = buffer_hit ? 1'b0 : cache_rd_req;
+assign axi_rd_type = cache_rd_type;
+assign axi_rd_addr = cache_rd_addr;
+assign cache_rd_rdy = buffer_hit ? 1'b1 : axi_rd_rdy;
+assign cache_ret_valid = (state == `HIT) ? valid : (uncache ? axi_ret_valid_mod : axi_ret_half);
+assign cache_ret_data = (state == `HIT) ? buffer : axi_ret_data[127:0];
+ */
+assign axi_rd_req =  cache_rd_req;
+assign axi_rd_type = cache_rd_type;
+assign axi_rd_addr = cache_rd_addr;
+assign cache_rd_rdy = axi_rd_rdy;
+assign cache_ret_valid = axi_ret_valid;
+assign cache_ret_data = axi_ret_data[127:0];
 // FSM
 reg [1:0] state;
 reg [1:0] next_state;
@@ -103,12 +132,5 @@ always @(*) begin
 		next_state = `IDLE;
 	endcase
 end
-
-assign axi_rd_req = buffer_hit ? 1'b0 : cache_rd_req;
-assign axi_rd_type = cache_rd_type;
-assign axi_rd_addr = cache_rd_addr;
-assign cache_rd_rdy = buffer_hit ? 1'b1 : axi_rd_rdy;
-assign cache_ret_valid = (state == `HIT) ? valid : axi_ret_valid;
-assign cache_ret_data = (state == `HIT) ? buffer : axi_ret_data[127:0];
     
 endmodule

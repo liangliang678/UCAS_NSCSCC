@@ -19,6 +19,8 @@ module cache2axi(
     output          inst_rd_rdy,
     output          inst_ret_valid,
     output  [255:0] inst_ret_data,
+    // for prefetcher
+    output          inst_ret_half,
     // data cache interface - slave
     input           data_rd_req,
     input           data_rd_type,
@@ -173,7 +175,7 @@ always @(posedge clk) begin
         if (inst_rd_type == 1'b0)
             arlen <= 4'd0;
         else if (inst_rd_type == 1'b1)
-            arlen <= 4'd7;
+            arlen <= 4'd3;
     end
 end
 
@@ -249,6 +251,7 @@ end
 // to cache
 reg to_icache_valid;
 reg to_dcache_valid;
+reg to_icache_half;
 always @(posedge clk) begin
     if (!resetn) begin
         to_icache_valid <= 1'b0;
@@ -271,8 +274,21 @@ always @(posedge clk) begin
         to_dcache_valid <= 1'b0;
     end
 end
+always @(posedge clk) begin
+    if (!resetn) begin
+        to_icache_half <= 1'b0;
+    end
+    else if (axi_rready && axi_rvalid && inst_rcount == 3'd4 && axi_rid == 4'b0) begin
+        to_icache_half <= 1'b1;
+    end
+    else if (to_icache_half == 1'b1) begin
+        to_icache_half <= 1'b0;
+    end
+end 
+
 assign inst_ret_valid = to_icache_valid;
 assign data_ret_valid = to_dcache_valid;
+assign inst_ret_half = to_icache_half;
 assign inst_ret_data = inst_rdata;
 assign data_ret_data = data_rdata;
 
