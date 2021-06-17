@@ -1,23 +1,21 @@
-`define  IDLE    4'b0001
-`define  LOOKUP  4'b0010
-`define  REPLACE 4'b0100
-`define  REFILL  4'b1000
+`define  IDLE    5'b00001
+`define  LOOKUP  5'b00010
+`define  REPLACE 5'b00100
+`define  REFILL  5'b01000
+`define  UNCACHE 5'b10000
 
 module icache(
     input           clk,
     input           resetn,
-
     // Cache and CPU
     input           valid,
     input           uncache,
     input  [ 19:0]  tag,
     input  [  7:0]  index,
     input  [  3:0]  offset,
-
     output          addr_ok,
     output          data_ok,
     output [ 31:0]  rdata,
-
     // Cache and AXI
     output          rd_req,
     output          rd_type,
@@ -27,6 +25,7 @@ module icache(
     input  [127:0]  ret_data
 );
 
+// RAM
 wire        tagv_way0_en;
 wire        tagv_way1_en;
 wire        tagv_way0_we;
@@ -152,39 +151,42 @@ Data_RAM Data_RAM_Way1_Bank3(
     .douta  (data_way1_bank3_dout)
 );
 
-assign tagv_way0_en = (valid && addr_ok) || (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign tagv_way1_en = (valid && addr_ok) || (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
-assign tagv_way0_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign tagv_way1_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
+// RAM Port
+assign tagv_way0_en = (valid && !uncache && addr_ok) || 
+                      (state == `REFILL && ret_valid && !rp_way);
+assign tagv_way1_en = (valid && !uncache && addr_ok) || 
+                      (state == `REFILL && ret_valid &&  rp_way);
+assign tagv_way0_we = (state == `REFILL && ret_valid && !rp_way);
+assign tagv_way1_we = (state == `REFILL && ret_valid &&  rp_way);
 assign tagv_way0_din = {1'b1, rb_tag};
 assign tagv_way1_din = {1'b1, rb_tag};
-assign tagv_addr = (valid && addr_ok) ? index : 
-                   (state == `REFILL && ret_valid && !rb_uncache) ? rb_index : 8'b0;
+assign tagv_addr = (valid && !uncache && addr_ok)  ? index : 
+                   (state == `REFILL && ret_valid) ? rb_index : 8'b0;
 
-assign data_way0_bank0_en = (valid && addr_ok) ||
-                            (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign data_way0_bank1_en = (valid && addr_ok) ||
-                            (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign data_way0_bank2_en = (valid && addr_ok) ||
-                            (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign data_way0_bank3_en = (valid && addr_ok) ||
-                            (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign data_way1_bank0_en = (valid && addr_ok) ||
-                            (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
-assign data_way1_bank1_en = (valid && addr_ok) ||
-                            (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
-assign data_way1_bank2_en = (valid && addr_ok) ||
-                            (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
-assign data_way1_bank3_en = (valid && addr_ok) ||
-                            (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
-assign data_way0_bank0_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache) ? 4'b1111 : 4'b0000;
-assign data_way0_bank1_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache) ? 4'b1111 : 4'b0000;
-assign data_way0_bank2_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache) ? 4'b1111 : 4'b0000;
-assign data_way0_bank3_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache) ? 4'b1111 : 4'b0000;
-assign data_way1_bank0_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache) ? 4'b1111 : 4'b0000;
-assign data_way1_bank1_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache) ? 4'b1111 : 4'b0000;
-assign data_way1_bank2_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache) ? 4'b1111 : 4'b0000;
-assign data_way1_bank3_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache) ? 4'b1111 : 4'b0000;
+assign data_way0_bank0_en = (valid && !uncache && addr_ok) ||
+                            (state == `REFILL && ret_valid && !rp_way);
+assign data_way0_bank1_en = (valid && !uncache && addr_ok) ||
+                            (state == `REFILL && ret_valid && !rp_way);
+assign data_way0_bank2_en = (valid && !uncache && addr_ok) ||
+                            (state == `REFILL && ret_valid && !rp_way);
+assign data_way0_bank3_en = (valid && !uncache && addr_ok) ||
+                            (state == `REFILL && ret_valid && !rp_way);
+assign data_way1_bank0_en = (valid && !uncache && addr_ok) ||
+                            (state == `REFILL && ret_valid &&  rp_way);
+assign data_way1_bank1_en = (valid && !uncache && addr_ok) ||
+                            (state == `REFILL && ret_valid &&  rp_way);
+assign data_way1_bank2_en = (valid && !uncache && addr_ok) ||
+                            (state == `REFILL && ret_valid &&  rp_way);
+assign data_way1_bank3_en = (valid && !uncache && addr_ok) ||
+                            (state == `REFILL && ret_valid &&  rp_way);
+assign data_way0_bank0_we = (state == `REFILL && ret_valid && !rp_way) ? 4'b1111 : 4'b0000;
+assign data_way0_bank1_we = (state == `REFILL && ret_valid && !rp_way) ? 4'b1111 : 4'b0000;
+assign data_way0_bank2_we = (state == `REFILL && ret_valid && !rp_way) ? 4'b1111 : 4'b0000;
+assign data_way0_bank3_we = (state == `REFILL && ret_valid && !rp_way) ? 4'b1111 : 4'b0000;
+assign data_way1_bank0_we = (state == `REFILL && ret_valid &&  rp_way) ? 4'b1111 : 4'b0000;
+assign data_way1_bank1_we = (state == `REFILL && ret_valid &&  rp_way) ? 4'b1111 : 4'b0000;
+assign data_way1_bank2_we = (state == `REFILL && ret_valid &&  rp_way) ? 4'b1111 : 4'b0000;
+assign data_way1_bank3_we = (state == `REFILL && ret_valid &&  rp_way) ? 4'b1111 : 4'b0000;
 assign data_way0_bank0_din = rd_way_data_bank0;
 assign data_way0_bank1_din = rd_way_data_bank1;
 assign data_way0_bank2_din = rd_way_data_bank2;
@@ -193,11 +195,10 @@ assign data_way1_bank0_din = rd_way_data_bank0;
 assign data_way1_bank1_din = rd_way_data_bank1;
 assign data_way1_bank2_din = rd_way_data_bank2;
 assign data_way1_bank3_din = rd_way_data_bank3;
-assign data_addr = (valid && addr_ok) ? index : 
-                   (state == `REFILL && ret_valid && !rb_uncache) ? rb_index : 8'b0;
+assign data_addr = (valid && !uncache && addr_ok)  ? index : 
+                   (state == `REFILL && ret_valid) ? rb_index : 8'b0;
 
 // Request Buffer
-reg          rb_uncache;
 reg  [ 19:0] rb_tag;
 reg  [  7:0] rb_index;
 reg  [  3:0] rb_offset;
@@ -210,15 +211,12 @@ wire [127:0] way0_data;
 wire [127:0] way1_data;
 
 always @(posedge clk) begin
-    if (valid && addr_ok) begin
-        rb_uncache <= uncache;
+    if (valid && !uncache && addr_ok) begin
         rb_index   <= index;
         rb_tag     <= tag;
         rb_offset  <= offset;
     end
 end
-
-assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid;
 
 assign way0_v = tagv_way0_dout[20];
 assign way1_v = tagv_way1_dout[20];
@@ -234,8 +232,7 @@ wire         cache_hit;
 
 assign way0_hit = way0_v && (way0_tag == rb_tag);
 assign way1_hit = way1_v && (way1_tag == rb_tag);
-assign cache_hit = rb_uncache ? 0 : (way0_hit || way1_hit);
-assign data_ok = (state == `LOOKUP) && cache_hit || (state == `REFILL) && ret_valid;
+assign cache_hit = (way0_hit || way1_hit);
 
 // Data Select
 wire [ 31:0] way0_load_word;
@@ -246,8 +243,6 @@ assign way0_load_word = way0_data[rb_offset[3:2]*32 +: 32];
 assign way1_load_word = way1_data[rb_offset[3:2]*32 +: 32];
 assign load_res = {32{way0_hit}} & way0_load_word |
                   {32{way1_hit}} & way1_load_word;
-assign rdata = {32{(state == `LOOKUP) && cache_hit}} & load_res | 
-               {32{(state == `REFILL) && ret_valid}} & rd_way_rdata;
 
 // LRU
 reg last_hit [255:0];
@@ -297,23 +292,32 @@ wire [ 31:0] rd_way_data_bank2;
 wire [ 31:0] rd_way_data_bank3;
 wire [ 31:0] rd_way_rdata;
 
-assign rd_req = (state == `REPLACE);
-assign rd_type = rb_uncache ? 1'b0 : 1'b1;
-assign rd_addr = rb_uncache ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 4'b0};
-
 assign rd_way_data_bank0 = ret_data[ 31: 0];
 assign rd_way_data_bank1 = ret_data[ 63:32];
 assign rd_way_data_bank2 = ret_data[ 95:64];
 assign rd_way_data_bank3 = ret_data[127:96];
-assign rd_way_rdata = {32{rb_uncache}} & rd_way_data_bank0 | 
-                      {32{!rb_uncache && rb_offset[3:2] == 2'b00}} & rd_way_data_bank0 | 
-                      {32{!rb_uncache && rb_offset[3:2] == 2'b01}} & rd_way_data_bank1 | 
-                      {32{!rb_uncache && rb_offset[3:2] == 2'b10}} & rd_way_data_bank2 | 
-                      {32{!rb_uncache && rb_offset[3:2] == 2'b11}} & rd_way_data_bank3;
+assign rd_way_rdata = {32{rb_offset[3:2] == 2'b00}} & rd_way_data_bank0 | 
+                      {32{rb_offset[3:2] == 2'b01}} & rd_way_data_bank1 | 
+                      {32{rb_offset[3:2] == 2'b10}} & rd_way_data_bank2 | 
+                      {32{rb_offset[3:2] == 2'b11}} & rd_way_data_bank3;
+
+// Output
+assign addr_ok = (valid && uncache) ? rd_rdy : 
+                 ((state == `IDLE || (state == `LOOKUP && cache_hit)) && valid);
+assign data_ok = (state == `LOOKUP)  && cache_hit || 
+                 (state == `REFILL)  && ret_valid ||
+                 (state == `UNCACHE) && ret_valid;
+assign rdata = {32{(state == `LOOKUP)  && cache_hit}} & load_res | 
+               {32{(state == `REFILL)  && ret_valid}} & rd_way_rdata | 
+               {32{(state == `UNCACHE) && ret_valid}} & ret_data[31:0]; 
+
+assign rd_req  = valid && uncache ? 1'b1 : (state == `REPLACE);
+assign rd_type = valid && uncache ? 1'b0 : 1'b1;
+assign rd_addr = valid && uncache ? {tag, index, offset} : {rb_tag, rb_index, 4'b0};
 
 // Main FSM
-reg  [3:0] state;
-reg  [3:0] next_state;
+reg [4:0] state;
+reg [4:0] next_state;
 
 always @(posedge clk) begin
     if (!resetn) begin
@@ -326,18 +330,24 @@ end
 always @(*) begin
 	case(state)
 	`IDLE:
-		if (valid && addr_ok) begin
+        if (valid && uncache && addr_ok) begin
+            next_state = `UNCACHE;
+        end
+		else if (valid && !uncache && addr_ok) begin
 			next_state = `LOOKUP;
 		end
 		else begin
 			next_state = `IDLE;
 		end
 	`LOOKUP:
-        if (cache_hit && !(valid && addr_ok)) begin
-			next_state = `IDLE;
-		end
-        else if (cache_hit && (valid && addr_ok)) begin
+        if (cache_hit && (valid && !uncache && addr_ok)) begin
 			next_state = `LOOKUP;
+		end
+        else if (cache_hit && (valid && uncache && addr_ok)) begin
+			next_state = `UNCACHE;
+		end
+        else if (cache_hit && !(valid && addr_ok)) begin
+			next_state = `IDLE;
 		end
 		else begin
 			next_state = `REPLACE;
@@ -355,6 +365,13 @@ always @(*) begin
         end
         else begin
             next_state = `REFILL;
+        end
+    `UNCACHE:
+        if (ret_valid) begin
+            next_state = `IDLE;
+        end
+        else begin
+            next_state = `UNCACHE;
         end
 	default:
 		next_state = `IDLE;

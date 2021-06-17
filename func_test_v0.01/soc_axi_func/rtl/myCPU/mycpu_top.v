@@ -149,6 +149,13 @@ wire [127:0]  data_cache_wr_data;
 wire          data_cache_wr_rdy;
 wire          data_cache_wr_ok;  
 
+wire          axi_rd_req;
+wire          axi_rd_type;
+wire [ 31:0]  axi_rd_addr;
+wire          axi_rd_rdy;
+wire          axi_ret_valid;
+wire [255:0]  axi_ret_data;
+
 // TLB
     // search port 0
 wire [18:0] s0_vpn2;
@@ -554,18 +561,36 @@ dcache dcache(
     .wr_ok      (data_cache_wr_ok    )
 );
 
+prefetcher prefetcher(
+    .clk              (aclk            ),
+    .resetn           (aresetn         ),
+    // Dcache
+    .cache_rd_req     (inst_cache_rd_req   ),
+    .cache_rd_type    (inst_cache_rd_type  ),
+    .cache_rd_addr    (inst_cache_rd_addr  ),
+    .cache_rd_rdy     (inst_cache_rd_rdy   ),
+    .cache_ret_valid  (inst_cache_ret_valid),
+    .cache_ret_data   (inst_cache_ret_data ),
+    // AXI
+    .axi_rd_req        (axi_rd_req    ),
+    .axi_rd_type       (axi_rd_type   ),
+    .axi_rd_addr       (axi_rd_addr   ),
+    .axi_rd_rdy        (axi_rd_rdy    ),
+    .axi_ret_valid     (axi_ret_valid ),
+    .axi_ret_data      (axi_ret_data  )
+);
 
 // cache to axi
 cache2axi cache2axi(
     .clk              (aclk            ),
     .resetn           (aresetn         ),
 
-    .inst_rd_req        (inst_cache_rd_req    ),
-    .inst_rd_type       (inst_cache_rd_type   ),
-    .inst_rd_addr       (inst_cache_rd_addr   ),
-    .inst_rd_rdy        (inst_cache_rd_rdy    ),
-    .inst_ret_valid     (inst_cache_ret_valid ),
-    .inst_ret_data      (inst_cache_ret_data  ),
+    .inst_rd_req        (axi_rd_req    ),
+    .inst_rd_type       (axi_rd_type   ),
+    .inst_rd_addr       (axi_rd_addr   ),
+    .inst_rd_rdy        (axi_rd_rdy    ),
+    .inst_ret_valid     (axi_ret_valid ),
+    .inst_ret_data      (axi_ret_data  ),
 
     .data_rd_req        (data_cache_rd_req    ),
     .data_rd_type       (data_cache_rd_type   ),

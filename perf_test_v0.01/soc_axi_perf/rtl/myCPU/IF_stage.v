@@ -15,17 +15,14 @@ module if_stage(
     output                         fs_to_ds_valid ,
     output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus   ,
 
-    // input         inst_sram_data_ok,
-    // input  [31:0] inst_sram_rdata,
-
     //icache output
     input            inst_cache_data_ok,
     input [ 31:0]    inst_cache_rdata,
 
     //clear stage
     input         fs_ex,
-    //reflush
-    input         fs_cancel_in
+    input         fs_cancel_in,
+    input         fs_eret_in
 );
 
 reg  [`PF_TO_FS_BUS_WD -1:0] preif_to_fs_bus_r;
@@ -57,17 +54,17 @@ assign {exception_is_tlb_refill,
         fs_pc
        } = preif_to_fs_bus_r;
 
-assign fs_to_ds_bus = {exception_is_tlb_refill, //111:111
-                       fs_badvaddr      ,  //110:79
-                       fs_has_exception ,  //78:78
-                       fs_exception_type,  //77:64
+assign fs_to_ds_bus = {exception_is_tlb_refill, //102:102
+                       fs_badvaddr      ,  //101:70
+                       fs_has_exception ,  //69:69
+                       fs_exception_type,  //68:64
                        fs_inst          ,  //63:32
                        fs_pc               //31:0
                        };
 
 // IF stage
 assign fs_ready_go  = ~(fs_exception_handle | fs_cancel_handle)  &       //exception
-                       (inst_cache_data_ok | inst_valid);                   //receive read data
+                       (inst_cache_data_ok | inst_valid);                //receive read data
 
 assign fs_allowin     = ~fs_valid | fs_ready_go & ds_allowin;
 assign fs_to_ds_valid =  fs_valid & fs_ready_go;
@@ -76,7 +73,7 @@ always @(posedge clk) begin
     if (reset) begin
         fs_valid <= 1'b0;
     end
-    else if (fs_ex || fs_cancel_in) begin
+    else if (fs_ex || fs_cancel_in || fs_eret_in) begin
         fs_valid <= 1'b0;
     end
     else if (fs_allowin) begin
