@@ -39,7 +39,8 @@ module preif_stage(
     //reflush
     input         pfs_cancel_in,
     input         pfs_eret_in,
-    input  [31:0] reflush_pc
+    input  [31:0] reflush_pc, 
+    input         tlb_write
 );
 wire [31:0] inst_addr;
 wire        fs_use_tlb;  //mapped addr
@@ -160,6 +161,65 @@ always @(posedge clk) begin
     end
 end
 
+reg [1 :0] state;
+reg [1 :0] nextstate;
+reg [18:0] vpn2;
+reg odd_page;
+reg [7 :0] asid;
+reg [19 :0] pfn;
+reg tlb_v;
+reg tlb_found;
+reg tlb_valid;
+
+wire tlb_hit;
+assign tlb_hit = tlb_valid & (nextpc[31:13] == vpn2) & (nextpc[12] == odd_page);
+
+always @(posedge clk) begin
+    if(reset)   state = 2'd0;
+    else state = nextstate;
+end
+
+always @(*) begin
+    case(state) 
+    2'b00:  nextstate = ( tlb_hit | !fs_use_tlb | br_stall) ? 2'b00 : 2'b01;// tlb hit or kseg01 or br uncomplete 
+    2'b01:  nextstate = 2'b10;
+    2'b10:  nextstate = inst_cache_addr_ok ? 2'b00 : 2'b10;
+    default:nextstate = 2'b00;
+    endcase
+end
+
+always @(posedge clk)
+begin
+    if(reset) tlb_valid = 1'b0;
+    else if (tlb_write) tlb_valid = 1'b0;
+    else if (state == 2'b01) tlb_valid = 1'b1;
+end
+
+always @(posedge clk)
+begin
+    if(reset) 
+    begin
+        vpn2 = 19'd0;
+        odd_page = 1'b0;
+        asid = 8'b0;
+        pfn = 20'b0;
+        tlb_v = 1'b0 ;
+        tlb_found = 1'b0;
+    end
+    else if(state == 2'b01)
+    begin
+        vpn2 = nextpc[31:13];
+        odd_page = nextpc[12];
+        asid = cp0_entryhi[7:0];
+        pfn = s0_pfn;
+        tlb_v = s0_v;
+        tlb_found = s0_found;
+    end
+end
+
+wire tlb_req_en;
+assign tlb_req_en = ((tlb_hit | !fs_use_tlb) & (state == 2'b00)) | (state == 2'b10);
+
 assign s0_vpn2 = nextpc[31:13];
 assign s0_odd_page = nextpc[12];
 assign s0_asid = cp0_entryhi[7:0];
@@ -167,9 +227,9 @@ assign s0_asid = cp0_entryhi[7:0];
 assign fs_use_tlb = ~(nextpc[31] & ~nextpc[30]);
 
 //cache valid
-assign inst_cache_valid     = fs_allowin & ~reset & (~pfs_ex) & (~br_stall);  //to_fs_valid && fs_allowin;
+assign inst_cache_valid     = fs_allowin & ~reset & (~pfs_ex) & (~br_stall) & tlb_req_en;  //to_fs_valid && fs_allowin;
 //[tag,index,offset] 20:8:4
-assign inst_addr    = fs_use_tlb ? {s0_pfn, nextpc[11:0]} : {3'b0, nextpc[28:0]};  
+assign inst_addr    = fs_use_tlb ? {3'b0,pfn[16:0], nextpc[11:0]} : {3'b0, nextpc[28:0]};
 assign inst_cache_tag   = inst_addr[31:12];
 assign inst_cache_index = inst_addr[11: 4];
 assign inst_cache_offset= inst_addr[ 3: 0];
@@ -179,8 +239,8 @@ assign inst_cache_uncache = nextpc[31] & ~nextpc[30] & nextpc[29];
 
 assign preif_tlb_exception  = pfs_exception_tlb_refill | pfs_exception_tlb_invalid;
 assign exception_adel    = ~(nextpc[1:0] == 0);
-assign pfs_exception_tlb_refill = ~s0_found & fs_use_tlb;
-assign pfs_exception_tlb_invalid = s0_found & ~s0_v & fs_use_tlb;
+assign pfs_exception_tlb_refill = ~tlb_found & fs_use_tlb & (state == 2'b10);
+assign pfs_exception_tlb_invalid = tlb_found & ~tlb_v & fs_use_tlb & (state == 2'b10);
 assign pfs_has_exception  = exception_adel | preif_tlb_exception;
 
 assign pfs_exception_type = exception_adel ?        5'h4 :

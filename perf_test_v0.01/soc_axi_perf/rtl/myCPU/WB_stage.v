@@ -32,6 +32,7 @@ module wb_stage(
 
     input         has_int,
     input  [31:0] c0_rdata,
+    input  [31:0] ws_epc,
 
     //TLB write port
     output         we,
@@ -77,8 +78,7 @@ module wb_stage(
     output        wb_mtc0_index,
 
     output        wb_cancel_to_all,
-    output [31:0] cancel_pc,
-    output        exception_is_tlb_refill
+    output [31:0] reflush_pc
 );
 
 reg         ws_valid;
@@ -104,6 +104,7 @@ wire [ 4:0] ws_dest;
 wire        ws_res_from_wb;
 wire [31:0] ws_final_result;
 wire [31:0] ws_pc;
+wire [31:0] cancel_pc;
 
 assign {exception_is_tlb_refill,//130:130
         ws_s1_index         ,  //129:126
@@ -186,7 +187,7 @@ assign ex_type              = ws_exception_type;
 assign wb_bd                = ws_bd;
 assign wb_pc                = ws_pc;
 assign wb_badvaddr          = ws_badvaddr;
-assign wb_eret              = ws_eret;
+assign wb_eret              = ws_valid & ws_eret;
 
 //TLB CP0 REG
 assign is_TLBR              = ws_tlbr;
@@ -215,5 +216,9 @@ assign r_index = cp0_index[3:0];
 assign wb_mtc0_index = mtc0_we & (ws_cp0_addr == 8'b00000000); //mtc0 write cp0_index
 
 assign wb_cancel_to_all = ws_valid & (ws_tlbr | ws_tlbwi );
-assign cancel_pc = ws_pc;
+assign cancel_pc = ws_pc + 3'b100;
+assign reflush_pc = exception_is_tlb_refill ? 32'hbfc00200 :
+                    ws_has_exception        ? 32'hbfc00380 :
+                    ws_eret                 ? ws_epc       :
+                    (cancel_pc) ;
 endmodule

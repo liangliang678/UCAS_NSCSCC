@@ -15,7 +15,7 @@ module mem_stage(
     output                         ms_to_ws_valid,
     output [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus  ,
     //from data-sram
-    //input  [31                 :0] data_cache_rdata,
+
     input         data_cache_data_ok,
     input  [31:0] data_cache_rdata,  
 
@@ -24,9 +24,10 @@ module mem_stage(
 
     //clear stage
     input         ms_ex,
-
+    output        ms_has_reflush_to_es,
     output        mem_mtc0_index,
-    input         ms_cancel_in
+    input         ms_cancel_in,
+    input         ms_eret_in
 );
 
 reg  [31:0] HI;
@@ -107,9 +108,6 @@ wire [31:0] ms_final_result;
 
 wire        ms_has_exception;
 wire [ 4:0] ms_exception_type;
-reg         ms_exception_appear;
-
-reg         ms_cancel;
 
 assign ms_to_ws_bus = {exception_is_tlb_refill,//130:130
                        ms_s1_index         ,  //129:126
@@ -135,14 +133,15 @@ assign ms_to_ws_bus = {exception_is_tlb_refill,//130:130
 assign ms_ready_go    = (~(ms_res_from_mem | ms_mem_we)) | data_cache_data_ok | ms_has_exception;//1'b1;
 assign ms_allowin     = !ms_valid || ms_ready_go && ws_allowin;
 assign ms_to_ws_valid = ms_valid && ms_ready_go;
+
+wire ms_disable;
+assign ms_disable = ms_ex || ms_cancel_in || ms_eret_in || ms_has_exception || ms_tlbr || ms_tlbwi;
+
 always @(posedge clk) begin
     if (reset) begin
         ms_valid <= 1'b0;
     end
-    else if (ms_has_exception & ms_valid & ws_allowin & ms_ready_go | ms_exception_appear) begin   // add ms_ready_go
-        ms_valid <= 1'b0;
-    end
-    else if ((ms_valid & ws_allowin & ms_ready_go & (~ms_has_exception) & (ms_tlbr | ms_tlbwi)) | ms_cancel)
+    else if (ms_ex || ms_cancel_in || ms_eret_in)
         ms_valid <= 1'b0;
     else if (ms_allowin) begin
         ms_valid <= es_to_ms_valid;
@@ -153,24 +152,6 @@ always @(posedge clk) begin
     end
 end
 
-always @(posedge clk) begin
-    if (reset) begin
-        ms_exception_appear <= 0;
-    end else if (ws_allowin && ms_has_exception && ms_valid && ms_ready_go) begin     // add ms_ready_go
-        ms_exception_appear <= 1;
-    end else if (ms_ex) begin
-        ms_exception_appear <= 0;
-    end
-end
-
-always @(posedge clk) begin
-    if(reset)
-        ms_cancel <= 1'b0;
-    else if(ms_valid & ws_allowin & ms_ready_go & (~ms_has_exception) & (ms_tlbr | ms_tlbwi))   
-        ms_cancel <= 1'b1;
-    else if(ms_cancel_in)
-        ms_cancel <= 1'b0;
-end
 
 wire mem_align_off_0;
 wire mem_align_off_1;
@@ -232,7 +213,7 @@ assign ms_final_result = ms_res_from_mem ? mem_result :
 always @(posedge clk) begin
     if (reset) begin
         HI <= 0;
-    end else if (ms_hi_we && ms_valid) begin
+    end else if (ms_hi_we && ms_valid && !ms_disable) begin
         HI <= ms_hl_src_from_mul ? mul_res[63:32]:
               ms_hl_src_from_div ? ms_alu_div_res[31: 0]:
                                    ms_rs_value;
@@ -242,7 +223,7 @@ end
 always @(posedge clk) begin
     if (reset) begin
         LO <= 0;
-    end else if (ms_lo_we && ms_valid) begin
+    end else if (ms_lo_we && ms_valid && !ms_disable) begin
         LO <= ms_hl_src_from_mul ? mul_res[31: 0]:
               ms_hl_src_from_div ? ms_alu_div_res[63:32]: 
                                    ms_rs_value;
@@ -262,4 +243,6 @@ assign ms_has_exception     = es_has_exception;
 assign ms_exception_type    = es_exception_type;
 
 assign mem_mtc0_index       = ms_cp0_we & ms_to_ws_valid & (ms_cp0_addr == 8'b00000000); //mtc0 write cp0_index
+assign ms_has_reflush_to_es = (ms_has_exception | ms_eret | ms_tlbr | ms_tlbwi) & ms_valid;
+
 endmodule

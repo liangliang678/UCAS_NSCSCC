@@ -26,16 +26,14 @@ module id_stage(
     
     //clear stage
     input                          ds_ex         ,
-    input                          es_exception_appear_in,
-    input                          ds_cancel_in 
+    input                          ds_cancel_in ,
+    input                          ds_eret_in
 );
 
 reg         ds_valid   ;
 wire        ds_ready_go;
 
-wire [31                 :0] fs_pc;
 reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
-assign fs_pc = fs_to_ds_bus[31:0];
 
 wire [31:0] ds_badvaddr      ;
 wire        fs_has_exception ;
@@ -44,14 +42,12 @@ wire        exception_syscall;
 wire        exception_break;
 wire        exception_reserve;
 wire        exception_int;
-reg         ds_exception_appear;
 wire        ds_eret;      //eret in ID, Exl -> 0
-
-reg         ds_cancel;   // Inst is TLBWI or TLBR cancel all behind
 
 wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
 wire        exception_is_tlb_refill;
+wire        ds_reflush;
 
 assign {exception_is_tlb_refill, //102:102
         ds_badvaddr      ,  //101:70
@@ -266,7 +262,6 @@ wire        rs_ge_zero;
 wire [ 6:0] load_store_type;
 
 wire        relevant_stall;
-wire        epc_relevant;
 wire        mfc0_relevent;
 wire        rs_eq_zero;
 wire        rt_eq_zero;
@@ -325,14 +320,13 @@ assign ds_ready_go    = ~(relevant_stall | ((wait_data_sram | es_data_sram_req))
                                                                                                  //but ... stop because of LOAD/STORE will make ds_to_es_valid 0 and if ID inst is syscall 
 assign ds_allowin     = !ds_valid || ds_ready_go && es_allowin;                                  //will make valid 0 and syscall just kills itself. All die here
 assign ds_to_es_valid = ds_valid && ds_ready_go;
+
+assign ds_reflush = ds_ex | ds_cancel_in | ds_eret_in;
 always @(posedge clk) begin
     if (reset) begin
         ds_valid <= 1'b0;
-    end                                                                                          //that's why ready_go is added here to control exception_appear register              
-    else if (ds_has_exception & ds_valid & ds_ready_go & es_allowin | ds_exception_appear | es_exception_appear_in | inst_eret & ds_ready_go & es_allowin) begin
-        ds_valid <= 1'b0;
-    end
-    else if ((ds_valid && ds_ready_go && es_allowin && (~ds_has_exception) && (ds_tlbr | ds_tlbwi)) | ds_cancel)
+    end                                                                                    
+    else if (ds_ex || ds_cancel_in || ds_eret_in)
         ds_valid <= 1'b0;
     else if (ds_allowin) begin
         ds_valid <= fs_to_ds_valid;
@@ -341,25 +335,6 @@ always @(posedge clk) begin
     if (fs_to_ds_valid && ds_allowin) begin
         fs_to_ds_bus_r <= fs_to_ds_bus;
     end
-end
-
-always @(posedge clk) begin
-    if (reset) begin
-        ds_exception_appear <= 0;
-    end else if (es_allowin && ds_has_exception && ds_valid && ds_ready_go) begin                 //ready_go add here. The same in EXE and MEM
-        ds_exception_appear <= 1;
-    end else if (ds_ex) begin
-        ds_exception_appear <= 0;
-    end
-end
-
-always @(posedge clk) begin
-    if(reset)
-        ds_cancel <= 1'b0;
-    else if(ds_valid && ds_ready_go && es_allowin && (~ds_has_exception) && (ds_tlbr | ds_tlbwi))   //what if it is also an exception? exception go first.
-        ds_cancel <= 1'b1;
-    else if(ds_cancel_in)
-        ds_cancel <= 1'b0;
 end
 
 assign op   = ds_inst[31:26];
@@ -482,7 +457,7 @@ assign jump_op   = inst_j | inst_jal | inst_jalr | inst_jr;
 assign alu_signed   = inst_add | inst_addi | inst_sub | inst_slt | inst_mult | inst_div;
 assign src1_is_sa   = inst_sll | inst_srl | inst_sra;
 assign src1_is_pc   = inst_jal | inst_bgezal | inst_bltzal | inst_jalr;
-assign src2_is_imm  = inst_addi | inst_addiu | inst_slti | inst_sltiu | inst_lui | load_op | store_op;
+assign src2_is_imm  = inst_addi | inst_addiu | inst_slti | inst_sltiu | inst_lui ;//| load_op | store_op;
 assign src2_is_imm16= inst_andi | inst_ori | inst_xori;
 assign src2_is_8    = inst_jal | inst_bgezal | inst_bltzal | inst_jalr;
 assign res_from_mem = load_op;
@@ -525,12 +500,12 @@ regfile u_regfile(
     .wdata  (rf_wdata )
     );
 
-assign rs_value = es_gr_we & rs_eq_es ? es_wdata :
-                  ms_gr_we & rs_eq_ms ? ms_wdata :
+assign rs_value = //es_gr_we & rs_eq_es ? es_wdata :
+                  //ms_gr_we & rs_eq_ms ? ms_wdata :
                   ws_gr_we & rs_eq_ws ? ws_wdata :
                   rf_rdata1;
-assign rt_value = es_gr_we & rt_eq_es ? es_wdata :
-                  ms_gr_we & rt_eq_ms ? ms_wdata :
+assign rt_value = //es_gr_we & rt_eq_es ? es_wdata :
+                  //ms_gr_we & rt_eq_ms ? ms_wdata :
                   ws_gr_we & rt_eq_ws ? ws_wdata :
                   rf_rdata2;
 
@@ -553,9 +528,8 @@ assign br_taken = (   inst_beq    &&  rs_eq_rt
                    || inst_jal
                    || inst_jr
                    || inst_jalr
-                   || inst_eret
-                  ) && ds_valid && ~ds_has_exception && ds_ready_go;   
-assign br_target = (inst_eret)             ? ds_epc :
+                  ) && ds_valid && ~ds_reflush && ds_ready_go;   
+assign br_target = 
                    (branch_op)             ? (ds_pc + {{14{imm[15]}}, imm[15:0], 2'b0} + 3'b100) :
                    (inst_jr  || inst_jalr) ? rs_value :
                   /*inst_jal || inst_j*/     {ds_pc[31:28], jidx[25:0], 2'b0};
@@ -569,11 +543,10 @@ assign rs_eq_ws = (rs == ws_dest) & ~rs_eq_zero;
 assign rt_eq_es = (rt == es_dest) & ~rt_eq_zero;
 assign rt_eq_ms = (rt == ms_dest) & ~rt_eq_zero;
 assign rt_eq_ws = (rt == ws_dest) & ~rt_eq_zero;
-assign relevant_stall = read_rs & es_gr_we & rs_eq_es & es_res_from_mem |
-                        read_rt & es_gr_we & rt_eq_es & es_res_from_mem |
-                        epc_relevant                                    | 
+assign relevant_stall = read_rs & es_gr_we & rs_eq_es | //& es_res_from_mem |
+                        read_rt & es_gr_we & rt_eq_es | //& es_res_from_mem |
                         mfc0_relevent;
-assign br_stall = ~ds_ready_go;
+assign br_stall = ~ds_ready_go ;
 
 assign exception_syscall = inst_syscall;
 assign exception_break   = inst_break;
@@ -581,30 +554,11 @@ assign exception_reserve = inst_reserve;
 assign exception_int     = has_int;
 assign ds_has_exception  = exception_syscall || exception_break || exception_reserve || exception_int || fs_has_exception;
 
-// assign ds_exception_type[0] = exception_int ? 1'b1 : fs_exception_type[0];
-// assign ds_exception_type[1] = fs_exception_type[1];
-// assign ds_exception_type[2] = fs_exception_type[2];
-// assign ds_exception_type[3] = fs_exception_type[3];
-// assign ds_exception_type[4] = exception_reserve ? 1'b1 : fs_exception_type[4];
-// assign ds_exception_type[5] = fs_exception_type[5];
-// assign ds_exception_type[6] = fs_exception_type[6];
-// assign ds_exception_type[7] = exception_syscall ? 1'b1 : fs_exception_type[7];
-// assign ds_exception_type[8] = exception_break ? 1'b1 : fs_exception_type[8];
-// assign ds_exception_type[9] = fs_exception_type[9];
-// assign ds_exception_type[10] = fs_exception_type[10];
-// assign ds_exception_type[11] = fs_exception_type[11];
-// assign ds_exception_type[12] = fs_exception_type[12];
-// assign ds_exception_type[13] = fs_exception_type[13];
-
 assign ds_exception_type = (exception_int     ) ? 5'h0 :
                            (fs_has_exception  ) ? fs_exception_type :
                            (exception_reserve ) ? 5'ha :
                            (exception_syscall ) ? 5'h8 :
                          /*(exception_break   )*/ 5'h9 ;
-
-assign epc_relevant = inst_eret & es_cp0_we & (es_cp0_addr == 8'b01110000) |
-                      inst_eret & ms_cp0_we & (ms_cp0_addr == 8'b01110000) |
-                      inst_eret & ws_cp0_we & (ws_cp0_addr == 8'b01110000) ;
 
 assign mfc0_relevent = read_rt & es_gr_we & rt_eq_es & es_res_from_wb |
                        read_rt & ms_gr_we & rt_eq_ms & ms_res_from_wb |

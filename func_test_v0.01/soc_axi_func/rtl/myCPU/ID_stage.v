@@ -457,7 +457,7 @@ assign jump_op   = inst_j | inst_jal | inst_jalr | inst_jr;
 assign alu_signed   = inst_add | inst_addi | inst_sub | inst_slt | inst_mult | inst_div;
 assign src1_is_sa   = inst_sll | inst_srl | inst_sra;
 assign src1_is_pc   = inst_jal | inst_bgezal | inst_bltzal | inst_jalr;
-assign src2_is_imm  = inst_addi | inst_addiu | inst_slti | inst_sltiu | inst_lui | load_op | store_op;
+assign src2_is_imm  = inst_addi | inst_addiu | inst_slti | inst_sltiu | inst_lui ;//| load_op | store_op;
 assign src2_is_imm16= inst_andi | inst_ori | inst_xori;
 assign src2_is_8    = inst_jal | inst_bgezal | inst_bltzal | inst_jalr;
 assign res_from_mem = load_op;
@@ -501,11 +501,11 @@ regfile u_regfile(
     );
 
 assign rs_value = //es_gr_we & rs_eq_es ? es_wdata :
-                  ms_gr_we & rs_eq_ms ? ms_wdata :
+                  //ms_gr_we & rs_eq_ms ? ms_wdata :
                   ws_gr_we & rs_eq_ws ? ws_wdata :
                   rf_rdata1;
 assign rt_value = //es_gr_we & rt_eq_es ? es_wdata :
-                  ms_gr_we & rt_eq_ms ? ms_wdata :
+                  //ms_gr_we & rt_eq_ms ? ms_wdata :
                   ws_gr_we & rt_eq_ws ? ws_wdata :
                   rf_rdata2;
 
