@@ -259,7 +259,8 @@ preif_stage preif_stage(
     //reflush
     .pfs_cancel_in    (cancel_to_all),
     .pfs_eret_in         (eret         ),
-    .reflush_pc        (reflush_pc    )  //actually pc of TLBR/TLBWI
+    .reflush_pc        (reflush_pc    ), //actually pc of TLBR/TLBWI
+    .tlb_write      (we)
 );
 
 
@@ -365,7 +366,8 @@ exe_stage exe_stage(
     .mem_mtc0_index (mem_mtc0_index ),
     .wb_mtc0_index  (wb_mtc0_index  ),
     .es_cancel_in   (cancel_to_all  ),
-    .es_eret_in     (eret           )
+    .es_eret_in     (eret           ),
+    .tlb_write      (we)
 );
 // MEM stage
 mem_stage mem_stage(

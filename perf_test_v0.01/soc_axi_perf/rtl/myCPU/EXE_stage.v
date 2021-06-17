@@ -49,7 +49,8 @@ module exe_stage(
     input         wb_mtc0_index,
     input         mem_mtc0_index,
     input         es_cancel_in,
-    input         es_eret_in
+    input         es_eret_in,
+    input         tlb_write
 );
 
 wire [31:0] data_addr     ;  
@@ -263,6 +264,9 @@ assign es_alu_src2 = es_src2_is_imm   ? {{16{es_imm[15]}}, es_imm[15:0]} :
                      es_src2_is_8     ? 32'd8 :
                                       es_rt_value;
 
+wire [31:0] es_addr;
+assign es_addr = es_rs_value + {{16{es_imm[15]}}, es_imm[15:0]} ;
+
 alu u_alu(
     .clk                (clk                  ),
     .reset              (reset                ),
@@ -278,7 +282,7 @@ alu u_alu(
     );
 
 
-assign es_load_store_offset = es_alu_result[1:0];
+assign es_load_store_offset = es_addr[1:0];
 
 assign write_strb = {4{sb_mem_res & mem_align_off_0}} & 4'b0001 |                           //sb
                     {4{sb_mem_res & mem_align_off_1}} & 4'b0010 |
@@ -324,7 +328,70 @@ assign mem_write_data = {32{sb_mem_res}} & {4{es_rt_value[ 7:0]}} |
                         {32{swr_mem_res & mem_align_off_2}} & {es_rt_value[15: 0],16'b0} |
                         {32{swr_mem_res & mem_align_off_3}} & {es_rt_value[ 7: 0],24'b0} ;
 
-assign es_VA = (swl_mem_res) ? {es_alu_result[31:2], 2'b0} : es_alu_result;
+assign es_VA = (swl_mem_res) ? {es_addr[31:2], 2'b0} : es_addr;
+
+
+reg [1 :0] state;
+reg [1 :0] nextstate;
+reg [18:0] vpn2;
+reg odd_page;
+reg [7 :0] asid;
+reg [19 :0] pfn;
+reg tlb_v;
+reg tlb_d;
+reg tlb_found;
+reg tlb_valid;
+
+wire tlb_hit;
+assign tlb_hit = tlb_valid & (es_VA[31:13] == vpn2) & (es_VA[12] == odd_page);
+
+always @(posedge clk) begin
+    if(reset)   state = 2'd0;
+    else state = nextstate;
+end
+
+always @(*) begin
+    case(state) 
+    2'b00:  nextstate = (es_valid & !tlb_hit & es_use_tlb) ? 1'b1 : 1'b0;
+    2'b01:  nextstate = 2'b10;
+    2'b10:  nextstate = (data_cache_addr_ok|es_exception_tlb_refill|es_exception_tlb_invalid|es_exception_modified) ? 2'b00 : 2'b10;
+    default:nextstate = 2'b00;
+    endcase
+end
+
+always @(posedge clk)
+begin
+    if(reset) tlb_valid = 1'b0;
+    else if (tlb_write) tlb_valid = 1'b0;
+    else if (state == 2'b01) tlb_valid = 1'b1;
+end
+
+always @(posedge clk)
+begin
+    if(reset) 
+    begin
+        vpn2 = 19'd0;
+        odd_page = 1'b0;
+        asid = 8'b0;
+        pfn = 20'b0;
+        tlb_d = 1'b0;
+        tlb_v = 1'b0 ;
+        tlb_found = 1'b0;
+    end
+    else if(state == 2'b01)
+    begin
+        vpn2 = es_VA[31:13];
+        odd_page = es_VA[12];
+        asid = cp0_entryhi[7:0];
+        pfn = s1_pfn;
+        tlb_v = s1_v;
+        tlb_d = s1_d;
+        tlb_found = s1_found;
+    end
+end
+
+wire tlb_req_en;
+assign tlb_req_en = ((tlb_hit | !es_use_tlb) & (state == 2'b00)) | (state == 2'b10);
 
 assign s1_vpn2 = es_tlbp ? cp0_entryhi[31:13] : es_VA[31:13];
 assign s1_odd_page = es_tlbp ? 1'b0 : es_VA[12];
@@ -333,11 +400,11 @@ assign s1_asid = cp0_entryhi[7:0];
 assign es_use_tlb = ~(es_VA[31] && ~es_VA[30]) && es_valid && (es_res_from_mem | es_mem_we);
 
 
-assign data_cache_valid   = (es_res_from_mem | es_mem_we) & ms_allowin & es_valid & !es_disable;        //only enable when LOAD/STORE
+assign data_cache_valid   = (es_res_from_mem | es_mem_we) & ms_allowin & es_valid & !es_disable &tlb_req_en;        //only enable when LOAD/STORE
 assign data_cache_wstrb = (es_mem_we && es_valid && !es_has_exception) ? write_strb : 4'h0;   
 assign data_cache_op    = (es_mem_we && es_valid && !es_has_exception);                                   
 
-assign data_addr  = es_use_tlb ? {s1_pfn, es_VA[11:0]} : {3'b0, es_VA[28:0]};
+assign data_addr  = es_use_tlb ? {3'b0,pfn[16:0], es_VA[11:0]} : {3'b0, es_VA[28:0]};
 assign data_cache_tag    = data_addr[31:12];
 assign data_cache_index  = data_addr[11: 4];
 assign data_cache_offset = data_addr[ 3: 0];
@@ -358,17 +425,17 @@ assign stall_es_bus = { data_cache_valid,                                       
                         es_dest                                                   //4:0
                       };
 
-assign exception_adel         = es_load_op && (sh_mem_res  && ~(es_alu_result[0] == 0) ||
-                                               shu_mem_res && ~(es_alu_result[0] == 0) ||
-                                               sw_mem_res  && ~(es_alu_result[1:0] == 0));
-assign exception_ades         = es_mem_we  && (sh_mem_res  && ~(es_alu_result[0] == 0) ||
-                                               shu_mem_res && ~(es_alu_result[0] == 0) ||
-                                               sw_mem_res  && ~(es_alu_result[1:0] == 0));
+assign exception_adel         = es_load_op && (sh_mem_res  && ~(es_addr[0] == 0) ||
+                                               shu_mem_res && ~(es_addr[0] == 0) ||
+                                               sw_mem_res  && ~(es_addr[1:0] == 0));
+assign exception_ades         = es_mem_we  && (sh_mem_res  && ~(es_addr[0] == 0) ||
+                                               shu_mem_res && ~(es_addr[0] == 0) ||
+                                               sw_mem_res  && ~(es_addr[1:0] == 0));
 
 assign exception_int_overflow = int_overflow && es_alu_signed && (es_alu_op[0] || es_alu_op[1]);
-assign es_exception_tlb_refill = ~s1_found & es_use_tlb;
-assign es_exception_tlb_invalid = s1_found & ~s1_v & es_use_tlb;
-assign es_exception_modified = es_mem_we & s1_found & s1_v & ~s1_d & es_use_tlb;
+assign es_exception_tlb_refill = ~tlb_found & es_use_tlb & (state == 2'b10);
+assign es_exception_tlb_invalid = tlb_found & ~tlb_v & es_use_tlb & (state == 2'b10);
+assign es_exception_modified = es_mem_we & tlb_found & tlb_v & ~tlb_d & es_use_tlb & (state == 2'b10);
 assign es_has_exception       = es_exception_modified || es_exception_tlb_invalid || es_exception_tlb_refill || exception_adel || exception_ades || exception_int_overflow || ds_has_exception;
 
 assign es_exception_type      = //((exception_int_overflow) && (((ds_has_exception) && ((ds_exception_type == 5'h8) || (ds_exception_type == 5'h9))) || (!ds_has_exception))) ? 5'hc :
