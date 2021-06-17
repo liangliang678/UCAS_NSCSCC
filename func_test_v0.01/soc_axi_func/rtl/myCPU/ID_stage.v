@@ -543,7 +543,9 @@ assign rs_eq_ws = (rs == ws_dest) & ~rs_eq_zero;
 assign rt_eq_es = (rt == es_dest) & ~rt_eq_zero;
 assign rt_eq_ms = (rt == ms_dest) & ~rt_eq_zero;
 assign rt_eq_ws = (rt == ws_dest) & ~rt_eq_zero;
-assign relevant_stall = read_rs & es_gr_we & rs_eq_es | //& es_res_from_mem |
+assign relevant_stall = read_rs & es_gr_we & rs_eq_ms |
+                        read_rt & es_gr_we & rt_eq_ms |
+                        read_rs & es_gr_we & rs_eq_es | //& es_res_from_mem |
                         read_rt & es_gr_we & rt_eq_es | //& es_res_from_mem |
                         mfc0_relevent;
 assign br_stall = ~ds_ready_go ;
