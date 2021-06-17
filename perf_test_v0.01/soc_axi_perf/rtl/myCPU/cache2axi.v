@@ -206,10 +206,10 @@ always @(posedge clk) begin
     end 
     else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
         if (axi_rlast) begin
-            data_rcount <= data_rcount + 2'b1;
+            data_rcount <= 2'b0;
         end
         else begin
-            data_rcount <= 2'b0;
+            data_rcount <= data_rcount + 2'b1;
         end
     end
 end
@@ -229,10 +229,10 @@ always @(posedge clk) begin
     end 
     else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
         if (axi_rlast) begin
-            inst_rcount <= inst_rcount + 2'b1;
+            inst_rcount <= 2'b0;
         end
         else begin
-            inst_rcount <= 2'b0;
+            inst_rcount <= inst_rcount + 2'b1;
         end
     end
 end

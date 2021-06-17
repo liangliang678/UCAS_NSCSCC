@@ -24,12 +24,13 @@ module prefetcher (
 reg [127:0] buffer;
 reg [ 31:0] addr;
 reg         valid;
+reg         uncache;
 
 always @(posedge clk) begin
     if(!resetn) begin
         addr <= 32'b0;
     end
-    else if (axi_rd_req && axi_rd_rdy) begin
+    else if (axi_rd_req && axi_rd_rdy && (axi_rd_type == 1'b1)) begin
         addr <= axi_rd_addr + 32'd16;
     end
 end
@@ -38,8 +39,20 @@ always @(posedge clk) begin
     if(!resetn) begin
         buffer <= 127'b0;
     end
-    else if (axi_ret_valid) begin
+    else if (axi_ret_valid && !uncache) begin
         buffer <= axi_ret_data[255:128];
+    end
+end
+
+always @(posedge clk) begin
+    if(!resetn) begin
+        uncache <= 1'b0;
+    end
+    else if (axi_rd_req && axi_rd_rdy && (axi_rd_type == 1'b0)) begin
+        uncache <= 1'b1;
+    end
+    else if (axi_ret_valid) begin
+        uncache <= 1'b0;
     end
 end
 
@@ -47,10 +60,10 @@ always @(posedge clk) begin
     if(!resetn) begin
         valid <= 1'b0;
     end
-    else if (axi_rd_req && axi_rd_rdy) begin
+    else if (axi_rd_req && axi_rd_rdy && (axi_rd_type == 1'b1)) begin
         valid <= 1'b0;
     end
-    else if (axi_ret_valid) begin
+    else if (axi_ret_valid && !uncache) begin
         valid <= 1'b1;
     end
 end

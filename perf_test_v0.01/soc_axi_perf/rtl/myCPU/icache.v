@@ -1,8 +1,9 @@
-`define  IDLE    5'b00001
-`define  LOOKUP  5'b00010
-`define  REPLACE 5'b00100
-`define  REFILL  5'b01000
-`define  UNCACHE 5'b10000
+`define  IDLE    6'b000001
+`define  LOOKUP  6'b000010
+`define  REPLACE 6'b000100
+`define  REFILL  6'b001000
+`define  UREQ    6'b010000
+`define  URESP   6'b100000
 
 module icache(
     input           clk,
@@ -211,7 +212,7 @@ wire [127:0] way0_data;
 wire [127:0] way1_data;
 
 always @(posedge clk) begin
-    if (valid && !uncache && addr_ok) begin
+    if (valid && addr_ok) begin
         rb_index   <= index;
         rb_tag     <= tag;
         rb_offset  <= offset;
@@ -302,22 +303,21 @@ assign rd_way_rdata = {32{rb_offset[3:2] == 2'b00}} & rd_way_data_bank0 |
                       {32{rb_offset[3:2] == 2'b11}} & rd_way_data_bank3;
 
 // Output
-assign addr_ok = (valid && uncache) ? rd_rdy : 
-                 ((state == `IDLE || (state == `LOOKUP && cache_hit)) && valid);
-assign data_ok = (state == `LOOKUP)  && cache_hit || 
-                 (state == `REFILL)  && ret_valid ||
-                 (state == `UNCACHE) && ret_valid;
-assign rdata = {32{(state == `LOOKUP)  && cache_hit}} & load_res | 
-               {32{(state == `REFILL)  && ret_valid}} & rd_way_rdata | 
-               {32{(state == `UNCACHE) && ret_valid}} & ret_data[31:0]; 
+assign addr_ok = ((state == `IDLE || (state == `LOOKUP && cache_hit)) && valid);
+assign data_ok = (state == `LOOKUP) && cache_hit || 
+                 (state == `REFILL) && ret_valid ||
+                 (state == `URESP)  && ret_valid;
+assign rdata = {32{(state == `LOOKUP) && cache_hit}} & load_res | 
+               {32{(state == `REFILL) && ret_valid}} & rd_way_rdata | 
+               {32{(state == `URESP)  && ret_valid}} & ret_data[31:0]; 
 
-assign rd_req  = valid && uncache ? 1'b1 : (state == `REPLACE);
-assign rd_type = valid && uncache ? 1'b0 : 1'b1;
-assign rd_addr = valid && uncache ? {tag, index, offset} : {rb_tag, rb_index, 4'b0};
+assign rd_req  = (state == `UREQ) || (state == `REPLACE);
+assign rd_type = (state == `UREQ) ? 1'b0 : 1'b1;
+assign rd_addr = (state == `UREQ) ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 4'b0};
 
 // Main FSM
-reg [4:0] state;
-reg [4:0] next_state;
+reg [5:0] state;
+reg [5:0] next_state;
 
 always @(posedge clk) begin
     if (!resetn) begin
@@ -331,7 +331,7 @@ always @(*) begin
 	case(state)
 	`IDLE:
         if (valid && uncache && addr_ok) begin
-            next_state = `UNCACHE;
+            next_state = `UREQ;
         end
 		else if (valid && !uncache && addr_ok) begin
 			next_state = `LOOKUP;
@@ -344,7 +344,7 @@ always @(*) begin
 			next_state = `LOOKUP;
 		end
         else if (cache_hit && (valid && uncache && addr_ok)) begin
-			next_state = `UNCACHE;
+			next_state = `UREQ;
 		end
         else if (cache_hit && !(valid && addr_ok)) begin
 			next_state = `IDLE;
@@ -366,12 +366,19 @@ always @(*) begin
         else begin
             next_state = `REFILL;
         end
-    `UNCACHE:
+    `UREQ:
+        if (rd_rdy && rd_req) begin
+            next_state = `URESP;
+        end
+        else begin
+            next_state = `UREQ;
+        end
+    `URESP:
         if (ret_valid) begin
             next_state = `IDLE;
         end
         else begin
-            next_state = `UNCACHE;
+            next_state = `URESP;
         end
 	default:
 		next_state = `IDLE;
