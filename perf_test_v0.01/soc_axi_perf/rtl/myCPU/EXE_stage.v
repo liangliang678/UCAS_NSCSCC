@@ -337,7 +337,7 @@ reg [18:0] vpn2;
 reg odd_page;
 reg [7 :0] asid;
 reg [19 :0] pfn;
-reg tlb_v;
+(* max_fanout = 30 *)reg tlb_v;
 reg tlb_d;
 reg tlb_found;
 reg tlb_valid;
@@ -346,16 +346,16 @@ wire tlb_hit;
 assign tlb_hit = tlb_valid & (es_VA[31:13] == vpn2) & (es_VA[12] == odd_page);
 
 always @(posedge clk) begin
-    if(reset)   state = 2'd0;
+    if(reset)   state <= 2'd0;
     else state <= nextstate;
 end
 
 always @(*) begin
     case(state) 
-    2'b00:  nextstate <= (es_valid & !tlb_hit & es_use_tlb) ? 1'b1 : 1'b0;
-    2'b01:  nextstate <= 2'b10;
-    2'b10:  nextstate <= (data_cache_addr_ok|es_exception_tlb_refill|es_exception_tlb_invalid|es_exception_modified) ? 2'b00 : 2'b10;
-    default:nextstate <= 2'b00;
+    2'b00:  nextstate = (es_valid & !tlb_hit & es_use_tlb) ? 1'b1 : 1'b0;
+    2'b01:  nextstate = 2'b10;
+    2'b10:  nextstate = (data_cache_addr_ok|es_exception_tlb_refill|es_exception_tlb_invalid|es_exception_modified) ? 2'b00 : 2'b10;
+    default:nextstate = 2'b00;
     endcase
 end
 
