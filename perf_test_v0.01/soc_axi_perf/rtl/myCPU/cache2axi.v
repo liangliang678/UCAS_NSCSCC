@@ -14,7 +14,7 @@ module cache2axi(
     input           resetn,
     // inst cache interface - slave
     input           inst_rd_req,
-    input           inst_rd_type,
+    input   [  1:0] inst_rd_type,
     input   [ 31:0] inst_rd_addr,
     output          inst_rd_rdy,
     output          inst_ret_valid,
@@ -172,10 +172,12 @@ always @(posedge clk) begin
             arlen <= 4'd3;
     end 
     else if (inst_rd_req && inst_rd_rdy) begin
-        if (inst_rd_type == 1'b0)
+        if (inst_rd_type == 2'b00)
             arlen <= 4'd0;
-        else if (inst_rd_type == 1'b1)
+        else if (inst_rd_type == 2'b01)
             arlen <= 4'd3;
+        else if (inst_rd_type == 2'b10)
+            arlen <= 4'd7;
     end
 end
 

@@ -31,6 +31,7 @@
 | 2021-06-14 |if 1st reset         | 50  | c452a    | 59b612      | c9ce2e   | 75cd9e| 18396e    | 516f4c     | 437136      | 507dbe | 688e4       | 3d8cf2       | 22.553 |
 | 2021-06-17 |tlb cache & opt delay| 70  | b9764    | 4c32fb      | b036ea   | 7b61b7| 141e2e    | 532178     | 3ffe5f      | 4eb5ce | 58930       | 33cccc       | 24.646 |
 | 2021-06-18 |add ms2ds forward    | 70  | 9ac78    | 461e77      | 9ef97d   | 67705b| 127c51    | 46cb88     | 37fcd4      | 43cdb7 | 518e0       | 2f7ffe       | 27.902 |
+| 2021-06-18 |add prefetcher       | 70  | 9afe5    | 45f143      | 9b2fcc   | 676acb| 12692f    | 46bbc9     | 37f90a      | 43b656 | 51598       | 2f79bc       | 28.000 |
 
 ## 参考资料
 

@@ -150,7 +150,7 @@ wire          data_cache_wr_rdy;
 wire          data_cache_wr_ok;  
 
 wire          axi_rd_req;
-wire          axi_rd_type;
+wire [  1:0]  axi_rd_type;
 wire [ 31:0]  axi_rd_addr;
 wire          axi_rd_rdy;
 wire          axi_ret_valid;
