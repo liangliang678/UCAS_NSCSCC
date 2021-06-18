@@ -508,7 +508,7 @@ cp0 cp0(
     .index_write_index  (index_write_index)    
 );
 
-icache2 icache(
+icache icache(
     .clk        (aclk   ),
     .resetn     (aresetn),
 
