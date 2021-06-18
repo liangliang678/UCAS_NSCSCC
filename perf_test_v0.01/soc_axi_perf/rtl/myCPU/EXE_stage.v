@@ -347,46 +347,46 @@ assign tlb_hit = tlb_valid & (es_VA[31:13] == vpn2) & (es_VA[12] == odd_page);
 
 always @(posedge clk) begin
     if(reset)   state = 2'd0;
-    else state = nextstate;
+    else state <= nextstate;
 end
 
 always @(*) begin
     case(state) 
-    2'b00:  nextstate = (es_valid & !tlb_hit & es_use_tlb) ? 1'b1 : 1'b0;
-    2'b01:  nextstate = 2'b10;
-    2'b10:  nextstate = (data_cache_addr_ok|es_exception_tlb_refill|es_exception_tlb_invalid|es_exception_modified) ? 2'b00 : 2'b10;
-    default:nextstate = 2'b00;
+    2'b00:  nextstate <= (es_valid & !tlb_hit & es_use_tlb) ? 1'b1 : 1'b0;
+    2'b01:  nextstate <= 2'b10;
+    2'b10:  nextstate <= (data_cache_addr_ok|es_exception_tlb_refill|es_exception_tlb_invalid|es_exception_modified) ? 2'b00 : 2'b10;
+    default:nextstate <= 2'b00;
     endcase
 end
 
 always @(posedge clk)
 begin
-    if(reset) tlb_valid = 1'b0;
-    else if (tlb_write) tlb_valid = 1'b0;
-    else if (state == 2'b01) tlb_valid = 1'b1;
+    if(reset) tlb_valid <= 1'b0;
+    else if (tlb_write) tlb_valid <= 1'b0;
+    else if (state == 2'b01) tlb_valid <= 1'b1;
 end
 
 always @(posedge clk)
 begin
     if(reset) 
     begin
-        vpn2 = 19'd0;
-        odd_page = 1'b0;
-        asid = 8'b0;
-        pfn = 20'b0;
-        tlb_d = 1'b0;
-        tlb_v = 1'b0 ;
-        tlb_found = 1'b0;
+        vpn2 <= 19'd0;
+        odd_page <= 1'b0;
+        asid <= 8'b0;
+        pfn <= 20'b0;
+        tlb_d <= 1'b0;
+        tlb_v <= 1'b0 ;
+        tlb_found <= 1'b0;
     end
     else if(state == 2'b01)
     begin
-        vpn2 = es_VA[31:13];
-        odd_page = es_VA[12];
-        asid = cp0_entryhi[7:0];
-        pfn = s1_pfn;
-        tlb_v = s1_v;
-        tlb_d = s1_d;
-        tlb_found = s1_found;
+        vpn2 <= es_VA[31:13];
+        odd_page <= es_VA[12];
+        asid <= cp0_entryhi[7:0];
+        pfn <= s1_pfn;
+        tlb_v <= s1_v;
+        tlb_d <= s1_d;
+        tlb_found <= s1_found;
     end
 end
 
