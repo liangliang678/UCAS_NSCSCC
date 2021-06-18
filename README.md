@@ -32,6 +32,7 @@
 | 2021-06-17 |tlb cache & opt delay| 70  | b9764    | 4c32fb      | b036ea   | 7b61b7| 141e2e    | 532178     | 3ffe5f      | 4eb5ce | 58930       | 33cccc       | 24.646 |
 | 2021-06-18 |add ms2ds forward    | 70  | 9ac78    | 461e77      | 9ef97d   | 67705b| 127c51    | 46cb88     | 37fcd4      | 43cdb7 | 518e0       | 2f7ffe       | 27.902 |
 | 2021-06-18 |add prefetcher       | 70  | 9afe5    | 45f143      | 9b2fcc   | 676acb| 12692f    | 46bbc9     | 37f90a      | 43b656 | 51598       | 2f79bc       | 28.000 |
+| 2021-06-18 |4way icache          | 70  | 9ac78    | 45ea55      | 91e9ae   | 676acb| 12683f    | 46b482     | 37f90c      | 43a431 | 51595       | 2f78cd       | 28.183 |
 
 ## 参考资料
 
