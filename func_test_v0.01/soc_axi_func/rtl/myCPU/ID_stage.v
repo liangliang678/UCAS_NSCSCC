@@ -85,6 +85,7 @@ wire [ 7:0] ms_cp0_addr;
 wire        ms_cp0_we;
 wire [31:0] ms_wdata;
 wire        ms_res_from_wb;
+wire        ms_non_mem_res;
 wire        ms_gr_we;
 wire [ 4:0] ms_dest;
 
@@ -104,11 +105,12 @@ assign {es_data_sram_req, //49:49
         es_gr_we       ,  //5:5
         es_dest           //4:0
        } = stall_es_bus;
-assign {ms_data_sram_data_ok,//48:48
-        ms_cp0_addr    ,  //47:40
-        ms_cp0_we      ,  //39:39
-        ms_wdata       ,  //38:7
-        ms_res_from_wb ,  //6:6
+assign {ms_data_sram_data_ok,//49:49
+        ms_cp0_addr    ,  //48:41
+        ms_cp0_we      ,  //40:40
+        ms_wdata       ,  //39:8
+        ms_res_from_wb ,  //7:7
+        ms_non_mem_res ,  //6:6
         ms_gr_we       ,  //5:5
         ms_dest           //4:0
        } = stall_ms_bus;
@@ -501,11 +503,11 @@ regfile u_regfile(
     );
 
 assign rs_value = //es_gr_we & rs_eq_es ? es_wdata :
-                  //ms_gr_we & rs_eq_ms ? ms_wdata :
+                  ms_gr_we & rs_eq_ms & ms_non_mem_res ? ms_wdata :
                   ws_gr_we & rs_eq_ws ? ws_wdata :
                   rf_rdata1;
 assign rt_value = //es_gr_we & rt_eq_es ? es_wdata :
-                  //ms_gr_we & rt_eq_ms ? ms_wdata :
+                  ms_gr_we & rt_eq_ms & ms_non_mem_res ? ms_wdata :
                   ws_gr_we & rt_eq_ws ? ws_wdata :
                   rf_rdata2;
 
@@ -543,8 +545,8 @@ assign rs_eq_ws = (rs == ws_dest) & ~rs_eq_zero;
 assign rt_eq_es = (rt == es_dest) & ~rt_eq_zero;
 assign rt_eq_ms = (rt == ms_dest) & ~rt_eq_zero;
 assign rt_eq_ws = (rt == ws_dest) & ~rt_eq_zero;
-assign relevant_stall = read_rs & ms_gr_we & rs_eq_ms |
-                        read_rt & ms_gr_we & rt_eq_ms |
+assign relevant_stall = read_rs & ms_gr_we & rs_eq_ms & ~ms_non_mem_res |
+                        read_rt & ms_gr_we & rt_eq_ms & ~ms_non_mem_res |
                         read_rs & es_gr_we & rs_eq_es | //& es_res_from_mem |
                         read_rt & es_gr_we & rt_eq_es | //& es_res_from_mem |
                         mfc0_relevent;

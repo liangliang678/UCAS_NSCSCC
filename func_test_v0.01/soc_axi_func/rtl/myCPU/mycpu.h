@@ -12,7 +12,7 @@
     `define WS_TO_RF_BUS_WD 38
 
     `define STALL_ES_BUS_WD 50
-    `define STALL_MS_BUS_WD 49
+    `define STALL_MS_BUS_WD 50
     `define STALL_WS_BUS_WD 48
 
     `define EXCEPTION_ADEL          0
