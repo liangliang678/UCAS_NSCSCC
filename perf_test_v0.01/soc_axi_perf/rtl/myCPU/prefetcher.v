@@ -1,8 +1,9 @@
-`define IDLE          5'b00001
-`define HIT           5'b00010
-`define MISS          5'b00100
-`define FILL          5'b01000
-`define UNCACHE       5'b10000
+`define IDLE          6'b000001
+`define HIT           6'b000010
+`define BAD           6'b000100
+`define MISS          6'b001000
+`define FILL          6'b010000
+`define UNCACHE       6'b100000
 
 module prefetcher (
     input           clk,
@@ -39,6 +40,9 @@ always @(posedge clk) begin
     else if (axi_rd_req && axi_rd_rdy && buffer_miss) begin
         req_addr <= axi_rd_addr + 32'd16;
     end
+    else if (axi_rd_req && axi_rd_rdy && bad_fill) begin
+        req_addr <= axi_rd_addr + 32'd16;
+    end
 end
 
 always @(posedge clk) begin
@@ -68,9 +72,11 @@ end
 wire buffer_hit;
 wire buffer_miss;
 wire uncache_req;
+wire bad_fill;
 assign buffer_hit  = cache_rd_req && (cache_rd_type == 1'b1) && (cache_rd_addr == addr);
 assign buffer_miss = cache_rd_req && (cache_rd_type == 1'b1) && (cache_rd_addr != addr);
 assign uncache_req = cache_rd_req && (cache_rd_type == 1'b0);
+assign bad_fill = (state == `HIT) && cache_rd_req && (cache_rd_type == 1'b1) && (cache_rd_addr != req_addr);
 
 reg [127:0] ret_data;
 reg         ret_valid;
@@ -96,18 +102,18 @@ always @(posedge clk) begin
     end
 end
 
-assign axi_rd_req = (state == `IDLE) && cache_rd_req;
-assign axi_rd_type = buffer_miss ? 2'b10 : {1'b0, cache_rd_type};
-assign axi_rd_addr = buffer_hit ? (cache_rd_addr + 32'd16) :cache_rd_addr;
-assign cache_rd_rdy = (state == `IDLE) && axi_rd_rdy;
+assign axi_rd_req = (state == `IDLE) && cache_rd_req || bad_fill;
+assign axi_rd_type = (buffer_miss || bad_fill) ? 2'b10 : {1'b0, cache_rd_type};
+assign axi_rd_addr = buffer_hit ? (cache_rd_addr + 32'd16) : cache_rd_addr;
+assign cache_rd_rdy = (state == `IDLE) && axi_rd_rdy || bad_fill && axi_rd_rdy;
 assign cache_ret_valid = (state == `HIT)     && ret_valid    ||
                          (state == `MISS)    && axi_ret_half ||
                          (state == `UNCACHE) && axi_ret_valid;
 assign cache_ret_data = (state == `HIT) ? ret_data : axi_ret_data[127:0];
 
 // FSM
-reg [4:0] state;
-reg [4:0] next_state;
+reg [5:0] state;
+reg [5:0] next_state;
 
 always @(posedge clk) begin
     if (!resetn) begin
@@ -136,9 +142,19 @@ always @(*) begin
         if (axi_ret_valid) begin
 			next_state = `IDLE;
 		end
+        else if (bad_fill) begin
+            next_state = `BAD;
+        end
         else begin
 			next_state = `HIT;
 		end
+    `BAD:
+        if (axi_ret_valid) begin
+            next_state = `MISS;
+        end
+        else begin
+            next_state = `BAD;
+        end
     `MISS:
         if (axi_ret_half) begin
             next_state = `FILL;

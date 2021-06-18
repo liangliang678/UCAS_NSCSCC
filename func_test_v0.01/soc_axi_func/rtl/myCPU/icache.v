@@ -427,27 +427,85 @@ assign load_res = {32{way0_hit}} & way0_load_word |
                   {32{way2_hit}} & way2_load_word |
                   {32{way3_hit}} & way3_load_word;
 
-// LRU
-reg [1:0] last_hit [255:0];
+// PLRU
+reg [255:0] way0_mru;
+reg [255:0] way1_mru;
+reg [255:0] way2_mru;
+reg [255:0] way3_mru;
 reg [1:0] rp_way;
 
 genvar i;
-generate for (i=0; i<256; i=i+1) begin :gen_for_hit
+generate for (i=0; i<256; i=i+1) begin :gen_for_mru
     always @(posedge clk) begin
         if (!resetn) begin
-            last_hit[i] <= 1'b0;
+            way0_mru[i] <= 1'b0;
+            way1_mru[i] <= 1'b0;
+            way2_mru[i] <= 1'b0;
+            way3_mru[i] <= 1'b0;
         end
         else if (state == `LOOKUP && way0_hit && rb_index == i) begin
-            last_hit[i] <= 2'b00;
+            way0_mru[i] <= 1'b1;
+            if(way1_mru[i] && way2_mru[i] && way3_mru[i]) begin
+                way1_mru[i] <= 1'b0;
+                way2_mru[i] <= 1'b0;
+                way3_mru[i] <= 1'b0;
+            end
         end
         else if (state == `LOOKUP && way1_hit && rb_index == i) begin
-            last_hit[i] <= 2'b01;
+            way1_mru[i] <= 1'b1;
+            if(way0_mru[i] && way2_mru[i] && way3_mru[i]) begin
+                way0_mru[i] <= 1'b0;
+                way2_mru[i] <= 1'b0;
+                way3_mru[i] <= 1'b0;
+            end
         end
         else if (state == `LOOKUP && way2_hit && rb_index == i) begin
-            last_hit[i] <= 2'b10;
+            way2_mru[i] <= 1'b1;
+            if(way0_mru[i] && way1_mru[i] && way3_mru[i]) begin
+                way0_mru[i] <= 1'b0;
+                way1_mru[i] <= 1'b0;
+                way3_mru[i] <= 1'b0;
+            end
         end
         else if (state == `LOOKUP && way3_hit && rb_index == i) begin
-            last_hit[i] <= 2'b11;
+            way3_mru[i] <= 1'b1;
+            if(way0_mru[i] && way1_mru[i] && way2_mru[i]) begin
+                way0_mru[i] <= 1'b0;
+                way1_mru[i] <= 1'b0;
+                way2_mru[i] <= 1'b0;
+            end
+        end
+        else if (state == `REPLACE && rp_way == 2'b00 && rb_index == i) begin
+            way0_mru[i] <= 1'b1;
+            if(way1_mru[i] && way2_mru[i] && way3_mru[i]) begin
+                way1_mru[i] <= 1'b0;
+                way2_mru[i] <= 1'b0;
+                way3_mru[i] <= 1'b0;
+            end
+        end
+        else if (state == `REPLACE && rp_way == 2'b01 && rb_index == i) begin
+            way1_mru[i] <= 1'b1;
+            if(way0_mru[i] && way2_mru[i] && way3_mru[i]) begin
+                way0_mru[i] <= 1'b0;
+                way2_mru[i] <= 1'b0;
+                way3_mru[i] <= 1'b0;
+            end
+        end
+        else if (state == `REPLACE && rp_way == 2'b10 && rb_index == i) begin
+            way2_mru[i] <= 1'b1;
+            if(way0_mru[i] && way1_mru[i] && way3_mru[i]) begin
+                way0_mru[i] <= 1'b0;
+                way1_mru[i] <= 1'b0;
+                way3_mru[i] <= 1'b0;
+            end
+        end
+        else if (state == `REPLACE && rp_way == 2'b11 && rb_index == i) begin
+            way3_mru[i] <= 1'b1;
+            if(way0_mru[i] && way1_mru[i] && way2_mru[i]) begin
+                way0_mru[i] <= 1'b0;
+                way1_mru[i] <= 1'b0;
+                way2_mru[i] <= 1'b0;
+            end
         end
     end
 end endgenerate
@@ -457,31 +515,17 @@ always @(posedge clk) begin
         rp_way <= 1'b0;
     end
     else if (state == `LOOKUP && !cache_hit) begin
-        if (!way0_v) begin
+        if(!way0_mru[rb_index]) begin
             rp_way <= 2'b00;
         end
-        else if (!way1_v) begin
+        else if(!way1_mru[rb_index]) begin
             rp_way <= 2'b01;
         end
-        else if (!way2_v) begin
+        else if(!way2_mru[rb_index]) begin
             rp_way <= 2'b10;
         end
-        else if (!way3_v) begin
+        else if(!way3_mru[rb_index]) begin
             rp_way <= 2'b11;
-        end
-        else begin
-            if(last_hit[rb_index] == 2'b00) begin
-                rp_way <= 2'b01;
-            end
-            else if(last_hit[rb_index] == 2'b01) begin
-                rp_way <= 2'b10;
-            end
-            else if(last_hit[rb_index] == 2'b10) begin
-                rp_way <= 2'b11;
-            end
-            else if(last_hit[rb_index] == 2'b11) begin
-                rp_way <= 2'b00;
-            end
         end
     end
 end

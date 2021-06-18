@@ -280,7 +280,7 @@ always @(posedge clk) begin
     if (!resetn) begin
         to_icache_half <= 1'b0;
     end
-    else if (axi_rready && axi_rvalid && inst_rcount == 3'd4 && axi_rid == 4'b0) begin
+    else if (axi_rready && axi_rvalid && inst_rcount == 3'd3 && axi_rid == 4'b0) begin
         to_icache_half <= 1'b1;
     end
     else if (to_icache_half == 1'b1) begin
