@@ -105,6 +105,7 @@ assign ms_res_from_wb = ms_cp0_op;
 
 wire [31:0] mem_result;
 wire [31:0] ms_final_result;
+wire [31:0] ms_non_mem_res;
 
 wire        ms_has_exception;
 wire [ 4:0] ms_exception_type;
@@ -203,12 +204,13 @@ assign mem_result = {32{lb_mem_res  & mem_align_off_0}} & { {24{data_cache_rdata
                     {32{lwr_mem_res & mem_align_off_2}} & { ms_rt_value[31:16], data_cache_rdata[31:16] } |
                     {32{lwr_mem_res & mem_align_off_3}} & { ms_rt_value[31: 8], data_cache_rdata[31:24] };
 
+assign ms_non_mem_res = ms_res_from_hi  ? HI :
+                        ms_res_from_lo  ? LO :
+                        ms_cp0_we       ? ms_rt_value :
+                                          ms_alu_result;
 
 assign ms_final_result = ms_res_from_mem ? mem_result :
-                         ms_res_from_hi  ? HI :
-                         ms_res_from_lo  ? LO :
-                         ms_cp0_we       ? ms_rt_value :
-                                           ms_alu_result;
+                                           ms_non_mem_res;
 
 always @(posedge clk) begin
     if (reset) begin
@@ -230,19 +232,20 @@ always @(posedge clk) begin
     end
 end
 
-assign stall_ms_bus = {data_cache_data_ok,     //48:48
-                       ms_cp0_addr,           //47:40
-                       ms_cp0_we && ms_to_ws_valid, //39:39
-                       ms_final_result     ,  //38:7
-                       ms_res_from_wb      ,  //6:6
-                       ms_gr_we && ms_to_ws_valid,  //5:5
+assign stall_ms_bus = {data_cache_data_ok,     //49:49
+                       ms_cp0_addr,           //48:41
+                       ms_cp0_we & ms_valid, //40:40
+                       ms_non_mem_res     ,  //39:8
+                       ms_res_from_wb      ,  //7:7
+                       (~ms_res_from_mem) & ms_valid, //6:6
+                       ms_gr_we & ms_valid,  //5:5
                        ms_dest                //4:0
                       };
 
 assign ms_has_exception     = es_has_exception;
 assign ms_exception_type    = es_exception_type;
 
-assign mem_mtc0_index       = ms_cp0_we & ms_to_ws_valid & (ms_cp0_addr == 8'b00000000); //mtc0 write cp0_index
+assign mem_mtc0_index       = ms_cp0_we & ms_valid & (ms_cp0_addr == 8'b00000000); //mtc0 write cp0_index
 assign ms_has_reflush_to_es = (ms_has_exception | ms_eret | ms_tlbr | ms_tlbwi) & ms_valid;
 
 endmodule

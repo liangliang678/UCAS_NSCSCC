@@ -1,7 +1,7 @@
 // Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
-// Date        : Thu Jun 17 22:16:19 2021
+// Date        : Fri Jun 18 12:35:57 2021
 // Host        : DESKTOP running 64-bit major release  (build 9200)
 // Command     : write_verilog -force -mode funcsim
 //               E:/NSCSCC/perf_test_v0.01/soc_axi_perf/rtl/xilinx_ip/clk_pll/clk_pll_sim_netlist.v
