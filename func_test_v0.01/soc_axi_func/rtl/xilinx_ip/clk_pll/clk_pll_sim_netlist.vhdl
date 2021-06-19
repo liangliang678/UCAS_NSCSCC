@@ -1,10 +1,10 @@
 -- Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
--- Date        : Fri Jun 18 01:18:21 2021
--- Host        : DESKTOP-Q45UAV2 running 64-bit major release  (build 9200)
+-- Date        : Sat Jun 19 15:28:42 2021
+-- Host        : DESKTOP running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode funcsim
---               D:/nscscc/NSCSCC2021/NSCSCC/func_test_v0.01/soc_axi_func/rtl/xilinx_ip/clk_pll/clk_pll_sim_netlist.vhdl
+--               E:/NSCSCC/func_test_v0.01/soc_axi_func/rtl/xilinx_ip/clk_pll/clk_pll_sim_netlist.vhdl
 -- Design      : clk_pll
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -80,7 +80,7 @@ plle2_adv_inst: unisim.vcomponents.PLLE2_ADV
       CLKFBOUT_PHASE => 0.000000,
       CLKIN1_PERIOD => 10.000000,
       CLKIN2_PERIOD => 0.000000,
-      CLKOUT0_DIVIDE => 12,
+      CLKOUT0_DIVIDE => 18,
       CLKOUT0_DUTY_CYCLE => 0.500000,
       CLKOUT0_PHASE => 0.000000,
       CLKOUT1_DIVIDE => 9,

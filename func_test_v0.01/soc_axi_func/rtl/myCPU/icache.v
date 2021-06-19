@@ -27,23 +27,23 @@ module icache(
 );
 
 // RAM
-wire        tagv_way0_en;
-wire        tagv_way1_en;
-wire        tagv_way2_en;
-wire        tagv_way3_en;
-wire        tagv_way0_we;
-wire        tagv_way1_we;
-wire        tagv_way2_we;
-wire        tagv_way3_we;
-wire [ 7:0] tagv_addr;
-wire [20:0] tagv_way0_din;
-wire [20:0] tagv_way1_din;
-wire [20:0] tagv_way2_din;
-wire [20:0] tagv_way3_din;
-wire [20:0] tagv_way0_dout;
-wire [20:0] tagv_way1_dout;
-wire [20:0] tagv_way2_dout;
-wire [20:0] tagv_way3_dout;
+wire        tag_way0_en;
+wire        tag_way1_en;
+wire        tag_way2_en;
+wire        tag_way3_en;
+wire        tag_way0_we;
+wire        tag_way1_we;
+wire        tag_way2_we;
+wire        tag_way3_we;
+wire [ 7:0] tag_addr;
+wire [19:0] tag_way0_din;
+wire [19:0] tag_way1_din;
+wire [19:0] tag_way2_din;
+wire [19:0] tag_way3_din;
+wire [19:0] tag_way0_dout;
+wire [19:0] tag_way1_dout;
+wire [19:0] tag_way2_dout;
+wire [19:0] tag_way3_dout;
 
 wire        data_way0_bank0_en;
 wire        data_way0_bank1_en;
@@ -111,37 +111,37 @@ wire [31:0] data_way3_bank1_dout;
 wire [31:0] data_way3_bank2_dout;
 wire [31:0] data_way3_bank3_dout;
 
-TagV_RAM TagV_RAM_Way0(
-    .clka   (clk           ),
-    .addra  (tagv_addr     ),
-    .ena    (tagv_way0_en  ),
-    .wea    (tagv_way0_we  ),
-    .dina   (tagv_way0_din ),
-    .douta  (tagv_way0_dout)
+Tag_RAM Tag_RAM_Way0(
+    .clka   (clk          ),
+    .addra  (tag_addr     ),
+    .ena    (tag_way0_en  ),
+    .wea    (tag_way0_we  ),
+    .dina   (tag_way0_din ),
+    .douta  (tag_way0_dout)
 );
-TagV_RAM TagV_RAM_Way1(
-    .clka   (clk           ),
-    .addra  (tagv_addr     ),
-    .ena    (tagv_way1_en  ),
-    .wea    (tagv_way1_we  ),
-    .dina   (tagv_way1_din ),
-    .douta  (tagv_way1_dout)
+Tag_RAM Tag_RAM_Way1(
+    .clka   (clk          ),
+    .addra  (tag_addr     ),
+    .ena    (tag_way1_en  ),
+    .wea    (tag_way1_we  ),
+    .dina   (tag_way1_din ),
+    .douta  (tag_way1_dout)
 );
-TagV_RAM TagV_RAM_Way2(
-    .clka   (clk           ),
-    .addra  (tagv_addr     ),
-    .ena    (tagv_way2_en  ),
-    .wea    (tagv_way2_we  ),
-    .dina   (tagv_way2_din ),
-    .douta  (tagv_way2_dout)
+Tag_RAM Tag_RAM_Way2(
+    .clka   (clk          ),
+    .addra  (tag_addr     ),
+    .ena    (tag_way2_en  ),
+    .wea    (tag_way2_we  ),
+    .dina   (tag_way2_din ),
+    .douta  (tag_way2_dout)
 );
-TagV_RAM TagV_RAM_Way3(
-    .clka   (clk           ),
-    .addra  (tagv_addr     ),
-    .ena    (tagv_way3_en  ),
-    .wea    (tagv_way3_we  ),
-    .dina   (tagv_way3_din ),
-    .douta  (tagv_way3_dout)
+Tag_RAM Tag_RAM_Way3(
+    .clka   (clk          ),
+    .addra  (tag_addr     ),
+    .ena    (tag_way3_en  ),
+    .wea    (tag_way3_we  ),
+    .dina   (tag_way3_din ),
+    .douta  (tag_way3_dout)
 );
 Data_RAM Data_RAM_Way0_Bank0(
     .clka   (clk                 ),
@@ -272,24 +272,29 @@ Data_RAM Data_RAM_Way3_Bank3(
     .douta  (data_way3_bank3_dout)
 );
 
+reg V_Way0 [255:0];
+reg V_Way1 [255:0];
+reg V_Way2 [255:0];
+reg V_Way3 [255:0];
+
 // RAM Port
-assign tagv_way0_en = (valid && !uncache && addr_ok) || 
-                      (state == `REFILL && ret_valid &&  rp_way == 2'b00);
-assign tagv_way1_en = (valid && !uncache && addr_ok) || 
-                      (state == `REFILL && ret_valid &&  rp_way == 2'b01);
-assign tagv_way2_en = (valid && !uncache && addr_ok) || 
-                      (state == `REFILL && ret_valid &&  rp_way == 2'b10);
-assign tagv_way3_en = (valid && !uncache && addr_ok) || 
-                      (state == `REFILL && ret_valid &&  rp_way == 2'b11);
-assign tagv_way0_we = (state == `REFILL && ret_valid && rp_way == 2'b00);
-assign tagv_way1_we = (state == `REFILL && ret_valid && rp_way == 2'b01);
-assign tagv_way2_we = (state == `REFILL && ret_valid && rp_way == 2'b10);
-assign tagv_way3_we = (state == `REFILL && ret_valid && rp_way == 2'b11);
-assign tagv_way0_din = {1'b1, rb_tag};
-assign tagv_way1_din = {1'b1, rb_tag};
-assign tagv_way2_din = {1'b1, rb_tag};
-assign tagv_way3_din = {1'b1, rb_tag};
-assign tagv_addr = (valid && !uncache && addr_ok)  ? index : 
+assign tag_way0_en = (valid && !uncache && addr_ok) || 
+                     (state == `REFILL && ret_valid && rp_way == 2'b00);
+assign tag_way1_en = (valid && !uncache && addr_ok) || 
+                     (state == `REFILL && ret_valid && rp_way == 2'b01);
+assign tag_way2_en = (valid && !uncache && addr_ok) || 
+                     (state == `REFILL && ret_valid && rp_way == 2'b10);
+assign tag_way3_en = (valid && !uncache && addr_ok) || 
+                     (state == `REFILL && ret_valid && rp_way == 2'b11);
+assign tag_way0_we = (state == `REFILL && ret_valid && rp_way == 2'b00);
+assign tag_way1_we = (state == `REFILL && ret_valid && rp_way == 2'b01);
+assign tag_way2_we = (state == `REFILL && ret_valid && rp_way == 2'b10);
+assign tag_way3_we = (state == `REFILL && ret_valid && rp_way == 2'b11);
+assign tag_way0_din = rb_tag;
+assign tag_way1_din = rb_tag;
+assign tag_way2_din = rb_tag;
+assign tag_way3_din = rb_tag;
+assign tag_addr = (valid && !uncache && addr_ok)  ? index : 
                    (state == `REFILL && ret_valid) ? rb_index : 8'b0;
 
 assign data_way0_bank0_en = (valid && !uncache && addr_ok) ||
@@ -359,6 +364,51 @@ assign data_way3_bank3_din = rd_way_data_bank3;
 assign data_addr = (valid && !uncache && addr_ok)  ? index : 
                    (state == `REFILL && ret_valid) ? rb_index : 8'b0;
 
+genvar i0;
+generate for (i0=0; i0<256; i0=i0+1) begin :gen_for_V_Way0
+    always @(posedge clk) begin
+        if (!resetn) begin
+            V_Way0[i0] <= 1'b0;
+        end
+        else if (state == `REFILL && ret_valid && rp_way == 2'b00 && rb_index == i0) begin
+            V_Way0[i0] <= 1'b1;
+        end
+    end
+end endgenerate
+genvar i1;
+generate for (i1=0; i1<256; i1=i1+1) begin :gen_for_V_Way1
+    always @(posedge clk) begin
+        if (!resetn) begin
+            V_Way1[i1] <= 1'b0;
+        end
+        else if (state == `REFILL && ret_valid && rp_way == 2'b01 && rb_index == i1) begin
+            V_Way1[i1] <= 1'b1;
+        end
+    end
+end endgenerate
+genvar i2;
+generate for (i2=0; i2<256; i2=i2+1) begin :gen_for_V_Way2
+    always @(posedge clk) begin
+        if (!resetn) begin
+            V_Way2[i2] <= 1'b0;
+        end
+        else if (state == `REFILL && ret_valid && rp_way == 2'b10 && rb_index == i2) begin
+            V_Way2[i2] <= 1'b1;
+        end
+    end
+end endgenerate
+genvar i3;
+generate for (i3=0; i3<256; i3=i3+1) begin :gen_for_V_Way3
+    always @(posedge clk) begin
+        if (!resetn) begin
+            V_Way3[i3] <= 1'b0;
+        end
+        else if (state == `REFILL && ret_valid && rp_way == 2'b11 && rb_index == i3) begin
+            V_Way3[i3] <= 1'b1;
+        end
+    end
+end endgenerate
+
 // Request Buffer
 reg  [ 19:0] rb_tag;
 reg  [  7:0] rb_index;
@@ -385,14 +435,14 @@ always @(posedge clk) begin
     end
 end
 
-assign way0_v = tagv_way0_dout[20];
-assign way1_v = tagv_way1_dout[20];
-assign way2_v = tagv_way2_dout[20];
-assign way3_v = tagv_way3_dout[20];
-assign way0_tag = tagv_way0_dout[19:0];
-assign way1_tag = tagv_way1_dout[19:0];
-assign way2_tag = tagv_way2_dout[19:0];
-assign way3_tag = tagv_way3_dout[19:0];
+assign way0_v = V_Way0[rb_index];
+assign way1_v = V_Way1[rb_index];
+assign way2_v = V_Way2[rb_index];
+assign way3_v = V_Way3[rb_index];
+assign way0_tag = tag_way0_dout[19:0];
+assign way1_tag = tag_way1_dout[19:0];
+assign way2_tag = tag_way2_dout[19:0];
+assign way3_tag = tag_way3_dout[19:0];
 assign way0_data = {data_way0_bank3_dout, data_way0_bank2_dout, data_way0_bank1_dout, data_way0_bank0_dout};
 assign way1_data = {data_way1_bank3_dout, data_way1_bank2_dout, data_way1_bank1_dout, data_way1_bank0_dout};
 assign way2_data = {data_way2_bank3_dout, data_way2_bank2_dout, data_way2_bank1_dout, data_way2_bank0_dout};

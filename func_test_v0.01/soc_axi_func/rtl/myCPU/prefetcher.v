@@ -139,10 +139,13 @@ always @(*) begin
 			next_state = `IDLE;
 		end
 	`HIT:
-        if (axi_ret_valid) begin
+        if (axi_ret_valid && bad_fill) begin
+			next_state = `MISS;
+		end
+        else if (axi_ret_valid && !bad_fill) begin
 			next_state = `IDLE;
 		end
-        else if (bad_fill) begin
+        else if (!axi_ret_valid && bad_fill) begin
             next_state = `BAD;
         end
         else begin

@@ -44,15 +44,15 @@ module dcache(
     input           wr_ok
 );
 
-wire        tagv_way0_en;
-wire        tagv_way1_en;
-wire        tagv_way0_we;
-wire        tagv_way1_we;
-wire [ 7:0] tagv_addr;
-wire [20:0] tagv_way0_din;
-wire [20:0] tagv_way1_din;
-wire [20:0] tagv_way0_dout;
-wire [20:0] tagv_way1_dout;
+wire        tag_way0_en;
+wire        tag_way1_en;
+wire        tag_way0_we;
+wire        tag_way1_we;
+wire [ 7:0] tag_addr;
+wire [19:0] tag_way0_din;
+wire [19:0] tag_way1_din;
+wire [19:0] tag_way0_dout;
+wire [19:0] tag_way1_dout;
 
 wire        data_way0_bank0_en;
 wire        data_way0_bank1_en;
@@ -90,22 +90,24 @@ wire [31:0] data_way1_bank3_dout;
 
 reg D_Way0 [255:0];
 reg D_Way1 [255:0];
+reg V_Way0 [255:0];
+reg V_Way1 [255:0];
 
-TagV_RAM TagV_RAM_Way0(
-    .clka   (clk           ),
-    .addra  (tagv_addr     ),
-    .ena    (tagv_way0_en  ),
-    .wea    (tagv_way0_we  ),
-    .dina   (tagv_way0_din ),
-    .douta  (tagv_way0_dout)
+Tag_RAM Tag_RAM_Way0(
+    .clka   (clk          ),
+    .addra  (tag_addr     ),
+    .ena    (tag_way0_en  ),
+    .wea    (tag_way0_we  ),
+    .dina   (tag_way0_din ),
+    .douta  (tag_way0_dout)
 );
-TagV_RAM TagV_RAM_Way1(
-    .clka   (clk           ),
-    .addra  (tagv_addr     ),
-    .ena    (tagv_way1_en  ),
-    .wea    (tagv_way1_we  ),
-    .dina   (tagv_way1_din ),
-    .douta  (tagv_way1_dout)
+Tag_RAM Tag_RAM_Way1(
+    .clka   (clk          ),
+    .addra  (tag_addr     ),
+    .ena    (tag_way1_en  ),
+    .wea    (tag_way1_we  ),
+    .dina   (tag_way1_din ),
+    .douta  (tag_way1_dout)
 );
 Data_RAM Data_RAM_Way0_Bank0(
     .clka   (clk                 ),
@@ -186,7 +188,6 @@ generate for (i0=0; i0<256; i0=i0+1) begin :gen_for_D_Way0
         end
     end
 end endgenerate
-
 genvar i1;
 generate for (i1=0; i1<256; i1=i1+1) begin :gen_for_D_Way1
     always @(posedge clk) begin
@@ -202,14 +203,37 @@ generate for (i1=0; i1<256; i1=i1+1) begin :gen_for_D_Way1
     end
 end endgenerate
 
-assign tagv_way0_en = (valid && addr_ok) || (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign tagv_way1_en = (valid && addr_ok) || (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
-assign tagv_way0_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
-assign tagv_way1_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
-assign tagv_way0_din = {1'b1, rb_tag};
-assign tagv_way1_din = {1'b1, rb_tag};
-assign tagv_addr = (valid && addr_ok) ? index : 
-                   (state == `REFILL && ret_valid && !rb_uncache) ? rb_index : 8'b0;
+genvar iv0;
+generate for (iv0=0; iv0<256; iv0=iv0+1) begin :gen_for_V_Way0
+    always @(posedge clk) begin
+        if (!resetn) begin
+            V_Way0[iv0] <= 1'b0;
+        end
+        else if (state == `REFILL && ret_valid && rp_way == 1'b0 && !rb_uncache && rb_index == iv0) begin
+            V_Way0[iv0] <= 1'b1;
+        end
+    end
+end endgenerate
+genvar iv1;
+generate for (iv1=0; iv1<256; iv1=iv1+1) begin :gen_for_V_Way1
+    always @(posedge clk) begin
+        if (!resetn) begin
+            V_Way1[iv1] <= 1'b0;
+        end
+        else if (state == `REFILL && ret_valid && rp_way == 1'b1 && !rb_uncache && rb_index == iv1) begin
+            V_Way1[iv1] <= 1'b1;
+        end
+    end
+end endgenerate
+
+assign tag_way0_en = (valid && addr_ok) || (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
+assign tag_way1_en = (valid && addr_ok) || (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
+assign tag_way0_we = (state == `REFILL && ret_valid && !rp_way && !rb_uncache);
+assign tag_way1_we = (state == `REFILL && ret_valid &&  rp_way && !rb_uncache);
+assign tag_way0_din = rb_tag;
+assign tag_way1_din = rb_tag;
+assign tag_addr = (valid && addr_ok) ? index : 
+                  (state == `REFILL && ret_valid && !rb_uncache) ? rb_index : 8'b0;
 
 assign data_way0_bank0_en = (valid && addr_ok) || 
                             (wstate == `WRITE && wb_offset[3:2] == 2'b00 && !wb_hit_way) || 
@@ -293,10 +317,10 @@ assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid &&
 
 assign way0_d = D_Way0[rb_index];
 assign way1_d = D_Way1[rb_index];
-assign way0_v = tagv_way0_dout[20];
-assign way1_v = tagv_way1_dout[20];
-assign way0_tag = tagv_way0_dout[19:0];
-assign way1_tag = tagv_way1_dout[19:0];
+assign way0_v = V_Way0[rb_index];
+assign way1_v = V_Way1[rb_index];
+assign way0_tag = tag_way0_dout[19:0];
+assign way1_tag = tag_way1_dout[19:0];
 assign way0_data = {data_way0_bank3_dout, data_way0_bank2_dout, data_way0_bank1_dout, data_way0_bank0_dout};
 assign way1_data = {data_way1_bank3_dout, data_way1_bank2_dout, data_way1_bank1_dout, data_way1_bank0_dout};
 
@@ -461,7 +485,7 @@ reg [2:0] pending_start;
 reg [2:0] pending_end;
 
 genvar ip;
-generate for (ip=0; ip<256; ip=ip+1) begin :gen_for_valid
+generate for (ip=0; ip<8; ip=ip+1) begin :gen_for_valid
     always @(posedge clk) begin
         if (!resetn) begin
             pending_valid[ip] <= 0;
@@ -500,9 +524,9 @@ wire uncache_read_stall;
 
 assign uncache_write_go = ((pending_end + 3'b1) != pending_start);
 
-wire [2:0] match;
+wire [7:0] match;
 genvar im;
-generate for (im=0; im<256; im=im+1) begin :gen_for_match
+generate for (im=0; im<8; im=im+1) begin :gen_for_match
     assign match[im] = ({rb_tag, rb_index, rb_offset} == pending_addr[im]) && 
                        (pending_type[im] == 1'b0) &&
                        (pending_valid[im] == 1'b1);
