@@ -600,7 +600,7 @@ always @(posedge aclk) begin
     begin
         btn_key_r   <=16'd0;
     end
-    else if(next_state == 3'b111 && state != 3'b111) begin
+    else if(next_state == 3'b111 && state != 3'b111 && state_count[3]) begin
         btn_key_r   <= btn_key_tmp;
     end
 end

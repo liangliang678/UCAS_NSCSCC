@@ -193,7 +193,7 @@ always @(posedge clk) begin
     end
 end
 
-assign inst_rd_rdy = (ar_state == `AR_IDLE);
+assign inst_rd_rdy = (ar_state == `AR_IDLE) && !data_rd_req;
 assign data_rd_rdy = (ar_state == `AR_IDLE);
 
 // R

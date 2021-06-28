@@ -564,7 +564,7 @@ dcache dcache(
     .wr_ok      (data_cache_wr_ok    )
 );
 
-prefetcher prefetcher(
+prefetcher1 prefetcher(
     .clk              (aclk            ),
     .resetn           (aresetn         ),
     // Dcache
