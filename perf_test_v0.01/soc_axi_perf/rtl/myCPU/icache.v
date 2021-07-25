@@ -294,8 +294,8 @@ assign tag_way0_din = rb_tag;
 assign tag_way1_din = rb_tag;
 assign tag_way2_din = rb_tag;
 assign tag_way3_din = rb_tag;
-assign tag_addr =  (valid && !uncache && addr_ok)  ? index : 
-                   (state == `REFILL && ret_valid) ? rb_index : 8'b0;
+assign tag_addr = (valid && !uncache && addr_ok)  ? index : 
+                  (state == `REFILL && ret_valid) ? rb_index : 8'b0;
 
 assign data_way0_bank0_en = (valid && !uncache && addr_ok) ||
                             (state == `REFILL && ret_valid && rp_way == 2'b00);

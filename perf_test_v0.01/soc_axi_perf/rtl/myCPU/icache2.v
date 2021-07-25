@@ -296,7 +296,7 @@ assign tag_way1_din = rb_tag;
 assign tag_way2_din = rb_tag;
 assign tag_way3_din = rb_tag;
 assign tag_addr = (valid && !uncache && addr_ok)  ? index : 
-                   (state == `REFILL && ret_valid) ? rb_index : 8'b0;
+                  (state == `REFILL && ret_valid) ? rb_index : 8'b0;
 
 assign data_way0_bank0_en = (valid && !uncache && addr_ok) ||
                             (state == `REFILL && ret_valid && rp_way == 2'b00);
@@ -440,10 +440,10 @@ assign way0_v = V_Way0[rb_index];
 assign way1_v = V_Way1[rb_index];
 assign way2_v = V_Way2[rb_index];
 assign way3_v = V_Way3[rb_index];
-assign way0_tag = tag_way0_dout[19:0];
-assign way1_tag = tag_way1_dout[19:0];
-assign way2_tag = tag_way2_dout[19:0];
-assign way3_tag = tag_way3_dout[19:0];
+assign way0_tag = tag_way0_dout;
+assign way1_tag = tag_way1_dout;
+assign way2_tag = tag_way2_dout;
+assign way3_tag = tag_way3_dout;
 assign way0_data = {data_way0_bank3_dout, data_way0_bank2_dout, data_way0_bank1_dout, data_way0_bank0_dout};
 assign way1_data = {data_way1_bank3_dout, data_way1_bank2_dout, data_way1_bank1_dout, data_way1_bank0_dout};
 assign way2_data = {data_way2_bank3_dout, data_way2_bank2_dout, data_way2_bank1_dout, data_way2_bank0_dout};
@@ -584,12 +584,12 @@ assign rd_way_data_bank2 = ret_data[ 95:64];
 assign rd_way_data_bank3 = ret_data[127:96];
 
 // Output
-assign addr_ok = ((state == `IDLE || (state == `LOOKUP && cache_hit)) && valid);
+assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid;
 assign data_ok = (state == `LOOKUP) && cache_hit || 
                  (state == `REFILL) && ret_valid ||
                  (state == `URESP)  && ret_valid;
-assign rdata = {128{(state == `LOOKUP) && cache_hit}} & (load_res >> (rb_offset << 5)) | 
-               {128{(state == `REFILL) && ret_valid}} & (ret_data >> (rb_offset << 5)) | 
+assign rdata = {128{(state == `LOOKUP) && cache_hit}} & (load_res >> (rb_offset[3:2] << 5)) | 
+               {128{(state == `REFILL) && ret_valid}} & (ret_data >> (rb_offset[3:2] << 5)) | 
                {128{(state == `URESP)  && ret_valid}} & {96'b0, ret_data[31:0]}; 
 assign rnum = (state == `URESP) ? 2'b0 : ~rb_offset;
 
