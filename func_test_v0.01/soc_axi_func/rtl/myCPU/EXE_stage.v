@@ -102,6 +102,10 @@ wire        self_r1_relevant;
 wire        self_r2_relevant;
 wire [31:0] br_target;
 
+wire [31:0] inst2_rs_update_value;
+wire [31:0] inst2_rt_update_value;
+
+
 assign {inst2_valid,
         inst2_refill,
         inst2_ds_except,
@@ -344,6 +348,9 @@ assign es_forward_bus = {es_valid, es_to_pms_valid,
 //         es_inst2_mfhilo, es_inst2_mfc0, es_inst2_load, es_inst2_gr_we, es_inst2_dest, es_inst2_result } = es_forward_bus;
 
 // data bus to pms
+assign inst2_rs_update_value = self_r1_relevant ? es_alu_inst1_result : inst2_rs_value;
+assign inst2_rt_update_value = self_r2_relevant ? es_alu_inst1_result : inst2_rt_value;
+
 assign es_to_pms_bus = {
                         inst2_valid,
                         inst2_refill,
@@ -371,8 +378,8 @@ assign es_to_pms_bus = {
                         inst2_gr_we,
                         inst2_mem_we,
                         inst2_dest,
-                        inst2_rs_value,
-                        inst2_rt_value,
+                        inst2_rs_update_value,// inst2_rs_value,
+                        inst2_rt_update_value,// inst2_rt_value,
                         inst2_pc,
                         es_inst2_mem_addr,
 
