@@ -725,13 +725,13 @@ assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _1_cach
 assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _2_cache_req &&
                   (!_1_cache_req || req_same_line && !req_read_write);
 assign data_ok1 = (state == `LOOKUP) && _1_cache_hit ||
-                  (state == `REFILL) && ret_valid || 
-                  (state == `URRESP) && ret_valid ||
-                  (state == `UWRESP) && uncache_write_go;
+                  (state == `REFILL) && rb_valid[0] && ret_valid || 
+                  (state == `URRESP) && (uncache_way == 1'b0) && ret_valid ||
+                  (state == `UWRESP) && (uncache_way == 1'b0) && uncache_write_go;
 assign data_ok2 = (state == `LOOKUP) && _2_cache_hit ||
-                  (state == `REFILL) && ret_valid || 
-                  (state == `URRESP) && ret_valid ||
-                  (state == `UWRESP) && uncache_write_go;
+                  (state == `REFILL) && rb_valid[1] && ret_valid || 
+                  (state == `URRESP) && (uncache_way == 1'b1) && ret_valid ||
+                  (state == `UWRESP) && (uncache_way == 1'b1) && uncache_write_go;
 assign rdata1 = {32{(state == `LOOKUP) && _1_cache_hit}} & _1_load_res  | 
                 {32{(state == `REFILL) && ret_valid}} & _1_rd_way_rdata |
                 {32{(state == `URRESP) && ret_valid}} & ret_data[31:0];
