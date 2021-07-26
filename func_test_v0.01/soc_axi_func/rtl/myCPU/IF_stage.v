@@ -773,7 +773,7 @@ assign ms_inst2_r2_relevant = ~fifo_empty & r2_need & ms_valid & ms_inst2_gr_we 
 assign ws_inst1_r2_relevant = ~fifo_empty & r2_need & ws_valid & ws_inst1_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ws_inst1_dest);
 assign ws_inst2_r2_relevant = ~fifo_empty & r2_need & ws_valid & ws_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ws_inst2_dest);
 
-assign ds_block = ds_inst1_r1_relevant | ds_inst2_r1_relevant;
+assign ds_block = ds_inst1_r1_relevant | ds_inst2_r1_relevant | ds_inst1_r2_relevant | ds_inst2_r2_relevant;
 
 assign es_block = es_inst1_r1_relevant & (es_inst1_load | es_inst1_mfc0 | es_inst1_mfhilo | ~es_res_valid) | es_inst2_r1_relevant & (es_inst2_load | es_inst2_mfc0 | es_inst2_mfhilo | ~es_res_valid) | 
                   es_inst1_r2_relevant & (es_inst1_load | es_inst1_mfc0 | es_inst1_mfhilo | ~es_res_valid) | es_inst2_r2_relevant & (es_inst2_load | es_inst2_mfc0 | es_inst2_mfhilo | ~es_res_valid);

@@ -223,6 +223,8 @@ reg  [31:0] es_alu_inst2_rt;
 wire [31:0] es_inst1_mem_addr;
 wire [31:0] es_inst2_mem_addr;
 
+wire [31:0] es_inst2_mem_addr_adder;
+
 always @(posedge clk) begin
     if(reset)
         es_alu_inst2_rs <= 32'b0;
@@ -255,8 +257,10 @@ assign es_alu_inst2_src2 = inst2_src2_is_imm   ? {{16{inst2_imm[15]}}, inst2_imm
                            self_r2_relevant    ? es_alu_inst2_rt :
                                                  inst2_rt_value;
 
+assign es_inst2_mem_addr_adder = self_r1_relevant ? es_alu_inst2_rs : inst2_rs_value;
+
 assign es_inst1_mem_addr = inst1_rs_value + {{16{inst1_imm[15]}}, inst1_imm[15:0]} ;
-assign es_inst2_mem_addr = es_alu_inst2_rs + {{16{inst2_imm[15]}}, inst2_imm[15:0]} ;
+assign es_inst2_mem_addr = es_inst2_mem_addr_adder + {{16{inst2_imm[15]}}, inst2_imm[15:0]} ;
 
 alu u_alu_inst1(
     .clk                (clk                  ),

@@ -168,11 +168,11 @@ always @(posedge clk) begin
     else if (pms_to_ms_valid && ms_allowin) begin
         inst1_mem_ok <= 1'b0;
     end
-    else if (data_cache_data_ok_01 & ~ms_ready_go) begin
+    else if (data_cache_data_ok_01 & (~ms_ready_go | ~ws_allowin)) begin
         inst1_mem_ok <= 1'b1;
     end
 
-    if (inst1_res_from_mem & data_cache_data_ok_01 & ~ms_ready_go) begin
+    if (inst1_res_from_mem & data_cache_data_ok_01 & (~ms_ready_go | ~ws_allowin)) begin
         inst1_mem_result_reg  <= inst1_mem_result;
     end
 end
@@ -243,11 +243,11 @@ always @(posedge clk) begin
     else if (pms_to_ms_valid && ms_allowin) begin
         inst2_mem_ok <= 1'b0;
     end
-    else if (data_cache_data_ok_02 & ~ms_ready_go) begin
+    else if (data_cache_data_ok_02 & (~ms_ready_go | ~ws_allowin)) begin
         inst2_mem_ok <= 1'b1;
     end
 
-    if (inst2_res_from_mem & data_cache_data_ok_02 & ~ms_ready_go) begin
+    if (inst2_res_from_mem & data_cache_data_ok_02 & (~ms_ready_go | ~ws_allowin)) begin
         inst2_mem_result_reg  <= inst2_mem_result;
     end
 end
