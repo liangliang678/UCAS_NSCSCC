@@ -24,7 +24,7 @@ module icache(
     output [ 31:0]  rd_addr,
     input           rd_rdy,
     input           ret_valid,
-    input  [255:0]  ret_data
+    input  [127:0]  ret_data
 );
 
 // RAM
@@ -588,9 +588,9 @@ assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid;
 assign data_ok = (state == `LOOKUP) && cache_hit || 
                  (state == `REFILL) && ret_valid ||
                  (state == `URESP)  && ret_valid;
-assign rdata = {128'b0, {
-               {128{(state == `LOOKUP) && cache_hit}} & (load_res >> (rb_offset[3:2] << 5)) | 
-               {128{(state == `REFILL) && ret_valid}} & (ret_data >> (rb_offset[3:2] << 5)) | 
+assign rdata = {256'b0, {
+               {128{(state == `LOOKUP) && cache_hit}} & (load_res >> ({5'b0, rb_offset[3:2]} << 5)) | 
+               {128{(state == `REFILL) && ret_valid}} & (ret_data >> ({5'b0, rb_offset[3:2]} << 5)) | 
                {128{(state == `URESP)  && ret_valid}} & {96'b0, ret_data[31:0]}
                }}; 
 assign rnum = (state == `URESP) ? 4'b1 : {2'b0, ~(rb_offset[3:2])} + 4'b1;

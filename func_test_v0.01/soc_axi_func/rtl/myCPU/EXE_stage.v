@@ -319,10 +319,12 @@ assign inst1_es_Ov = inst1_detect_overflow & es_alu_inst1_overflow;
 assign inst2_es_Ov = inst2_detect_overflow & es_alu_inst2_overflow;
 
 assign inst1_es_except = inst1_ds_except | inst1_es_Ov;
-assign inst2_es_except = inst2_ds_except | inst1_es_Ov;
+assign inst2_es_except = inst2_ds_except | inst2_es_Ov;
 
-assign inst1_es_exccode = inst1_ds_except ? inst1_ds_exccode : 5'hc ;
-assign inst2_es_exccode = inst2_ds_except ? inst2_ds_exccode : 5'hc ;
+assign inst1_es_exccode = inst1_ds_except ? inst1_ds_exccode : 
+                          inst1_es_Ov ? 5'hc : 5'b0;
+assign inst2_es_exccode = inst2_ds_except ? inst2_ds_exccode : 
+                          inst2_es_Ov ? 5'hc : 5'b0;
 
 assign inst1_es_BadVAddr = inst1_ds_except ? inst1_pc : es_inst1_mem_addr;
 assign inst2_es_BadVAddr = inst2_ds_except ? inst2_pc : es_inst2_mem_addr;

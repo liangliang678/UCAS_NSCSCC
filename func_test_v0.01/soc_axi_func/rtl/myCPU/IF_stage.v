@@ -980,12 +980,19 @@ assign inst2_func_final = inst2_func & {6{inst2_valid}};
 assign inst2_imm_final  = inst2_imm  & {16{inst2_valid}};
 assign inst2_jidx_final = inst2_jidx & {26{inst2_valid}};
 
-assign inst2_op_d_final   = inst2_op_d   & {64{inst2_valid}};
-assign inst2_func_d_final = inst2_func_d & {64{inst2_valid}};
-assign inst2_rs_d_final   = inst2_rs_d   & {32{inst2_valid}};
-assign inst2_rt_d_final   = inst2_rt_d   & {32{inst2_valid}};
-assign inst2_rd_d_final   = inst2_rd_d   & {32{inst2_valid}};
-assign inst2_sa_d_final   = inst2_sa_d   & {32{inst2_valid}};
+//assign inst2_op_d_final   = inst2_op_d   & {64{inst2_valid}};
+//assign inst2_func_d_final = inst2_func_d & {64{inst2_valid}};
+//assign inst2_rs_d_final   = inst2_rs_d   & {32{inst2_valid}};
+//assign inst2_rt_d_final   = inst2_rt_d   & {32{inst2_valid}};
+//assign inst2_rd_d_final   = inst2_rd_d   & {32{inst2_valid}};
+//assign inst2_sa_d_final   = inst2_sa_d   & {32{inst2_valid}};
+
+assign inst2_op_d_final   = inst2_valid ? inst2_op_d : 64'd1;
+assign inst2_func_d_final = inst2_valid ? inst2_func_d : 64'd1;
+assign inst2_rs_d_final   = inst2_valid ? inst2_rs_d : 32'd1;
+assign inst2_rt_d_final   = inst2_valid ? inst2_rt_d : 32'd1;
+assign inst2_rd_d_final   = inst2_valid ? inst2_rd_d : 32'd1;
+assign inst2_sa_d_final   = inst2_valid ? inst2_sa_d : 32'd1;
 
 assign inst2_pc       = fifo_pc[head_1];
 assign inst2_inst     = fs_inst2 & {32{inst2_valid}};
