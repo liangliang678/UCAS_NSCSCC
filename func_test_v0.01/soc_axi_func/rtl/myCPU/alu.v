@@ -74,9 +74,12 @@ wire        adder_cout_31;
 assign adder_a   = alu_src1;
 assign adder_b   = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;
 assign adder_cin = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
-assign {adder_cout_31, adder_result[30:0]} = adder_a[30:0] + adder_b[30:0] + adder_cin;
-assign {adder_cout, adder_result[31]} = adder_a[31] + adder_b[31] + adder_cout_31;
-assign overflow = adder_cout ^ adder_cout_31;
+//assign {adder_cout_31, adder_result[30:0]} = adder_a[30:0] + adder_b[30:0] + adder_cin;
+// assign {adder_cout, adder_result[31]} = adder_a[31] + adder_b[31] + adder_cout_31;
+// assign overflow = adder_cout ^ adder_cout_31;
+
+assign {adder_cout, adder_result} = adder_a + adder_b + adder_cin;
+assign overflow = (op_add | op_sub) & (adder_cout ^ adder_result[31]) & ~(adder_a[31] ^ adder_b[31]);
 
 // ADD, SUB result
 assign add_sub_result = adder_result;
@@ -152,12 +155,9 @@ assign alu_result = ({32{op_add|op_sub }}   & add_sub_result)
                   | ({32{op_lui        }}   & lui_result)
                   | ({32{op_sll        }}   & sll_result)
                   | ({32{op_srl|op_sra }}   & sr_result);
-                  // | ({32{op_mult|op_multu}} & mult_result[31:0])
-                  // | ({32{op_div|op_divu}}   & div_result[31:0]);
+
 
 assign alu_div_res = div_result;
-// ({64{op_mult|op_multu}} & mult_result) |
-//                             ({64{op_div|op_divu}} & div_result);
 
 assign alu_mul_res = mult_result;
 

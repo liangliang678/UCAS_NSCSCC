@@ -1,149 +1,64 @@
 `include "mycpu.h"
 
 module wb_stage(
-    input                           clk           ,
-    input                           reset         ,
+    input                            clk           ,
+    input                            reset         ,
     //allowin
-    output                          ws_allowin    ,
+    output                           ws_allowin    ,
     //from ms
-    input                           ms_to_ws_valid,
-    input  [`MS_TO_WS_BUS_WD -1:0]  ms_to_ws_bus  ,
+    input                            ms_to_ws_valid,
+    input  [`MS_TO_WS_BUS_WD -1:0]   ms_to_ws_bus  ,
+
     //to rf: for write back
-    output [`WS_TO_RF_BUS_WD -1:0]  ws_to_rf_bus  ,
+    output [`WS_TO_RF_BUS_WD -1:0]   ws_to_rf_bus  ,
+
+    //relevant bus
+    output [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus,
+
     //trace debug interface
     output [31:0] debug_wb_pc     ,
     output [ 3:0] debug_wb_rf_wen ,
     output [ 4:0] debug_wb_rf_wnum,
-    output [31:0] debug_wb_rf_wdata,
-    //data relevant
-    output [`STALL_WS_BUS_WD -1:0] stall_ws_bus,
-
-    //handle exception
-    output [31:0] c0_wdata,
-    output [ 7:0] c0_addr,
-    output        mtc0_we,
-
-    output        wb_ex,       //has exception
-    output [ 4:0] ex_type,     //type of exception
-    output        wb_bd,       //is delay slot
-    output [31:0] wb_pc,       //pc
-    output [31:0] wb_badvaddr, //bad vaddr
-    output        wb_eret,
-
-    input         has_int,
-    input  [31:0] c0_rdata,
-    input  [31:0] ws_epc,
-
-    //TLB write port
-    output         we,
-    output  [ 3:0] w_index,
-    output  [18:0] w_vpn2,
-    output  [ 7:0] w_asid,
-    output         w_g,
-    output  [19:0] w_pfn0, 
-    output  [ 2:0] w_c0,
-    output         w_d0,
-    output         w_v0,
-    output  [19:0] w_pfn1,
-    output  [ 2:0] w_c1,
-    output         w_d1,
-    output         w_v1, 
-    //TLB read port
-    output [ 3:0] r_index,
-    input  [18:0] r_vpn2,
-    input  [ 7:0] r_asid,
-    input         r_g,
-    input  [19:0] r_pfn0,
-    input  [ 2:0] r_c0,
-    input         r_d0,
-    input         r_v0,
-    input  [19:0] r_pfn1,
-    input  [ 2:0] r_c1,
-    input         r_d1,
-    input         r_v1,
-
-    //TLB CP0 REG
-    input  [31:0] cp0_index,
-    input  [31:0] cp0_entryhi,
-    input  [31:0] cp0_entrylo0,
-    input  [31:0] cp0_entrylo1,
-
-    //TLBR\TLBP to CP0
-    output        is_TLBR,
-    output [77:0] TLB_rdata,
-    output        is_TLBP,
-    output        index_write_p,
-    output [ 3:0] index_write_index,
-
-    output        wb_mtc0_index,
-
-    output        wb_cancel_to_all,
-    output [31:0] reflush_pc
+    output [31:0] debug_wb_rf_wdata
 );
 
 reg         ws_valid;
 wire        ws_ready_go;
 
 reg [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus_r;
-wire [ 3:0] ws_s1_index   ;
-wire        ws_s1_found   ;
-wire        ws_tlbp       ;
-wire        ws_tlbr       ;
-wire        ws_tlbwi      ;
-wire        ws_eret       ;
-wire [31:0] ws_badvaddr   ;
-wire        ws_bd         ;
-wire        ms_has_exception;
-wire [ 4:0] ms_exception_type;
-wire        ws_cp0_op     ;
-wire        ws_cp0_we     ;
-wire [ 7:0] ws_cp0_addr   ;
-wire [ 1:0] ws_load_store_offset;
-wire        ws_gr_we;
-wire [ 4:0] ws_dest;
-wire        ws_res_from_wb;
-wire [31:0] ws_final_result;
-wire [31:0] ws_pc;
-wire [31:0] cancel_pc;
 
-assign {exception_is_tlb_refill,//130:130
-        ws_s1_index         ,  //129:126
-        ws_s1_found         ,  //125:125
-        ws_tlbp             ,  //124:124
-        ws_tlbr             ,  //123:123
-        ws_tlbwi            ,  //122:122
-        ws_eret             ,  //121:121
-        ws_badvaddr         ,  //120:89
-        ws_bd               ,  //88:88
-        ms_has_exception    ,  //87:87
-        ms_exception_type   ,  //86:82
-        ws_cp0_op           ,  //81:81
-        ws_cp0_we           ,  //80:80
-        ws_cp0_addr         ,  //79:72
-        ws_load_store_offset,  //71:70
-        ws_gr_we            ,  //69:69
-        ws_dest             ,  //68:64
-        ws_final_result     ,  //63:32
-        ws_pc                  //31:0
+wire        inst2_valid;
+wire [31:0] inst2_pc;
+wire        inst2_gr_we;
+wire [ 4:0] inst2_dest;
+wire [31:0] inst2_final_result;
+wire [31:0] inst1_pc;
+wire        inst1_gr_we;
+wire [ 4:0] inst1_dest;
+wire [31:0] inst1_final_result;
+
+reg         double_write_wait;
+wire        inst1_write;
+wire        inst2_write;
+wire        double_write;
+wire        write_same_reg;
+
+assign {inst2_valid,
+        inst2_gr_we,
+        inst2_dest,
+        inst2_final_result,
+        inst2_pc,
+
+        inst1_gr_we,
+        inst1_dest,
+        inst1_final_result,
+        inst1_pc
        } = ms_to_ws_bus_r;
 
-assign ws_res_from_wb = ws_cp0_op;//mfc0
-
-wire        rf_we;
-wire [4 :0] rf_waddr;
-wire [31:0] rf_wdata;
-assign ws_to_rf_bus = {rf_we   ,  //37:37
-                       rf_waddr,  //36:32
-                       rf_wdata   //31:0
-                      };
-
-assign ws_ready_go = 1'b1;
+assign ws_ready_go = ~double_write | double_write & double_write_wait;
 assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
     if (reset) begin
-        ws_valid <= 1'b0;
-    end
-    else if (wb_ex) begin
         ws_valid <= 1'b0;
     end
     else if (ws_allowin) begin
@@ -155,70 +70,61 @@ always @(posedge clk) begin
     end
 end
 
-wire        ws_has_exception;
-wire [ 4:0] ws_exception_type;
+wire        rf_we_01;
+wire [ 4:0] rf_waddr_01;
+wire [31:0] rf_wdata_01;
+wire        rf_we_02;
+wire [ 4:0] rf_waddr_02;
+wire [31:0] rf_wdata_02;
 
-assign rf_we    = ws_gr_we && ws_valid && !ws_has_exception;
-assign rf_waddr = ws_dest;
-assign rf_wdata = ws_cp0_op ? c0_rdata : ws_final_result;
+assign ws_to_rf_bus = {rf_we_02, rf_waddr_02, rf_wdata_02, 
+                       rf_we_01, rf_waddr_01, rf_wdata_01 };
+
+assign inst1_write = ws_valid & inst1_gr_we;
+assign inst2_write = ws_valid & inst2_gr_we & inst2_valid;
+assign double_write = inst1_write & inst2_write;
+assign write_same_reg = double_write & (inst2_dest == inst1_dest);
+
+always @(posedge clk) begin
+    if (reset) begin
+        double_write_wait <= 1'b0;
+    end
+    else if (double_write & double_write_wait == 1'b0) begin
+        double_write_wait <= 1'b1;
+    end
+    else if (double_write_wait == 1'b1) begin
+        double_write_wait <= 1'b0;
+    end
+end
+
+assign rf_we_01    = inst1_write | inst2_write;
+assign rf_waddr_01 = {5{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_dest | 
+                     {5{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_dest;
+
+assign rf_wdata_01 = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_final_result | 
+                     {32{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_final_result;
+
+assign rf_we_02    = 1'b0;
+assign rf_waddr_02 = 5'b0;
+assign rf_wdata_02 = 32'b0;
+
+//assign rf_we_01    = inst1_write;
+//assign rf_waddr_01 = inst1_dest;
+//assign rf_wdata_01 = write_same_reg ? inst2_final_result : inst1_final_result;
+//assign rf_we_02    = write_same_reg ? 1'b0 : inst2_write;
+//assign rf_waddr_02 = inst2_dest;
+//assign rf_wdata_02 = inst2_final_result;
 
 // debug info generate
-assign debug_wb_pc       = ws_pc;
-assign debug_wb_rf_wen   = {4{rf_we}};
-assign debug_wb_rf_wnum  = ws_dest;
-assign debug_wb_rf_wdata = rf_wdata;
+assign debug_wb_pc       = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_pc | 
+                           {32{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_pc;
+assign debug_wb_rf_wen   = {4{rf_we_01}};
+assign debug_wb_rf_wnum  = rf_waddr_01;
+assign debug_wb_rf_wdata = rf_wdata_01;
 
-assign stall_ws_bus = {ws_cp0_addr,           //47:40
-                       ws_cp0_we && ws_valid, //39:39
-                       rf_wdata            ,  //38:7
-                       ws_res_from_wb      ,  //6:6
-                       ws_gr_we && ws_valid,  //5:5
-                       ws_dest                //4:0
-                      };
+// ws_forward_bus
+assign ws_forward_bus = { ws_valid, 
+                          inst1_gr_we, inst1_dest, inst1_final_result, 
+                          inst2_gr_we, inst2_dest, inst2_final_result };
 
-assign ws_has_exception   = ws_valid && ms_has_exception;
-assign ws_exception_type  = ms_exception_type;
-
-assign c0_addr              = ws_cp0_addr;
-assign c0_wdata             = ws_final_result;
-assign mtc0_we              = ws_valid && ws_cp0_we && !ws_has_exception;
-assign wb_ex                = ws_has_exception;
-assign ex_type              = ws_exception_type;
-assign wb_bd                = ws_bd;
-assign wb_pc                = ws_pc;
-assign wb_badvaddr          = ws_badvaddr;
-assign wb_eret              = ws_valid & ws_eret;
-
-//TLB CP0 REG
-assign is_TLBR              = ws_tlbr;
-assign TLB_rdata            = {r_vpn2, r_asid, r_g, r_pfn0, r_c0, r_d0, r_v0, r_pfn1, r_c1, r_d1, r_v1};
-assign is_TLBP              = ws_tlbp;
-assign index_write_p        = ~ws_s1_found;
-assign index_write_index    = ws_s1_index;
-
-//TLB write port
-assign we      = ws_tlbwi;
-assign w_index = cp0_index[3:0];
-assign w_vpn2  = cp0_entryhi[31:13];
-assign w_asid  = cp0_entryhi[ 7:0];
-assign w_g     = cp0_entrylo0[0] & cp0_entrylo1[0];
-assign w_pfn0  = cp0_entrylo0[25:6];
-assign w_c0    = cp0_entrylo0[ 5:3];
-assign w_d0    = cp0_entrylo0[2];
-assign w_v0    = cp0_entrylo0[1];
-assign w_pfn1  = cp0_entrylo1[25:6]; 
-assign w_c1    = cp0_entrylo1[ 5:3];
-assign w_d1    = cp0_entrylo1[2];
-assign w_v1    = cp0_entrylo1[1];
-//TLB read port
-assign r_index = cp0_index[3:0];
-
-assign wb_mtc0_index = mtc0_we & (ws_cp0_addr == 8'b00000000); //mtc0 write cp0_index
-
-assign wb_cancel_to_all = ws_valid & (ws_tlbr | ws_tlbwi );
-assign cancel_pc = ws_pc + 3'b100;
-assign reflush_pc = exception_is_tlb_refill ? 32'hbfc00200 :
-                    ws_has_exception        ? 32'hbfc00380 :
-                    ws_eret                 ? ws_epc       :
-                    (cancel_pc) ;
 endmodule

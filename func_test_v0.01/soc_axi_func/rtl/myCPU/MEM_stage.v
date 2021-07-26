@@ -1,251 +1,266 @@
 `include "mycpu.h"
 
 module mem_stage(
-    input                          clk           ,
-    input                          reset         ,
+    input                           clk            ,
+    input                           reset          ,
     //allowin
-    input                          ws_allowin    ,
-    output                         ms_allowin    ,
-    //from es
-    input                          es_to_ms_valid,
-    input  [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus  ,
-    //multiper res
-    input  [63                 :0] mul_res    ,                 
-    //to ws
-    output                         ms_to_ws_valid,
-    output [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus  ,
-    //from data-sram
+    input                           ws_allowin     ,
+    output                          ms_allowin     ,
+    //from pms
+    input                           pms_to_ms_valid,
+    input  [`PMS_TO_MS_BUS_WD -1:0] pms_to_ms_bus  ,
 
-    input         data_cache_data_ok,
-    input  [31:0] data_cache_rdata,  
+    //to ws
+    output                          ms_to_ws_valid ,
+    output [`MS_TO_WS_BUS_WD -1:0]  ms_to_ws_bus   ,
 
     //data relevant
-    output [`STALL_MS_BUS_WD -1:0] stall_ms_bus,
+    output [`MS_FORWARD_BUS_WD -1:0] ms_forward_bus,
 
-    //clear stage
-    input         ms_ex,
-    output        ms_has_reflush_to_es,
-    output        mem_mtc0_index,
-    input         ms_cancel_in,
-    input         ms_eret_in
+    //from data-sram
+    input         data_cache_data_ok_01,
+    input  [31:0] data_cache_rdata_01,
+    input         data_cache_data_ok_02,
+    input  [31:0] data_cache_rdata_02
 );
-
-reg  [31:0] HI;
-reg  [31:0] LO;
 
 reg         ms_valid;
 wire        ms_ready_go;
 
-reg  [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus_r;
-wire [ 3:0] ms_s1_index   ;
-wire        ms_s1_found   ;
-wire        ms_tlbp       ;
-wire        ms_tlbr       ;
-wire        ms_tlbwi      ;
-wire        ms_mem_we     ;
-wire        ms_eret       ;
-wire [31:0] ms_badvaddr   ;
-wire        ms_bd         ;
-wire        es_has_exception;
-wire [ 4:0] es_exception_type;
-wire        ms_cp0_op     ;
-wire        ms_cp0_we     ;
-wire [ 7:0] ms_cp0_addr   ;
-wire [ 6:0] ms_load_store_type;
-wire [ 1:0] ms_load_store_offset;
-wire [31:0] ms_rs_value;
-wire [31:0] ms_rt_value;
-wire        ms_hi_we;
-wire        ms_lo_we;
-wire        ms_hl_src_from_mul;
-wire        ms_hl_src_from_div;
-wire [63:0] ms_alu_div_res;
-wire        ms_res_from_hi;
-wire        ms_res_from_lo;
-wire        ms_res_from_mem;
-wire        ms_gr_we;
-wire [ 4:0] ms_dest;
-wire        ms_res_from_wb;
-wire [31:0] ms_alu_result;
-wire [31:0] ms_pc;
-wire        exception_is_tlb_refill;
-assign {exception_is_tlb_refill, //273:273
-        ms_s1_index           ,  //272:269
-        ms_s1_found           ,  //268:268
-        ms_tlbp               ,  //267:267
-        ms_tlbr               ,  //266:266
-        ms_tlbwi              ,  //265:265
-        ms_mem_we             ,  //264:264
-        ms_eret               ,  //263:263
-        ms_badvaddr           ,  //262:231
-        ms_bd                 ,  //230:230
-        es_has_exception      ,  //229:229
-        es_exception_type     ,  //228:224
-        ms_cp0_op             ,  //223:223
-        ms_cp0_we             ,  //222:222
-        ms_cp0_addr           ,  //221:214
-        ms_load_store_type    ,  //213:207
-        ms_load_store_offset  ,  //206:205
-        ms_rt_value           ,  //204:173
-        ms_rs_value           ,  //172:141
-        ms_hi_we              ,  //140:140
-        ms_lo_we              ,  //139:139
-        ms_hl_src_from_mul    ,  //138:138
-        ms_hl_src_from_div    ,  //137:137
-        ms_alu_div_res        ,  //136:73
-        ms_res_from_mem       ,  //72:72
-        ms_res_from_hi        ,  //71:71
-        ms_res_from_lo        ,  //70:70
-        ms_gr_we              ,  //69:69
-        ms_dest               ,  //68:64
-        ms_alu_result         ,  //63:32
-        ms_pc                    //31:0
-        } = es_to_ms_bus_r;
-assign ms_res_from_wb = ms_cp0_op;
+reg  [`PMS_TO_MS_BUS_WD -1:0] pms_to_ms_bus_r;
 
-wire [31:0] mem_result;
-wire [31:0] ms_final_result;
-wire [31:0] ms_non_mem_res;
+wire [ 6:0] inst1_load_store_type;
+wire [ 1:0] inst1_load_store_offset;
+wire        inst1_res_from_mem;
+wire        inst1_mem_we;
+wire        inst1_gr_we;
+wire [ 4:0] inst1_dest;
+wire [31:0] inst1_rt_value;
+wire [31:0] inst1_alu_result;
+wire [31:0] inst1_pc;
 
-wire        ms_has_exception;
-wire [ 4:0] ms_exception_type;
+wire        inst2_valid;
+wire [ 6:0] inst2_load_store_type;
+wire [ 1:0] inst2_load_store_offset;
+wire        inst2_res_from_mem;
+wire        inst2_mem_we;
+wire        inst2_gr_we;
+wire [ 4:0] inst2_dest;
+wire [31:0] inst2_rt_value;
+wire [31:0] inst2_alu_result;
+wire [31:0] inst2_pc;
 
-assign ms_to_ws_bus = {exception_is_tlb_refill,//130:130
-                       ms_s1_index         ,  //129:126
-                       ms_s1_found         ,  //125:125
-                       ms_tlbp             ,  //124:124
-                       ms_tlbr             ,  //123:123
-                       ms_tlbwi            ,  //122:122
-                       ms_eret             ,  //121:121
-                       ms_badvaddr         ,  //120:89
-                       ms_bd               ,  //88:88
-                       ms_has_exception    ,  //87:87
-                       ms_exception_type   ,  //86:82
-                       ms_cp0_op           ,  //81:81
-                       ms_cp0_we           ,  //80:80
-                       ms_cp0_addr         ,  //79:72
-                       ms_load_store_offset,  //71:70
-                       ms_gr_we            ,  //69:69
-                       ms_dest             ,  //68:64
-                       ms_final_result     ,  //63:32
-                       ms_pc                  //31:0
-                      };
+assign {inst2_valid,
+        inst2_load_store_type,
+        inst2_load_store_offset,
+        inst2_res_from_mem,
+        inst2_mem_we,
+        inst2_gr_we,
+        inst2_dest,
+        inst2_rt_value,
+        inst2_alu_result,
+        inst2_pc,
 
-assign ms_ready_go    = (~(ms_res_from_mem | ms_mem_we)) | data_cache_data_ok | ms_has_exception;//1'b1;
+        inst1_load_store_type,
+        inst1_load_store_offset,
+        inst1_res_from_mem,
+        inst1_mem_we,
+        inst1_gr_we,
+        inst1_dest,
+        inst1_rt_value,
+        inst1_alu_result,
+        inst1_pc
+        } = pms_to_ms_bus_r;
+
+wire [31:0] inst1_mem_result;
+wire [31:0] inst1_final_result;
+wire [31:0] inst2_mem_result;
+wire [31:0] inst2_final_result;
+
+wire        inst1_ready_go;
+wire        inst2_ready_go;
+
+assign ms_to_ws_bus = {inst2_valid,
+                       inst2_gr_we,
+                       inst2_dest,
+                       inst2_final_result,
+                       inst2_pc,
+
+                       inst1_gr_we,
+                       inst1_dest,
+                       inst1_final_result,
+                       inst1_pc };
+
+assign ms_ready_go    = inst1_ready_go & inst2_ready_go;
 assign ms_allowin     = !ms_valid || ms_ready_go && ws_allowin;
 assign ms_to_ws_valid = ms_valid && ms_ready_go;
 
-wire ms_disable;
-assign ms_disable = ms_ex || ms_cancel_in || ms_eret_in || ms_has_exception || ms_tlbr || ms_tlbwi;
-
 always @(posedge clk) begin
     if (reset) begin
         ms_valid <= 1'b0;
     end
-    else if (ms_ex || ms_cancel_in || ms_eret_in)
-        ms_valid <= 1'b0;
     else if (ms_allowin) begin
-        ms_valid <= es_to_ms_valid;
+        ms_valid <= pms_to_ms_valid;
     end
 
-    if (es_to_ms_valid && ms_allowin) begin
-        es_to_ms_bus_r  <= es_to_ms_bus;
+    if (pms_to_ms_valid && ms_allowin) begin
+        pms_to_ms_bus_r  <= pms_to_ms_bus;
     end
 end
 
+// inst 1
+wire inst1_align_off_0;
+wire inst1_align_off_1;
+wire inst1_align_off_2;
+wire inst1_align_off_3;
 
-wire mem_align_off_0;
-wire mem_align_off_1;
-wire mem_align_off_2;
-wire mem_align_off_3;
+assign inst1_align_off_0 = (inst1_load_store_offset == 2'b00);
+assign inst1_align_off_1 = (inst1_load_store_offset == 2'b01);
+assign inst1_align_off_2 = (inst1_load_store_offset == 2'b10);
+assign inst1_align_off_3 = (inst1_load_store_offset == 2'b11);
 
-assign mem_align_off_0 = (ms_load_store_offset == 2'b00);
-assign mem_align_off_1 = (ms_load_store_offset == 2'b01);
-assign mem_align_off_2 = (ms_load_store_offset == 2'b10);
-assign mem_align_off_3 = (ms_load_store_offset == 2'b11);
+wire inst1_lb_mem_res;
+wire inst1_lbu_mem_res;
+wire inst1_lh_mem_res;
+wire inst1_lhu_mem_res;
+wire inst1_lw_mem_res;
+wire inst1_lwl_mem_res;
+wire inst1_lwr_mem_res;
 
-wire lb_mem_res;
-wire lbu_mem_res;
-wire lh_mem_res;
-wire lhu_mem_res;
-wire lw_mem_res;
-wire lwl_mem_res;
-wire lwr_mem_res;
+assign {inst1_lb_mem_res  ,  //6
+        inst1_lbu_mem_res ,  //5
+        inst1_lh_mem_res  ,  //4
+        inst1_lhu_mem_res ,  //3
+        inst1_lw_mem_res  ,  //2
+        inst1_lwl_mem_res ,  //1
+        inst1_lwr_mem_res    //0
+        } = inst1_load_store_type;
 
-assign {
-        lb_mem_res  ,  //6
-        lbu_mem_res ,  //5
-        lh_mem_res  ,  //4
-        lhu_mem_res ,  //3
-        lw_mem_res  ,  //2
-        lwl_mem_res ,  //1
-        lwr_mem_res    //0
-        } = ms_load_store_type;
+reg [31:0] inst1_mem_result_reg;
+reg        inst1_mem_ok;
 
-assign mem_result = {32{lb_mem_res  & mem_align_off_0}} & { {24{data_cache_rdata[ 7]}}, data_cache_rdata[ 7: 0] } |  //lb
-                    {32{lb_mem_res  & mem_align_off_1}} & { {24{data_cache_rdata[15]}}, data_cache_rdata[15: 8] } |
-                    {32{lb_mem_res  & mem_align_off_2}} & { {24{data_cache_rdata[23]}}, data_cache_rdata[23:16] } |
-                    {32{lb_mem_res  & mem_align_off_3}} & { {24{data_cache_rdata[31]}}, data_cache_rdata[31:24] } |
-                    {32{lbu_mem_res & mem_align_off_0}} & { 24'b0, data_cache_rdata[ 7: 0] } |                      //lbu
-                    {32{lbu_mem_res & mem_align_off_1}} & { 24'b0, data_cache_rdata[15: 8] } |
-                    {32{lbu_mem_res & mem_align_off_2}} & { 24'b0, data_cache_rdata[23:16] } |
-                    {32{lbu_mem_res & mem_align_off_3}} & { 24'b0, data_cache_rdata[31:24] } |
-                    {32{lh_mem_res  & (mem_align_off_0 | mem_align_off_1)}} & { {16{data_cache_rdata[15]}}, data_cache_rdata[15: 0] } |   //lh
-                    {32{lh_mem_res  & (mem_align_off_2 | mem_align_off_3)}} & { {16{data_cache_rdata[31]}}, data_cache_rdata[31:16] } |
-                    {32{lhu_mem_res & (mem_align_off_0 | mem_align_off_1)}} & { 16'b0, data_cache_rdata[15: 0] } |                       //lhu
-                    {32{lhu_mem_res & (mem_align_off_2 | mem_align_off_3)}} & { 16'b0, data_cache_rdata[31:16] } |      
-                    {32{lw_mem_res}} & data_cache_rdata |                                                                                //lw
-                    {32{lwl_mem_res & mem_align_off_0}} & { data_cache_rdata[ 7: 0], ms_rt_value[23: 0] } |                              //lwl
-                    {32{lwl_mem_res & mem_align_off_1}} & { data_cache_rdata[15: 0], ms_rt_value[15: 0] } |
-                    {32{lwl_mem_res & mem_align_off_2}} & { data_cache_rdata[23: 0], ms_rt_value[ 7: 0] } |
-                    {32{lwl_mem_res & mem_align_off_3}} & data_cache_rdata |
-                    {32{lwr_mem_res & mem_align_off_0}} & data_cache_rdata |                                                             //lwr
-                    {32{lwr_mem_res & mem_align_off_1}} & { ms_rt_value[31:24], data_cache_rdata[31: 8] } |
-                    {32{lwr_mem_res & mem_align_off_2}} & { ms_rt_value[31:16], data_cache_rdata[31:16] } |
-                    {32{lwr_mem_res & mem_align_off_3}} & { ms_rt_value[31: 8], data_cache_rdata[31:24] };
-
-assign ms_non_mem_res = ms_res_from_hi  ? HI :
-                        ms_res_from_lo  ? LO :
-                        ms_cp0_we       ? ms_rt_value :
-                                          ms_alu_result;
-
-assign ms_final_result = ms_res_from_mem ? mem_result :
-                                           ms_non_mem_res;
+assign inst1_mem_result = {32{inst1_lb_mem_res  & inst1_align_off_0}} & { {24{data_cache_rdata_01[ 7]}}, data_cache_rdata_01[ 7: 0] } |  //lb
+                          {32{inst1_lb_mem_res  & inst1_align_off_1}} & { {24{data_cache_rdata_01[15]}}, data_cache_rdata_01[15: 8] } |
+                          {32{inst1_lb_mem_res  & inst1_align_off_2}} & { {24{data_cache_rdata_01[23]}}, data_cache_rdata_01[23:16] } |
+                          {32{inst1_lb_mem_res  & inst1_align_off_3}} & { {24{data_cache_rdata_01[31]}}, data_cache_rdata_01[31:24] } |
+                          {32{inst1_lbu_mem_res & inst1_align_off_0}} & { 24'b0, data_cache_rdata_01[ 7: 0] } |                      //lbu
+                          {32{inst1_lbu_mem_res & inst1_align_off_1}} & { 24'b0, data_cache_rdata_01[15: 8] } |
+                          {32{inst1_lbu_mem_res & inst1_align_off_2}} & { 24'b0, data_cache_rdata_01[23:16] } |
+                          {32{inst1_lbu_mem_res & inst1_align_off_3}} & { 24'b0, data_cache_rdata_01[31:24] } |
+                          {32{inst1_lh_mem_res  & (inst1_align_off_0 | inst1_align_off_1)}} & { {16{data_cache_rdata_01[15]}}, data_cache_rdata_01[15: 0] } |   //lh
+                          {32{inst1_lh_mem_res  & (inst1_align_off_2 | inst1_align_off_3)}} & { {16{data_cache_rdata_01[31]}}, data_cache_rdata_01[31:16] } |
+                          {32{inst1_lhu_mem_res & (inst1_align_off_0 | inst1_align_off_1)}} & { 16'b0, data_cache_rdata_01[15: 0] } |                       //lhu
+                          {32{inst1_lhu_mem_res & (inst1_align_off_2 | inst1_align_off_3)}} & { 16'b0, data_cache_rdata_01[31:16] } |      
+                          {32{inst1_lw_mem_res}} & data_cache_rdata_01 |                                                                                //lw
+                          {32{inst1_lwl_mem_res & inst1_align_off_0}} & { data_cache_rdata_01[ 7: 0], inst1_rt_value[23: 0] } |                              //lwl
+                          {32{inst1_lwl_mem_res & inst1_align_off_1}} & { data_cache_rdata_01[15: 0], inst1_rt_value[15: 0] } |
+                          {32{inst1_lwl_mem_res & inst1_align_off_2}} & { data_cache_rdata_01[23: 0], inst1_rt_value[ 7: 0] } |
+                          {32{inst1_lwl_mem_res & inst1_align_off_3}} & data_cache_rdata_01 |
+                          {32{inst1_lwr_mem_res & inst1_align_off_0}} & data_cache_rdata_01 |                                                             //lwr
+                          {32{inst1_lwr_mem_res & inst1_align_off_1}} & { inst1_rt_value[31:24], data_cache_rdata_01[31: 8] } |
+                          {32{inst1_lwr_mem_res & inst1_align_off_2}} & { inst1_rt_value[31:16], data_cache_rdata_01[31:16] } |
+                          {32{inst1_lwr_mem_res & inst1_align_off_3}} & { inst1_rt_value[31: 8], data_cache_rdata_01[31:24] };
 
 always @(posedge clk) begin
     if (reset) begin
-        HI <= 0;
-    end else if (ms_hi_we && ms_valid && !ms_disable) begin
-        HI <= ms_hl_src_from_mul ? mul_res[63:32]:
-              ms_hl_src_from_div ? ms_alu_div_res[31: 0]:
-                                   ms_rs_value;
+        inst1_mem_ok <= 1'b0;
+    end
+    else if (pms_to_ms_valid && ms_allowin) begin
+        inst1_mem_ok <= 1'b0;
+    end
+    else if (data_cache_data_ok_01 & ~ms_ready_go) begin
+        inst1_mem_ok <= 1'b1;
+    end
+
+    if (inst1_res_from_mem & data_cache_data_ok_01 & ~ms_ready_go) begin
+        inst1_mem_result_reg  <= inst1_mem_result;
     end
 end
+
+assign inst1_final_result = (inst1_mem_ok) ? inst1_mem_result_reg : 
+                      (inst1_res_from_mem) ? inst1_mem_result : 
+                                             inst1_alu_result;
+
+assign inst1_ready_go = ~(inst1_res_from_mem | inst1_mem_we) | data_cache_data_ok_01 | inst1_mem_ok;
+
+// inst 2
+wire inst2_align_off_0;
+wire inst2_align_off_1;
+wire inst2_align_off_2;
+wire inst2_align_off_3;
+
+assign inst2_align_off_0 = (inst2_load_store_offset == 2'b00);
+assign inst2_align_off_1 = (inst2_load_store_offset == 2'b01);
+assign inst2_align_off_2 = (inst2_load_store_offset == 2'b10);
+assign inst2_align_off_3 = (inst2_load_store_offset == 2'b11);
+
+wire inst2_lb_mem_res;
+wire inst2_lbu_mem_res;
+wire inst2_lh_mem_res;
+wire inst2_lhu_mem_res;
+wire inst2_lw_mem_res;
+wire inst2_lwl_mem_res;
+wire inst2_lwr_mem_res;
+
+assign {inst2_lb_mem_res  ,  //6
+        inst2_lbu_mem_res ,  //5
+        inst2_lh_mem_res  ,  //4
+        inst2_lhu_mem_res ,  //3
+        inst2_lw_mem_res  ,  //2
+        inst2_lwl_mem_res ,  //1
+        inst2_lwr_mem_res    //0
+        } = inst2_load_store_type;
+
+reg [31:0] inst2_mem_result_reg;
+reg        inst2_mem_ok;
+
+assign inst2_mem_result = {32{inst2_lb_mem_res  & inst2_align_off_0}} & { {24{data_cache_rdata_02[ 7]}}, data_cache_rdata_02[ 7: 0] } |  //lb
+                          {32{inst2_lb_mem_res  & inst2_align_off_1}} & { {24{data_cache_rdata_02[15]}}, data_cache_rdata_02[15: 8] } |
+                          {32{inst2_lb_mem_res  & inst2_align_off_2}} & { {24{data_cache_rdata_02[23]}}, data_cache_rdata_02[23:16] } |
+                          {32{inst2_lb_mem_res  & inst2_align_off_3}} & { {24{data_cache_rdata_02[31]}}, data_cache_rdata_02[31:24] } |
+                          {32{inst2_lbu_mem_res & inst2_align_off_0}} & { 24'b0, data_cache_rdata_02[ 7: 0] } |                      //lbu
+                          {32{inst2_lbu_mem_res & inst2_align_off_1}} & { 24'b0, data_cache_rdata_02[15: 8] } |
+                          {32{inst2_lbu_mem_res & inst2_align_off_2}} & { 24'b0, data_cache_rdata_02[23:16] } |
+                          {32{inst2_lbu_mem_res & inst2_align_off_3}} & { 24'b0, data_cache_rdata_02[31:24] } |
+                          {32{inst2_lh_mem_res  & (inst2_align_off_0 | inst2_align_off_1)}} & { {16{data_cache_rdata_02[15]}}, data_cache_rdata_02[15: 0] } |   //lh
+                          {32{inst2_lh_mem_res  & (inst2_align_off_2 | inst2_align_off_3)}} & { {16{data_cache_rdata_02[31]}}, data_cache_rdata_02[31:16] } |
+                          {32{inst2_lhu_mem_res & (inst2_align_off_0 | inst2_align_off_1)}} & { 16'b0, data_cache_rdata_02[15: 0] } |                       //lhu
+                          {32{inst2_lhu_mem_res & (inst2_align_off_2 | inst2_align_off_3)}} & { 16'b0, data_cache_rdata_02[31:16] } |      
+                          {32{inst2_lw_mem_res}} & data_cache_rdata_02 |                                                                                //lw
+                          {32{inst2_lwl_mem_res & inst2_align_off_0}} & { data_cache_rdata_02[ 7: 0], inst2_rt_value[23: 0] } |                              //lwl
+                          {32{inst2_lwl_mem_res & inst2_align_off_1}} & { data_cache_rdata_02[15: 0], inst2_rt_value[15: 0] } |
+                          {32{inst2_lwl_mem_res & inst2_align_off_2}} & { data_cache_rdata_02[23: 0], inst2_rt_value[ 7: 0] } |
+                          {32{inst2_lwl_mem_res & inst2_align_off_3}} & data_cache_rdata_02 |
+                          {32{inst2_lwr_mem_res & inst2_align_off_0}} & data_cache_rdata_02 |                                                             //lwr
+                          {32{inst2_lwr_mem_res & inst2_align_off_1}} & { inst2_rt_value[31:24], data_cache_rdata_02[31: 8] } |
+                          {32{inst2_lwr_mem_res & inst2_align_off_2}} & { inst2_rt_value[31:16], data_cache_rdata_02[31:16] } |
+                          {32{inst2_lwr_mem_res & inst2_align_off_3}} & { inst2_rt_value[31: 8], data_cache_rdata_02[31:24] };
 
 always @(posedge clk) begin
     if (reset) begin
-        LO <= 0;
-    end else if (ms_lo_we && ms_valid && !ms_disable) begin
-        LO <= ms_hl_src_from_mul ? mul_res[31: 0]:
-              ms_hl_src_from_div ? ms_alu_div_res[63:32]: 
-                                   ms_rs_value;
+        inst2_mem_ok <= 1'b0;
+    end
+    else if (pms_to_ms_valid && ms_allowin) begin
+        inst2_mem_ok <= 1'b0;
+    end
+    else if (data_cache_data_ok_02 & ~ms_ready_go) begin
+        inst2_mem_ok <= 1'b1;
+    end
+
+    if (inst2_res_from_mem & data_cache_data_ok_02 & ~ms_ready_go) begin
+        inst2_mem_result_reg  <= inst2_mem_result;
     end
 end
 
-assign stall_ms_bus = {data_cache_data_ok,     //49:49
-                       ms_cp0_addr,           //48:41
-                       ms_cp0_we & ms_valid, //40:40
-                       ms_non_mem_res     ,  //39:8
-                       ms_res_from_wb      ,  //7:7
-                       (~ms_res_from_mem) & ms_valid, //6:6
-                       ms_gr_we & ms_valid,  //5:5
-                       ms_dest                //4:0
-                      };
+assign inst2_final_result = (inst2_mem_ok) ? inst2_mem_result_reg : 
+                      (inst2_res_from_mem) ? inst2_mem_result : 
+                                             inst2_alu_result;
 
-assign ms_has_exception     = es_has_exception;
-assign ms_exception_type    = es_exception_type;
+assign inst2_ready_go = ~(inst2_res_from_mem | inst2_mem_we) | data_cache_data_ok_02 | inst2_mem_ok;
 
-assign mem_mtc0_index       = ms_cp0_we & ms_valid & (ms_cp0_addr == 8'b00000000); //mtc0 write cp0_index
-assign ms_has_reflush_to_es = (ms_has_exception | ms_eret | ms_tlbr | ms_tlbwi) & ms_valid;
+// ms_forward_bus
+assign ms_forward_bus = {ms_valid, ms_to_ws_valid, 
+                         inst1_res_from_mem, inst1_gr_we, inst1_dest, inst1_final_result, 
+                         inst2_res_from_mem, inst2_gr_we, inst2_dest, inst2_final_result };
 
 endmodule

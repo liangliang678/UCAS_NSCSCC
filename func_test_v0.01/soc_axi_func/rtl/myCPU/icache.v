@@ -16,14 +16,15 @@ module icache(
     input  [  3:0]  offset,
     output          addr_ok,
     output          data_ok,
-    output [ 31:0]  rdata,
+    output [ 255:0] rdata,
+    output [   3:0] rnum,
     // Cache and AXI
     output          rd_req,
     output          rd_type,
     output [ 31:0]  rd_addr,
     input           rd_rdy,
     input           ret_valid,
-    input  [127:0]  ret_data
+    input  [255:0]  ret_data
 );
 
 // RAM
@@ -462,20 +463,11 @@ assign way3_hit = way3_v && (way3_tag == rb_tag);
 assign cache_hit = (way0_hit || way1_hit || way2_hit || way3_hit);
 
 // Data Select
-wire [ 31:0] way0_load_word;
-wire [ 31:0] way1_load_word;
-wire [ 31:0] way2_load_word;
-wire [ 31:0] way3_load_word;
-wire [ 31:0] load_res;
-
-assign way0_load_word = way0_data[rb_offset[3:2]*32 +: 32];
-assign way1_load_word = way1_data[rb_offset[3:2]*32 +: 32];
-assign way2_load_word = way2_data[rb_offset[3:2]*32 +: 32];
-assign way3_load_word = way3_data[rb_offset[3:2]*32 +: 32];
-assign load_res = {32{way0_hit}} & way0_load_word |
-                  {32{way1_hit}} & way1_load_word |
-                  {32{way2_hit}} & way2_load_word |
-                  {32{way3_hit}} & way3_load_word;
+wire [127:0] load_res;
+assign load_res = {128{way0_hit}} & way0_data |
+                  {128{way1_hit}} & way1_data |
+                  {128{way2_hit}} & way2_data |
+                  {128{way3_hit}} & way3_data;
 
 // PLRU
 reg [255:0] way0_mru;
@@ -585,25 +577,23 @@ wire [ 31:0] rd_way_data_bank0;
 wire [ 31:0] rd_way_data_bank1;
 wire [ 31:0] rd_way_data_bank2;
 wire [ 31:0] rd_way_data_bank3;
-wire [ 31:0] rd_way_rdata;
 
 assign rd_way_data_bank0 = ret_data[ 31: 0];
 assign rd_way_data_bank1 = ret_data[ 63:32];
 assign rd_way_data_bank2 = ret_data[ 95:64];
 assign rd_way_data_bank3 = ret_data[127:96];
-assign rd_way_rdata = {32{rb_offset[3:2] == 2'b00}} & rd_way_data_bank0 | 
-                      {32{rb_offset[3:2] == 2'b01}} & rd_way_data_bank1 | 
-                      {32{rb_offset[3:2] == 2'b10}} & rd_way_data_bank2 | 
-                      {32{rb_offset[3:2] == 2'b11}} & rd_way_data_bank3;
 
 // Output
 assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid;
 assign data_ok = (state == `LOOKUP) && cache_hit || 
                  (state == `REFILL) && ret_valid ||
                  (state == `URESP)  && ret_valid;
-assign rdata = {32{(state == `LOOKUP) && cache_hit}} & load_res | 
-               {32{(state == `REFILL) && ret_valid}} & rd_way_rdata | 
-               {32{(state == `URESP)  && ret_valid}} & ret_data[31:0]; 
+assign rdata = {128'b0, {
+               {128{(state == `LOOKUP) && cache_hit}} & (load_res >> (rb_offset[3:2] << 5)) | 
+               {128{(state == `REFILL) && ret_valid}} & (ret_data >> (rb_offset[3:2] << 5)) | 
+               {128{(state == `URESP)  && ret_valid}} & {96'b0, ret_data[31:0]}
+               }}; 
+assign rnum = (state == `URESP) ? 4'b1 : {2'b0, ~(rb_offset[3:2])} + 4'b1;
 
 assign rd_req  = (state == `UREQ) || (state == `REPLACE);
 assign rd_type = (state == `UREQ) ? 1'b0 : 1'b1;
