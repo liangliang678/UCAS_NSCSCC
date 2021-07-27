@@ -412,7 +412,7 @@ end
 assign dual_req = rb_recv[0] && rb_recv[1];
 
 assign rb_valid[0] = rb_recv[0];
-assign rb_valid[1] = rb_recv[1] && (rb_uncache2 && !rb_recv[0] || !rb_uncache2 && (!rb_recv[1] || req_same_line && !req_read_write));
+assign rb_valid[1] = rb_recv[1] && (rb_uncache2 && !rb_recv[0] || !rb_uncache2 && (!rb_recv[0] || req_same_line && !req_read_write));
 
 reg          rb_op1;
 reg          rb_uncache1;
