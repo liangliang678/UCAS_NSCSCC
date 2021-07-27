@@ -1013,7 +1013,7 @@ always @(posedge clk) begin
     end
 end
 always @(posedge clk) begin
-    if(resetn) begin
+    if(!resetn) begin
         wb_valid <= 2'b00;
     end
     else if ((state == `LOOKUP) && _1_cache_hit && (rb_op1 == 1'b1) && _2_cache_hit && (rb_op2 == 1'b1)) begin
