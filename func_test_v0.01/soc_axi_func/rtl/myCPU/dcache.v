@@ -428,7 +428,7 @@ reg  [  3:0] rb_wstrb2;
 reg  [ 31:0] rb_wdata2;
 
 always @(posedge clk) begin
-    if (_1_cache_req && addr_ok1) begin
+    if (valid1 && addr_ok1) begin
         rb_op1     <= op1;
         rb_tag1    <= tag1;
         rb_index1  <= index1;      
@@ -440,7 +440,7 @@ always @(posedge clk) begin
 end
 
 always @(posedge clk) begin
-    if (_2_cache_req && addr_ok2) begin
+    if (valid2 && addr_ok2) begin
         rb_op2     <= op2;
         rb_tag2    <= tag2;
         rb_index2  <= index2;      
