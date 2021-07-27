@@ -565,7 +565,7 @@ assign pms_to_ms_bus = {
         inst2_gr_we,
         inst2_dest,
         inst2_rt_value,
-        pms_alu_inst2_result,
+        pms_inst2_result,
         inst2_pc,
 
         inst1_load_store_type,
@@ -575,25 +575,31 @@ assign pms_to_ms_bus = {
         inst1_gr_we,
         inst1_dest,
         inst1_rt_value,
-        pms_alu_inst1_result,
+        pms_inst1_result,
         inst1_pc
     };
 
 // forward bus
 wire [31:0] pms_inst1_result;
 wire [31:0] pms_inst2_result;
-wire [31:0] pms_inst1_alu_result;
-wire [31:0] pms_inst2_alu_result;
+wire [31:0] pms_inst1_cal_result;
+wire [31:0] pms_inst2_cal_result;
 
 wire [31:0] inst2_cp0_res_update;
 wire [31:0] pms_inst2_cp0_final_res;
 
-assign pms_inst1_alu_result = {32{inst1_hi_op}} & {HI} |
+wire [31:0] reg_hi_res;
+wire [31:0] reg_lo_res;
+
+assign reg_hi_res = inst1_hi_we ? inst1_write_hi : HI;
+assign reg_lo_res = inst1_lo_we ? inst1_write_lo : LO;
+
+assign pms_inst1_cal_result = {32{inst1_hi_op}} & {HI} |
                               {32{inst1_lo_op}} & {LO} |
                               {32{~inst1_lo_op & ~inst1_hi_op}} & {pms_alu_inst1_result};
 
-assign pms_inst2_alu_result = {32{inst2_hi_op}} & {HI} |
-                              {32{inst2_lo_op}} & {LO} |
+assign pms_inst2_cal_result = {32{inst2_hi_op}} & {reg_hi_res} |
+                              {32{inst2_lo_op}} & {reg_lo_res} |
                               {32{~inst2_lo_op & ~inst2_hi_op}} & {pms_alu_inst2_result};
 
 assign inst2_cp0_res_update = {32{(inst2_cp0_addr == `CR_EPC)}} & inst1_rt_value |
@@ -608,8 +614,8 @@ assign inst2_cp0_res_update = {32{(inst2_cp0_addr == `CR_EPC)}} & inst1_rt_value
 
 assign pms_inst2_cp0_final_res = cp0_RAW ? inst2_cp0_res_update : inst2_c0_rdata;
 
-assign pms_inst1_result = inst1_cp0_op ? inst1_c0_rdata : pms_inst1_alu_result;
-assign pms_inst2_result = inst2_cp0_op ? pms_inst2_cp0_final_res : pms_inst2_alu_result;
+assign pms_inst1_result = inst1_cp0_op ? inst1_c0_rdata : pms_inst1_cal_result;
+assign pms_inst2_result = inst2_cp0_op ? pms_inst2_cp0_final_res : pms_inst2_cal_result;
 
 assign pms_forward_bus = {
     pms_valid,
