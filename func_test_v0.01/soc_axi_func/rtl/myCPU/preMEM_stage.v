@@ -96,8 +96,8 @@ always @(posedge clk) begin
     end
 end
 
-assign inst1_ready_go = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok & inst1_data_cache_valid) | inst1_pms_except; //不访存 访存请求接受 有例外
-assign inst2_ready_go = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok & inst2_data_cache_valid) | inst2_pms_except;
+assign inst1_ready_go = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok | inst1_addr_ok_reg) | inst1_pms_except; //不访存 访存请求接受 有例外
+assign inst2_ready_go = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok | inst2_addr_ok_reg) | inst2_pms_except;
 
 wire        inst1_refill;
 wire [31:0] inst1_pc;
@@ -506,13 +506,36 @@ wire [31:0] inst2_data_addr;
 wire [31:0] inst1_VA;
 wire [31:0] inst2_VA;
 
+reg inst1_addr_ok_reg;
+reg inst2_addr_ok_reg;
+
+always@(posedge clk) begin
+    if(reset) begin
+        inst1_addr_ok_reg <= 1'b0;
+    end
+    else if(pms_to_ms_valid && ms_allowin)
+        inst1_addr_ok_reg <= 1'b0;
+    else if(inst1_data_cache_addr_ok)
+        inst1_addr_ok_reg <= 1'b1;
+end
+
+always@(posedge clk) begin
+    if(reset) begin
+        inst2_addr_ok_reg <= 1'b0;
+    end
+    else if(pms_to_ms_valid && ms_allowin)
+        inst2_addr_ok_reg <= 1'b0;
+    else if(inst2_data_cache_addr_ok)
+        inst2_addr_ok_reg <= 1'b1;
+end
+
 assign inst1_VA = inst1_swl_mem_res ? {pms_inst1_mem_addr[31:2], 2'b0} : pms_inst1_mem_addr;
 assign inst2_VA = inst2_swl_mem_res ? {pms_inst2_mem_addr[31:2], 2'b0} : pms_inst2_mem_addr;
 assign inst1_data_addr = {3'b0, inst1_VA[28:0]};
 assign inst2_data_addr = {3'b0, inst2_VA[28:0]};
 
 
-assign inst1_data_cache_valid = (inst1_load_op | inst1_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except;
+assign inst1_data_cache_valid = (inst1_load_op | inst1_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except & ~inst1_addr_ok_reg;
 assign inst1_data_cache_op = inst1_mem_we & pms_valid & ~inst1_pms_except;
 assign inst1_data_cache_uncache = inst1_VA[31] && ~inst1_VA[30] && inst1_VA[29];
 assign inst1_data_cache_tag = inst1_data_addr[31:12];
@@ -523,7 +546,7 @@ assign inst1_data_cache_wstrb = (inst1_mem_we & pms_valid & ~inst1_pms_except) ?
 wire mem_RAW;
 assign mem_RAW = (inst1_VA[31:2] == inst2_VA[31:2]) & inst1_mem_we & inst2_load_op & ~inst1_pms_except & ~inst2_pms_except;
 
-assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except & ~inst2_pms_except;
+assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except & ~inst2_pms_except & ~inst2_addr_ok_reg;
 assign inst2_data_cache_op = inst2_mem_we & pms_valid & ~inst1_pms_except & ~inst2_pms_except;
 assign inst2_data_cache_uncache = inst2_VA[31] && ~inst2_VA[30] && inst2_VA[29];
 assign inst2_data_cache_tag = inst2_data_addr[31:12];
