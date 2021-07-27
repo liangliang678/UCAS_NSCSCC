@@ -252,7 +252,7 @@ assign data_way1_bank2_en = (_1_cache_req && addr_ok1) ||
                             (_2_cache_req && addr_ok2) || 
                             (state == `PRELOOK) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b10 &&  wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset1[3:2] == 2'b10 &&  wb_hit_way) || 
+                            (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b10 &&  wb_hit_way) || 
                             (state == `REFILL && ret_valid &&  rp_way);
 assign data_way1_bank3_en = (_1_cache_req && addr_ok1) || 
                             (_2_cache_req && addr_ok2) ||
