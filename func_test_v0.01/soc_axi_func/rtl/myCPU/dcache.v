@@ -721,9 +721,12 @@ assign uncache_read_stall = |match;
 assign uncache_write_go = !((pending_end + 3'b1) == pending_start);
 
 // Output
-assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _1_cache_req;
+assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _1_cache_req ||
+                  (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid1 && uncache1;
 assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _2_cache_req &&
-                  (!_1_cache_req || req_same_line && !req_read_write);
+                  (!_1_cache_req || req_same_line && !req_read_write) ||
+                  (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid2 && uncache2 &&
+                  !(valid1 && uncache1);
 assign data_ok1 = (state == `LOOKUP) && _1_cache_hit ||
                   (state == `REFILL) && rb_valid[0] && ret_valid || 
                   (state == `URRESP) && (uncache_way == 1'b0) && ret_valid ||
