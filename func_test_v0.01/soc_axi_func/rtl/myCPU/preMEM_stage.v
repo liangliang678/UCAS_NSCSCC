@@ -87,7 +87,7 @@ always @(posedge clk) begin
     end
     else if(inst1_pms_except)
         pms_valid <= 1'b0;
-    else if (ms_allowin) begin
+    else if (pms_allowin) begin
         pms_valid <= es_to_pms_valid;
     end
 
