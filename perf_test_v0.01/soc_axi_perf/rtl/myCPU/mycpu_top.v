@@ -505,7 +505,9 @@ cp0 cp0(
     .TLB_rdata          (TLB_rdata        ),
     .is_TLBP            (is_TLBP          ),
     .index_write_p      (index_write_p    ),
-    .index_write_index  (index_write_index)    
+    .index_write_index  (index_write_index),
+
+    .ext_int_in         (ext_int)
 );
 
 icache icache(

@@ -103,8 +103,10 @@ wire [31:0] es_rt_value   ;
 wire [31:0] es_pc         ;
 wire        exception_is_tlb_refill;
 wire        exception_is_tlb_refill_temp;
+wire        es_mul;
 
-assign {exception_is_tlb_refill_temp,//208:208
+assign {es_mul              ,
+        exception_is_tlb_refill_temp,//208:208
         es_tlbp             ,  //207:207
         es_tlbr             ,  //206:206
         es_tlbwi            ,  //205:205
@@ -198,7 +200,8 @@ wire        es_exception_tlb_invalid;
 wire        es_exception_modified;
 
 
-assign es_to_ms_bus = {exception_is_tlb_refill, //273:273
+assign es_to_ms_bus = {es_mul                ,
+                       exception_is_tlb_refill, //273:273
                        s1_index              ,  //272:269
                        s1_found              ,  //268:268
                        es_tlbp               ,  //267:267
@@ -412,15 +415,15 @@ assign data_cache_wdata = mem_write_data;
 
 //kseg 1
 // 1: uncached; 0: cached
-assign data_cache_uncache = es_VA[31] && ~es_VA[30] && es_VA[29];
-
+//assign data_cache_uncache = es_VA[31] && ~es_VA[30] && es_VA[29];
+assign data_cache_uncache = (es_VA[31] & ~es_VA[30] & es_VA[29]) | (es_VA[31] & ~es_VA[30] & ~es_VA[29] & ~es_VA[28]);
 
 assign stall_es_bus = { data_cache_valid,                                            //49:49
                         es_cp0_addr,                                              //48:41
                        (es_cp0_we && es_valid),                                   //40:40
                         es_alu_result,                                            //39:8
                         es_res_from_wb,                                           //7:7
-                       (es_res_from_mem || es_res_from_lo || es_res_from_hi),     //6:6
+                       (es_res_from_mem || es_res_from_lo || es_res_from_hi || es_mul),     //6:6
                        (es_gr_we && es_valid),                                    //5:5
                         es_dest                                                   //4:0
                       };
