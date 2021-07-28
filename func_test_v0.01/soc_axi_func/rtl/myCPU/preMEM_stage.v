@@ -241,7 +241,7 @@ assign {
 
 // exception
 wire pms_inst2_valid;
-assign pms_inst2_valid = inst2_valid & ~inst2_pms_except;
+assign pms_inst2_valid = inst2_valid & ~(inst1_pms_except | inst2_pms_except | inst1_pms_eret);
 
 wire inst1_exception_adel, inst1_exception_ades;
 wire inst2_exception_adel, inst2_exception_ades;
@@ -327,7 +327,7 @@ always @(posedge clk) begin
         HI <= inst1_write_hi;
     else if(inst1_hi_we & ~inst2_hi_we & !inst1_pms_except)
         HI <= inst1_write_hi;
-    else if(~inst1_hi_we & inst2_hi_we & !inst1_pms_except & !inst2_pms_except)
+    else if(~inst1_hi_we & inst2_hi_we & !(inst1_pms_except | inst1_pms_eret) & !inst2_pms_except)
         HI <= inst2_write_hi;
 end
 
@@ -340,7 +340,7 @@ always @(posedge clk) begin
         LO <= inst1_write_lo;
     else if(inst1_lo_we & ~inst2_lo_we & !inst1_pms_except)
         LO <= inst1_write_lo;
-    else if(~inst1_lo_we & inst2_lo_we & !inst1_pms_except & !inst2_pms_except)
+    else if(~inst1_lo_we & inst2_lo_we & !(inst1_pms_except | inst1_pms_eret) & !inst2_pms_except)
         LO <= inst2_write_lo;
 end
 
@@ -350,7 +350,7 @@ assign inst1_c0_addr = inst1_cp0_addr;
 assign inst1_mtc0_we = (inst1_cp0_we & ~((inst1_c0_addr == `CR_EPC) & inst2_pms_except));
 assign inst2_c0_wdata = inst2_rt_value;
 assign inst2_c0_addr = inst2_cp0_addr;
-assign inst2_mtc0_we = (inst2_cp0_we & ~inst1_pms_except);    
+assign inst2_mtc0_we = (inst2_cp0_we & ~(inst1_pms_except | inst1_pms_eret));    
 
 wire cp0_RAW;
 assign cp0_RAW = (inst1_cp0_addr == inst2_cp0_addr) & inst1_cp0_we & inst2_cp0_op & (~inst1_pms_except & ~inst2_pms_except);
@@ -546,7 +546,7 @@ assign inst1_data_cache_wstrb = (inst1_mem_we & pms_valid & ~inst1_pms_except) ?
 wire mem_RAW;
 assign mem_RAW = (inst1_VA[31:2] == inst2_VA[31:2]) & inst1_mem_we & inst2_load_op & ~inst1_pms_except & ~inst2_pms_except;
 
-assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except & ~inst2_pms_except & ~inst2_addr_ok_reg;
+assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & ms_allowin & pms_valid & ~(inst1_pms_except | inst1_pms_eret) & ~inst2_pms_except & ~inst2_addr_ok_reg;
 assign inst2_data_cache_op = inst2_mem_we & pms_valid & ~inst1_pms_except & ~inst2_pms_except;
 assign inst2_data_cache_uncache = inst2_VA[31] && ~inst2_VA[30] && inst2_VA[29];
 assign inst2_data_cache_tag = inst2_data_addr[31:12];
