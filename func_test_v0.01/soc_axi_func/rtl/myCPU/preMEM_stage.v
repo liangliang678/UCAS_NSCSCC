@@ -350,7 +350,7 @@ assign inst1_c0_addr = inst1_cp0_addr;
 assign inst1_mtc0_we = inst1_cp0_we;
 assign inst2_c0_wdata = inst2_rt_value;
 assign inst2_c0_addr = inst2_cp0_addr;
-assign inst2_mtc0_we = inst2_cp0_we;    
+assign inst2_mtc0_we = (inst2_cp0_we & ~inst1_pms_except);    
 
 wire cp0_RAW;
 assign cp0_RAW = (inst1_cp0_addr == inst2_cp0_addr) & inst1_cp0_we & inst2_cp0_op & (~inst1_pms_except & ~inst2_pms_except);
