@@ -69,7 +69,9 @@ wire        ms_res_from_wb;
 wire [31:0] ms_alu_result;
 wire [31:0] ms_pc;
 wire        exception_is_tlb_refill;
-assign {exception_is_tlb_refill, //273:273
+wire        ms_mul;
+assign {ms_mul                ,
+        exception_is_tlb_refill, //273:273
         ms_s1_index           ,  //272:269
         ms_s1_found           ,  //268:268
         ms_tlbp               ,  //267:267
@@ -207,6 +209,7 @@ assign mem_result = {32{lb_mem_res  & mem_align_off_0}} & { {24{data_cache_rdata
 assign ms_non_mem_res = ms_res_from_hi  ? HI :
                         ms_res_from_lo  ? LO :
                         ms_cp0_we       ? ms_rt_value :
+                        ms_mul          ? mul_res[31: 0] :
                                           ms_alu_result;
 
 assign ms_final_result = ms_res_from_mem ? mem_result :

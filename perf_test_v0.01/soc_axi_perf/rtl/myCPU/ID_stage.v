@@ -242,6 +242,7 @@ wire        inst_reserve;
 wire        inst_tlbp;
 wire        inst_tlbr;
 wire        inst_tlbwi;
+wire        inst_mul;
 
 wire        dst_is_r31;  
 wire        dst_is_rt;   
@@ -282,7 +283,8 @@ wire        ds_bd;           // is delay slot inst
 
 assign br_bus       = {br_valid,br_taken,br_target,br_stall};
 
-assign ds_to_es_bus = {exception_is_tlb_refill, //208:208
+assign ds_to_es_bus = {inst_mul,                //209:209
+                       exception_is_tlb_refill, //208:208
                        ds_tlbp          ,  //207:207
                        ds_tlbr          ,  //206:206
                        ds_tlbwi         ,  //205:205
@@ -425,7 +427,8 @@ assign inst_reserve= ~(inst_add || inst_addu || inst_sub || inst_subu || inst_sl
                        inst_ori || inst_xori || inst_lb || inst_lbu || inst_lh || inst_lhu || inst_lw || inst_lwl || inst_lwr || inst_sb || inst_sh ||
                        inst_sw || inst_swl || inst_swr || inst_beq || inst_bne || inst_bgez || inst_bgtz || inst_blez || inst_bltz || inst_j ||
                        inst_bltzal || inst_bgezal || inst_jal || inst_jr || inst_jalr || inst_syscall || inst_break || inst_eret || inst_mtc0 || inst_mfc0 ||
-                       inst_tlbp || inst_tlbr || inst_tlbwi);
+                       inst_tlbp || inst_tlbr || inst_tlbwi || inst_mul);
+assign inst_mul = op_d[6'h1c] & func_d[6'h02] & sa_d[5'h00];
 
 assign alu_op[ 0] = inst_add | inst_addu | inst_addi | inst_addiu | load_op | store_op | inst_jal | inst_bgezal | inst_bltzal | inst_jalr;
 assign alu_op[ 1] = inst_sub | inst_subu;
@@ -439,7 +442,7 @@ assign alu_op[ 8] = inst_sll | inst_sllv;
 assign alu_op[ 9] = inst_srl | inst_srlv;
 assign alu_op[10] = inst_sra | inst_srav;
 assign alu_op[11] = inst_lui;
-assign alu_op[12] = inst_mult;
+assign alu_op[12] = inst_mult | inst_mul;
 assign alu_op[13] = inst_multu;
 assign alu_op[14] = inst_div;
 assign alu_op[15] = inst_divu;
@@ -456,7 +459,7 @@ assign cp0_op    = inst_mfc0;
 assign branch_op = inst_beq | inst_bne | inst_bgez | inst_bgezal | inst_bgtz | inst_blez | inst_bltz | inst_bltzal;
 assign jump_op   = inst_j | inst_jal | inst_jalr | inst_jr;
 
-assign alu_signed   = inst_add | inst_addi | inst_sub | inst_slt | inst_mult | inst_div;
+assign alu_signed   = inst_add | inst_addi | inst_sub | inst_slt | inst_mult | inst_div | inst_mul;
 assign src1_is_sa   = inst_sll | inst_srl | inst_sra;
 assign src1_is_pc   = inst_jal | inst_bgezal | inst_bltzal | inst_jalr;
 assign src2_is_imm  = inst_addi | inst_addiu | inst_slti | inst_sltiu | inst_lui ;//| load_op | store_op;
@@ -481,7 +484,7 @@ assign load_store_type   = {inst_lb | inst_sb,       //[b,bu,h,hu,w,wl,wr]
                             inst_lwr | inst_swr};
 assign cp0_addr     = {rd[4:0], func[2:0]};
 
-assign read_rs_rt   = inst_add | inst_addu | inst_sub | inst_subu | inst_slt | inst_sltu | inst_div | inst_divu | inst_mult | inst_multu | inst_and | inst_or | inst_xor | inst_nor | inst_sllv | inst_srav | inst_srlv | inst_beq | inst_bne;
+assign read_rs_rt   = inst_add | inst_addu | inst_sub | inst_subu | inst_slt | inst_sltu | inst_div | inst_divu | inst_mult | inst_multu | inst_mul | inst_and | inst_or | inst_xor | inst_nor | inst_sllv | inst_srav | inst_srlv | inst_beq | inst_bne;
 assign read_rs      = read_rs_rt | inst_addi | inst_addiu | inst_slti | inst_sltiu | inst_andi | inst_ori | inst_xori | inst_jr | inst_jalr | load_op | store_op | inst_bgez | inst_blez | inst_bltz | inst_bgezal | inst_bltzal | inst_mthi | inst_mtlo | inst_mtc0;  //store and load need read rf[base]==rs
 assign read_rt      = read_rs_rt | inst_sll | inst_srl | inst_sra | store_op | inst_lwl | inst_lwr | inst_mtc0;
 
