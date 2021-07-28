@@ -79,7 +79,7 @@ wire        inst2_ready_go;
 
 assign pms_ready_go    = (inst1_ready_go & inst2_ready_go) | clear_all;
 assign pms_allowin     = !pms_valid || pms_ready_go && ms_allowin;
-assign pms_to_ms_valid = pms_valid && pms_ready_go;
+assign pms_to_ms_valid = pms_valid && pms_ready_go && (~inst1_pms_except);
 
 always @(posedge clk) begin
     if (reset) begin
@@ -347,7 +347,7 @@ end
 // cp0
 assign inst1_c0_wdata = inst1_rt_value;
 assign inst1_c0_addr = inst1_cp0_addr;
-assign inst1_mtc0_we = inst1_cp0_we;
+assign inst1_mtc0_we = (inst1_cp0_we & ~((inst1_c0_addr == `CR_EPC) & inst2_pms_except));
 assign inst2_c0_wdata = inst2_rt_value;
 assign inst2_c0_addr = inst2_cp0_addr;
 assign inst2_mtc0_we = (inst2_cp0_we & ~inst1_pms_except);    
