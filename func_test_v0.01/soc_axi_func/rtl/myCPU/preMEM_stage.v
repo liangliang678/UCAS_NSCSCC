@@ -87,7 +87,7 @@ always @(posedge clk) begin
     end
     else if(inst1_pms_except)
         pms_valid <= 1'b0;
-    else if (ms_allowin) begin
+    else if (pms_allowin) begin
         pms_valid <= es_to_pms_valid;
     end
 
@@ -96,8 +96,8 @@ always @(posedge clk) begin
     end
 end
 
-assign inst1_ready_go = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok & inst1_data_cache_valid) | inst1_pms_except; //不访存 访存请求接受 有例外
-assign inst2_ready_go = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok & inst2_data_cache_valid) | inst2_pms_except;
+assign inst1_ready_go = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok | inst1_addr_ok_reg) | inst1_pms_except; //不访存 访存请求接受 有例外
+assign inst2_ready_go = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok | inst2_addr_ok_reg) | inst2_pms_except;
 
 wire        inst1_refill;
 wire [31:0] inst1_pc;
@@ -506,13 +506,36 @@ wire [31:0] inst2_data_addr;
 wire [31:0] inst1_VA;
 wire [31:0] inst2_VA;
 
+reg inst1_addr_ok_reg;
+reg inst2_addr_ok_reg;
+
+always@(posedge clk) begin
+    if(reset) begin
+        inst1_addr_ok_reg <= 1'b0;
+    end
+    else if(pms_to_ms_valid && ms_allowin)
+        inst1_addr_ok_reg <= 1'b0;
+    else if(inst1_data_cache_addr_ok)
+        inst1_addr_ok_reg <= 1'b1;
+end
+
+always@(posedge clk) begin
+    if(reset) begin
+        inst2_addr_ok_reg <= 1'b0;
+    end
+    else if(pms_to_ms_valid && ms_allowin)
+        inst2_addr_ok_reg <= 1'b0;
+    else if(inst2_data_cache_addr_ok)
+        inst2_addr_ok_reg <= 1'b1;
+end
+
 assign inst1_VA = inst1_swl_mem_res ? {pms_inst1_mem_addr[31:2], 2'b0} : pms_inst1_mem_addr;
 assign inst2_VA = inst2_swl_mem_res ? {pms_inst2_mem_addr[31:2], 2'b0} : pms_inst2_mem_addr;
 assign inst1_data_addr = {3'b0, inst1_VA[28:0]};
 assign inst2_data_addr = {3'b0, inst2_VA[28:0]};
 
 
-assign inst1_data_cache_valid = (inst1_load_op | inst1_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except;
+assign inst1_data_cache_valid = (inst1_load_op | inst1_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except & ~inst1_addr_ok_reg;
 assign inst1_data_cache_op = inst1_mem_we & pms_valid & ~inst1_pms_except;
 assign inst1_data_cache_uncache = inst1_VA[31] && ~inst1_VA[30] && inst1_VA[29];
 assign inst1_data_cache_tag = inst1_data_addr[31:12];
@@ -523,7 +546,7 @@ assign inst1_data_cache_wstrb = (inst1_mem_we & pms_valid & ~inst1_pms_except) ?
 wire mem_RAW;
 assign mem_RAW = (inst1_VA[31:2] == inst2_VA[31:2]) & inst1_mem_we & inst2_load_op & ~inst1_pms_except & ~inst2_pms_except;
 
-assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except & ~inst2_pms_except;
+assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except & ~inst2_pms_except & ~inst2_addr_ok_reg;
 assign inst2_data_cache_op = inst2_mem_we & pms_valid & ~inst1_pms_except & ~inst2_pms_except;
 assign inst2_data_cache_uncache = inst2_VA[31] && ~inst2_VA[30] && inst2_VA[29];
 assign inst2_data_cache_tag = inst2_data_addr[31:12];
@@ -542,7 +565,7 @@ assign pms_to_ms_bus = {
         inst2_gr_we,
         inst2_dest,
         inst2_rt_value,
-        pms_alu_inst2_result,
+        pms_inst2_result,
         inst2_pc,
 
         inst1_load_store_type,
@@ -552,25 +575,31 @@ assign pms_to_ms_bus = {
         inst1_gr_we,
         inst1_dest,
         inst1_rt_value,
-        pms_alu_inst1_result,
+        pms_inst1_result,
         inst1_pc
     };
 
 // forward bus
 wire [31:0] pms_inst1_result;
 wire [31:0] pms_inst2_result;
-wire [31:0] pms_inst1_alu_result;
-wire [31:0] pms_inst2_alu_result;
+wire [31:0] pms_inst1_cal_result;
+wire [31:0] pms_inst2_cal_result;
 
 wire [31:0] inst2_cp0_res_update;
 wire [31:0] pms_inst2_cp0_final_res;
 
-assign pms_inst1_alu_result = {32{inst1_hi_op}} & {HI} |
+wire [31:0] reg_hi_res;
+wire [31:0] reg_lo_res;
+
+assign reg_hi_res = inst1_hi_we ? inst1_write_hi : HI;
+assign reg_lo_res = inst1_lo_we ? inst1_write_lo : LO;
+
+assign pms_inst1_cal_result = {32{inst1_hi_op}} & {HI} |
                               {32{inst1_lo_op}} & {LO} |
                               {32{~inst1_lo_op & ~inst1_hi_op}} & {pms_alu_inst1_result};
 
-assign pms_inst2_alu_result = {32{inst2_hi_op}} & {HI} |
-                              {32{inst2_lo_op}} & {LO} |
+assign pms_inst2_cal_result = {32{inst2_hi_op}} & {reg_hi_res} |
+                              {32{inst2_lo_op}} & {reg_lo_res} |
                               {32{~inst2_lo_op & ~inst2_hi_op}} & {pms_alu_inst2_result};
 
 assign inst2_cp0_res_update = {32{(inst2_cp0_addr == `CR_EPC)}} & inst1_rt_value |
@@ -585,8 +614,8 @@ assign inst2_cp0_res_update = {32{(inst2_cp0_addr == `CR_EPC)}} & inst1_rt_value
 
 assign pms_inst2_cp0_final_res = cp0_RAW ? inst2_cp0_res_update : inst2_c0_rdata;
 
-assign pms_inst1_result = inst1_cp0_op ? inst1_c0_rdata : pms_inst1_alu_result;
-assign pms_inst2_result = inst2_cp0_op ? pms_inst2_cp0_final_res : pms_inst2_alu_result;
+assign pms_inst1_result = inst1_cp0_op ? inst1_c0_rdata : pms_inst1_cal_result;
+assign pms_inst2_result = inst2_cp0_op ? pms_inst2_cp0_final_res : pms_inst2_cal_result;
 
 assign pms_forward_bus = {
     pms_valid,

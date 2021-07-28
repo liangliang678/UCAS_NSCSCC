@@ -535,7 +535,7 @@ dcache dcache(
     .rdata1      (data_cache_rdata_01    ),
     .valid2      (inst2_data_cache_valid    ),
     .op2         (inst2_data_cache_op       ),
-    .uncache2    (inst1_data_cache_uncache  ),
+    .uncache2    (inst2_data_cache_uncache  ),
     .tag2        (inst2_data_cache_tag      ),
     .index2      (inst2_data_cache_index    ),
     .offset2     (inst2_data_cache_offset   ),
