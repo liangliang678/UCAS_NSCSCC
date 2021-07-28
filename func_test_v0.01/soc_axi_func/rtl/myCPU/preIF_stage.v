@@ -113,7 +113,7 @@ always @(posedge clk) begin                              //we need a register to
 end
 
 // pre-IF stage
-assign preif_ready_go = (inst_cache_valid & inst_cache_addr_ok) | fs_no_inst_wait;  //请求接受 或者 不发请求（有例外）
+assign preif_ready_go = (inst_cache_valid & inst_cache_addr_ok) | fs_no_inst_wait & fs_allowin;  //请求接受 或者 不发请求（有例外）
 assign to_fs_valid    = ~reset & preif_ready_go;
 assign seq_pc         = fs_pc + inst_offset;
 assign nextpc         = (pfs_reflush ) ? reflush_pc : 
@@ -202,7 +202,7 @@ assign fs_no_inst_wait = pfs_has_exception;
 // assign fs_use_tlb = ~(nextpc[31] & ~nextpc[30]);
 
 //cache valid
-assign inst_cache_valid     = fs_allowin & ~reset; //& tlb_req_en;  
+assign inst_cache_valid     = fs_allowin & ~reset & ~fs_no_inst_wait; //& tlb_req_en;  
 //[tag,index,offset] 20:8:4
 assign inst_addr    = {3'b0, nextpc[28:0]};//fs_use_tlb ? {3'b0,pfn[16:0], nextpc[11:0]} : {3'b0, nextpc[28:0]};
 assign inst_cache_tag   = inst_addr[31:12];

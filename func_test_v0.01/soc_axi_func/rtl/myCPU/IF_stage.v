@@ -281,7 +281,7 @@ always @(posedge clk) begin
             tail <= tail + inst_cache_data_num;
         end
         else if (fs_state == `RECV_NO_INST) begin
-            tail <= tail_1;
+            tail <= tail_2;
         end
     end
 end
@@ -559,11 +559,17 @@ always @(posedge clk) begin
         endcase
     end
     if (fs_state == `RECV_NO_INST && !(clear_all || ds_branch)) begin
-        fifo_inst[tail]     <= 32'b0;
-        fifo_pc[tail]       <= fs_pc;
-        fifo_except[tail]   <= fs_except;
-        fifo_exccode[tail]  <= fs_exccode;
-        fifo_refill[tail]   <= fs_refill;
+        fifo_inst[tail]       <= 32'b0;
+        fifo_pc[tail]         <= fs_pc;
+        fifo_except[tail]     <= fs_except;
+        fifo_exccode[tail]    <= fs_exccode;
+        fifo_refill[tail]     <= fs_refill;
+
+        fifo_inst[tail_1]     <= 32'b0;
+        fifo_pc[tail_1]       <= fs_pc_4;
+        fifo_except[tail_1]   <= fs_except;
+        fifo_exccode[tail_1]  <= fs_exccode;
+        fifo_refill[tail_1]   <= fs_refill;
     end
 end
 

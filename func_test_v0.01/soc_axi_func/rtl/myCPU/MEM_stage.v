@@ -256,7 +256,7 @@ assign inst2_final_result = (inst2_mem_ok) ? inst2_mem_result_reg :
                       (inst2_res_from_mem) ? inst2_mem_result : 
                                              inst2_alu_result;
 
-assign inst2_ready_go = ~(inst2_res_from_mem | inst2_mem_we) | data_cache_data_ok_02 | inst2_mem_ok;
+assign inst2_ready_go = ~(inst2_res_from_mem | inst2_mem_we) | data_cache_data_ok_02 | inst2_mem_ok | ~inst2_valid;
 
 // ms_forward_bus
 assign ms_forward_bus = {ms_valid, ms_to_ws_valid, 
