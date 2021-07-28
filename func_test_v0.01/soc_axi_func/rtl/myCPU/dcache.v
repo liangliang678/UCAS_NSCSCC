@@ -804,9 +804,9 @@ always @(posedge clk) begin
 end
 
 // Output
-assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _1_cache_req ||
+assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _1_cache_req && (wstate != `WRITE) ||
                   (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid1 && uncache1;
-assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _2_cache_req ||
+assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _2_cache_req && (wstate != `WRITE) ||
                   (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid2 && uncache2;
 assign data_ok1 = data_ok1_r && !dual_req;
 assign data_ok2 = data_ok2_r && !dual_req;
@@ -871,7 +871,12 @@ always@(*) begin
 			next_state = `IDLE;
 		end
     `PRELOOK:
-        next_state = `LOOKUP;
+        if(wstate != `WRITE) begin
+            next_state = `LOOKUP;
+        end
+        else begin
+            next_state = `PRELOOK;
+        end
 	`LOOKUP:
         if (cache_hit && dual_req) begin
             if(rb_uncache2 && rb_op2 == 1'b0) begin
