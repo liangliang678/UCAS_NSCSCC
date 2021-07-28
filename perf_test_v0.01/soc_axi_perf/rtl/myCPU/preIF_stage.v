@@ -235,7 +235,8 @@ assign inst_cache_index = inst_addr[11: 4];
 assign inst_cache_offset= inst_addr[ 3: 0];
 //kseg 1
 // 1: uncached; 0: cached
-assign inst_cache_uncache = nextpc[31] & ~nextpc[30] & nextpc[29];
+//assign inst_cache_uncache = nextpc[31] & ~nextpc[30] & nextpc[29];
+assign inst_cache_uncache = (nextpc[31] & ~nextpc[30] & nextpc[29]) | (nextpc[31] & ~nextpc[30] & ~nextpc[29] & ~nextpc[28]);
 
 assign preif_tlb_exception  = pfs_exception_tlb_refill | pfs_exception_tlb_invalid;
 assign exception_adel    = ~(nextpc[1:0] == 0);

@@ -30,7 +30,9 @@ module cp0(
     input [77:0] TLB_rdata    ,
     input        is_TLBP      ,
     input        index_write_p,
-    input [ 3:0] index_write_index    
+    input [ 3:0] index_write_index,
+
+    input  [ 5:0] ext_int_in
 );
 
 //              -> rd    sel
@@ -144,8 +146,10 @@ end
 always @(posedge cp0_clk) begin
     if (reset)
         c0_cause_ip[7:2] <= 6'b0;
-    else 
-        c0_cause_ip[7] <= c0_cause_ti;
+    else begin
+        c0_cause_ip[7]   <= ext_int_in[5] | c0_cause_ti;
+        c0_cause_ip[6:2] <= ext_int_in[4:0];
+    end
 end
 
 always @(posedge cp0_clk) begin

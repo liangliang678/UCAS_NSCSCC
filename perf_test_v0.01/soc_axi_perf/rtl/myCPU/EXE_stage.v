@@ -412,8 +412,8 @@ assign data_cache_wdata = mem_write_data;
 
 //kseg 1
 // 1: uncached; 0: cached
-assign data_cache_uncache = es_VA[31] && ~es_VA[30] && es_VA[29];
-
+//assign data_cache_uncache = es_VA[31] && ~es_VA[30] && es_VA[29];
+assign data_cache_uncache = (es_VA[31] & ~es_VA[30] & es_VA[29]) | (es_VA[31] & ~es_VA[30] & ~es_VA[29] & ~es_VA[28]);
 
 assign stall_es_bus = { data_cache_valid,                                            //49:49
                         es_cp0_addr,                                              //48:41
