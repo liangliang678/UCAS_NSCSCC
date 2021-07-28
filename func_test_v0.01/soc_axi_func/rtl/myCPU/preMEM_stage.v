@@ -85,11 +85,11 @@ always @(posedge clk) begin
     if (reset) begin
         pms_valid <= 1'b0;
     end
-    else if(inst1_pms_except)
-        pms_valid <= 1'b0;
     else if (pms_allowin) begin
         pms_valid <= es_to_pms_valid;
     end
+    else if(inst1_pms_except)
+        pms_valid <= 1'b0;    
 
     if (es_to_pms_valid && pms_allowin) begin
         es_to_pms_bus_r  <= es_to_pms_bus;
@@ -288,8 +288,8 @@ assign exception_2_refush_pc = inst2_refill ? 32'hbfc00200 :
                                inst2_pms_eret ? pms_epc :
                                br_target;
 
-assign reflush_pc = {32{inst1_pms_except}} & {exception_1_refush_pc} |
-                    {32{inst2_pms_except}} & {exception_2_refush_pc} ;
+assign reflush_pc = {32{inst1_pms_except | inst1_pms_eret}} & {exception_1_refush_pc} |
+                    {32{inst2_pms_except | inst2_pms_eret}} & {exception_2_refush_pc} ;
 
 assign clear_all = (inst2_pms_except | inst1_pms_except | inst1_pms_eret | inst2_pms_eret) & pms_valid;
 

@@ -150,6 +150,9 @@ wire        br_taken;
 wire        br_leave;
 wire [31:0] br_target;
 
+wire        inst1_except;
+wire [ 4:0] inst1_exccode;
+
 wire        inst1_ds_except;
 wire [ 4:0] inst1_ds_exccode;
 wire        inst1_ds_tlbp;
@@ -184,6 +187,10 @@ wire [31:0] inst1_rt_value;
 
 wire        inst1_branch_op;
 wire        inst1_jump_op;
+
+
+wire        inst2_except;
+wire [ 4:0] inst2_exccode;
 
 wire        inst2_ds_except;
 wire [ 4:0] inst2_ds_exccode;
