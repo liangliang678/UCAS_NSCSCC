@@ -705,38 +705,38 @@ assign rd_way_data_bank0 = ret_data[ 31: 0];
 assign rd_way_data_bank1 = ret_data[ 63:32];
 assign rd_way_data_bank2 = ret_data[ 95:64];
 assign rd_way_data_bank3 = ret_data[127:96];
-assign rd_way_wdata_bank0[ 7: 0] = (rb_op2 && rb_offset2[3:2] == 2'b00 && rb_wstrb2[0]) ? rb_wdata2[ 7: 0] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b00 && rb_wstrb1[0]) ? rb_wdata1[ 7: 0] : rd_way_data_bank0[ 7: 0];
-assign rd_way_wdata_bank0[15: 8] = (rb_op2 && rb_offset2[3:2] == 2'b00 && rb_wstrb2[1]) ? rb_wdata2[15: 8] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b00 && rb_wstrb1[1]) ? rb_wdata1[15: 8] : rd_way_data_bank0[15: 8];
-assign rd_way_wdata_bank0[23:16] = (rb_op2 && rb_offset2[3:2] == 2'b00 && rb_wstrb2[2]) ? rb_wdata2[23:16] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b00 && rb_wstrb1[2]) ? rb_wdata1[23:16] : rd_way_data_bank0[23:16];
-assign rd_way_wdata_bank0[31:24] = (rb_op2 && rb_offset2[3:2] == 2'b00 && rb_wstrb2[3]) ? rb_wdata2[31:24] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b00 && rb_wstrb1[3]) ? rb_wdata1[31:24] : rd_way_data_bank0[31:24];
-assign rd_way_wdata_bank1[ 7: 0] = (rb_op2 && rb_offset2[3:2] == 2'b01 && rb_wstrb2[0]) ? rb_wdata2[ 7: 0] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b01 && rb_wstrb1[0]) ? rb_wdata1[ 7: 0] : rd_way_data_bank1[ 7: 0];
-assign rd_way_wdata_bank1[15: 8] = (rb_op2 && rb_offset2[3:2] == 2'b01 && rb_wstrb2[1]) ? rb_wdata2[15: 8] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b01 && rb_wstrb1[1]) ? rb_wdata1[15: 8] : rd_way_data_bank1[15: 8];
-assign rd_way_wdata_bank1[23:16] = (rb_op2 && rb_offset2[3:2] == 2'b01 && rb_wstrb2[2]) ? rb_wdata2[23:16] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b01 && rb_wstrb1[2]) ? rb_wdata1[23:16] : rd_way_data_bank1[23:16];
-assign rd_way_wdata_bank1[31:24] = (rb_op2 && rb_offset2[3:2] == 2'b01 && rb_wstrb2[3]) ? rb_wdata2[31:24] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b01 && rb_wstrb1[3]) ? rb_wdata1[31:24] : rd_way_data_bank1[31:24];
-assign rd_way_wdata_bank2[ 7: 0] = (rb_op2 && rb_offset2[3:2] == 2'b10 && rb_wstrb2[0]) ? rb_wdata2[ 7: 0] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b10 && rb_wstrb1[0]) ? rb_wdata1[ 7: 0] : rd_way_data_bank2[ 7: 0];
-assign rd_way_wdata_bank2[15: 8] = (rb_op2 && rb_offset2[3:2] == 2'b10 && rb_wstrb2[1]) ? rb_wdata2[15: 8] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b10 && rb_wstrb1[1]) ? rb_wdata1[15: 8] : rd_way_data_bank2[15: 8];
-assign rd_way_wdata_bank2[23:16] = (rb_op2 && rb_offset2[3:2] == 2'b10 && rb_wstrb2[2]) ? rb_wdata2[23:16] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b10 && rb_wstrb1[2]) ? rb_wdata1[23:16] : rd_way_data_bank2[23:16];
-assign rd_way_wdata_bank2[31:24] = (rb_op2 && rb_offset2[3:2] == 2'b10 && rb_wstrb2[3]) ? rb_wdata2[31:24] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b10 && rb_wstrb1[3]) ? rb_wdata1[31:24] : rd_way_data_bank2[31:24];
-assign rd_way_wdata_bank3[ 7: 0] = (rb_op2 && rb_offset2[3:2] == 2'b11 && rb_wstrb2[0]) ? rb_wdata2[ 7: 0] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b11 && rb_wstrb1[0]) ? rb_wdata1[ 7: 0] : rd_way_data_bank3[ 7: 0];
-assign rd_way_wdata_bank3[15: 8] = (rb_op2 && rb_offset2[3:2] == 2'b11 && rb_wstrb2[1]) ? rb_wdata2[15: 8] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b11 && rb_wstrb1[1]) ? rb_wdata1[15: 8] : rd_way_data_bank3[15: 8];
-assign rd_way_wdata_bank3[23:16] = (rb_op2 && rb_offset2[3:2] == 2'b11 && rb_wstrb2[2]) ? rb_wdata2[23:16] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b11 && rb_wstrb1[2]) ? rb_wdata1[23:16] : rd_way_data_bank3[23:16];
-assign rd_way_wdata_bank3[31:24] = (rb_op2 && rb_offset2[3:2] == 2'b11 && rb_wstrb2[3]) ? rb_wdata2[31:24] :
-                                   (rb_op1 && rb_offset1[3:2] == 2'b11 && rb_wstrb1[3]) ? rb_wdata1[31:24] : rd_way_data_bank3[31:24];
+assign rd_way_wdata_bank0[ 7: 0] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b00 && rb_wstrb2[0]) ? rb_wdata2[ 7: 0] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b00 && rb_wstrb1[0]) ? rb_wdata1[ 7: 0] : rd_way_data_bank0[ 7: 0];
+assign rd_way_wdata_bank0[15: 8] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b00 && rb_wstrb2[1]) ? rb_wdata2[15: 8] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b00 && rb_wstrb1[1]) ? rb_wdata1[15: 8] : rd_way_data_bank0[15: 8];
+assign rd_way_wdata_bank0[23:16] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b00 && rb_wstrb2[2]) ? rb_wdata2[23:16] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b00 && rb_wstrb1[2]) ? rb_wdata1[23:16] : rd_way_data_bank0[23:16];
+assign rd_way_wdata_bank0[31:24] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b00 && rb_wstrb2[3]) ? rb_wdata2[31:24] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b00 && rb_wstrb1[3]) ? rb_wdata1[31:24] : rd_way_data_bank0[31:24];
+assign rd_way_wdata_bank1[ 7: 0] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b01 && rb_wstrb2[0]) ? rb_wdata2[ 7: 0] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b01 && rb_wstrb1[0]) ? rb_wdata1[ 7: 0] : rd_way_data_bank1[ 7: 0];
+assign rd_way_wdata_bank1[15: 8] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b01 && rb_wstrb2[1]) ? rb_wdata2[15: 8] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b01 && rb_wstrb1[1]) ? rb_wdata1[15: 8] : rd_way_data_bank1[15: 8];
+assign rd_way_wdata_bank1[23:16] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b01 && rb_wstrb2[2]) ? rb_wdata2[23:16] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b01 && rb_wstrb1[2]) ? rb_wdata1[23:16] : rd_way_data_bank1[23:16];
+assign rd_way_wdata_bank1[31:24] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b01 && rb_wstrb2[3]) ? rb_wdata2[31:24] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b01 && rb_wstrb1[3]) ? rb_wdata1[31:24] : rd_way_data_bank1[31:24];
+assign rd_way_wdata_bank2[ 7: 0] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b10 && rb_wstrb2[0]) ? rb_wdata2[ 7: 0] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b10 && rb_wstrb1[0]) ? rb_wdata1[ 7: 0] : rd_way_data_bank2[ 7: 0];
+assign rd_way_wdata_bank2[15: 8] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b10 && rb_wstrb2[1]) ? rb_wdata2[15: 8] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b10 && rb_wstrb1[1]) ? rb_wdata1[15: 8] : rd_way_data_bank2[15: 8];
+assign rd_way_wdata_bank2[23:16] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b10 && rb_wstrb2[2]) ? rb_wdata2[23:16] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b10 && rb_wstrb1[2]) ? rb_wdata1[23:16] : rd_way_data_bank2[23:16];
+assign rd_way_wdata_bank2[31:24] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b10 && rb_wstrb2[3]) ? rb_wdata2[31:24] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b10 && rb_wstrb1[3]) ? rb_wdata1[31:24] : rd_way_data_bank2[31:24];
+assign rd_way_wdata_bank3[ 7: 0] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b11 && rb_wstrb2[0]) ? rb_wdata2[ 7: 0] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b11 && rb_wstrb1[0]) ? rb_wdata1[ 7: 0] : rd_way_data_bank3[ 7: 0];
+assign rd_way_wdata_bank3[15: 8] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b11 && rb_wstrb2[1]) ? rb_wdata2[15: 8] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b11 && rb_wstrb1[1]) ? rb_wdata1[15: 8] : rd_way_data_bank3[15: 8];
+assign rd_way_wdata_bank3[23:16] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b11 && rb_wstrb2[2]) ? rb_wdata2[23:16] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b11 && rb_wstrb1[2]) ? rb_wdata1[23:16] : rd_way_data_bank3[23:16];
+assign rd_way_wdata_bank3[31:24] = (rb_valid[1] && rb_op2 && rb_offset2[3:2] == 2'b11 && rb_wstrb2[3]) ? rb_wdata2[31:24] :
+                                   (rb_valid[0] && rb_op1 && rb_offset1[3:2] == 2'b11 && rb_wstrb1[3]) ? rb_wdata1[31:24] : rd_way_data_bank3[31:24];
 assign _1_rd_way_rdata = {32{rb_offset1[3:2] == 2'b00}} & rd_way_data_bank0 | 
                          {32{rb_offset1[3:2] == 2'b01}} & rd_way_data_bank1 | 
                          {32{rb_offset1[3:2] == 2'b10}} & rd_way_data_bank2 | 
