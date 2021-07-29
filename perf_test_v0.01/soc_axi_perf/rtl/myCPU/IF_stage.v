@@ -196,7 +196,8 @@ always @(posedge clk) begin
         case(fs_state)
         `WAIT_PREIF: begin
             if (to_fs_valid && fs_allowin && (clear_all || ds_branch)) begin
-                fs_state <= `CLEAR_ALL;
+                //fs_state <= `CLEAR_ALL;
+                fs_state <= `RECV_INST;
             end
             else if (to_fs_valid && fs_allowin && !fs_no_inst_wait) begin
                 fs_state <= `RECV_INST;
