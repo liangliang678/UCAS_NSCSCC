@@ -602,8 +602,11 @@ wire        inst1_lbu;
 wire        inst1_lh;
 wire        inst1_lhu;
 wire        inst1_mfc0;
+wire        inst1_mfhi;
+wire        inst1_mflo;
 
 wire        inst1_load_mfc0hilo;
+wire [ 4:0] inst1_dest;
 
 assign inst1_op   = fs_inst1[31:26];
 assign inst1_rs   = fs_inst1[25:21];
@@ -648,6 +651,8 @@ assign inst1_mflo   = inst1_op_d[6'h00] & inst1_func_d[6'h12] & inst1_rs_d[5'h00
 
 assign inst1_load_mfc0hilo = inst1_lb | inst1_lbu | inst1_lh | inst1_lhu | inst1_lw | inst1_lwl | inst1_lwr | inst1_mfc0 | inst1_mfhi | inst1_mflo;
 assign inst1_br = inst1_beq | inst1_bne | inst1_bgez | inst1_bgezal | inst1_bgtz | inst1_blez | inst1_bltz | inst1_bltzal | inst1_j | inst1_jal | inst1_jalr | inst1_jr;
+
+assign inst1_dest = {5{inst1_mfhi | inst1_mflo}} & inst1_rd | {5{~(inst1_mfhi | inst1_mflo)}} & inst1_rt;
 
 assign inst1_pc       = fifo_pc[head];
 assign inst1_inst     = fs_inst1;
@@ -1028,8 +1033,8 @@ assign inst2_r2_need = inst2_add  || inst2_addu  || inst2_sub || inst2_subu ||
                        inst2_beq  || inst2_bne   || inst2_lwl || inst2_lwr  ||
                        inst2_sw   || inst2_sb    || inst2_sh  || inst2_swl  || inst2_swr || inst2_mtc0;
 
-assign inst2_r1_relevant = inst2_r1_need & inst1_load_mfc0hilo & ~inst2_rs_d[5'h00] & (inst2_rs == inst1_rt);
-assign inst2_r2_relevant = inst2_r2_need & inst1_load_mfc0hilo & ~inst2_rt_d[5'h00] & (inst2_rt == inst1_rt);
+assign inst2_r1_relevant = inst2_r1_need & inst1_load_mfc0hilo & ~inst2_rs_d[5'h00] & (inst2_rs == inst1_dest);
+assign inst2_r2_relevant = inst2_r2_need & inst1_load_mfc0hilo & ~inst2_rt_d[5'h00] & (inst2_rt == inst1_dest);
 
 assign self_relevant = inst2_r1_relevant | inst2_r2_relevant;
 assign single_shoot = self_relevant | inst2_br;

@@ -363,7 +363,8 @@ begin
     end
     else
     begin
-        timer <= timer + 1'b1;
+        //timer <= timer + 1'b1;
+        timer <= 32'hbfcbfc380;
     end
 end
 
