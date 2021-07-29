@@ -868,10 +868,8 @@ always @(posedge clk) begin
 end
 
 // Output
-assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _1_cache_req && (wstate != `WRITE) ||
-                  (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid1 && uncache1;
-assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && _2_cache_req && (wstate != `WRITE) ||
-                  (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid2 && uncache2;
+assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid1 && (wstate != `WRITE);
+assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid2 && (wstate != `WRITE);
 assign data_ok1 = data_ok1_r && !dual_req;
 assign data_ok2 = data_ok2_r && !dual_req;
 assign rdata1 = data_ok1_raw ? rdata1_raw : rdata1_r;
