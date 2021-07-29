@@ -79,17 +79,18 @@ wire        inst2_ready_go;
 
 assign pms_ready_go    = (inst1_ready_go & inst2_ready_go) | clear_all;
 assign pms_allowin     = !pms_valid || pms_ready_go && ms_allowin;
-assign pms_to_ms_valid = pms_valid && pms_ready_go && (~inst1_pms_except);
+assign pms_to_ms_valid = (pms_valid & pms_ready_go) & ~(inst1_pms_except | inst1_pms_eret);
 
 always @(posedge clk) begin
     if (reset) begin
         pms_valid <= 1'b0;
     end
+    else if(clear_all & ((inst1_pms_except | inst1_pms_eret) | (inst2_pms_except | inst2_pms_eret) & pms_ready_go & pms_ready_go)) begin
+        pms_valid <= 1'b0;         
+    end
     else if (pms_allowin) begin
         pms_valid <= es_to_pms_valid;
     end
-    else if(inst1_pms_except)
-        pms_valid <= 1'b0;    
 
     if (es_to_pms_valid && pms_allowin) begin
         es_to_pms_bus_r  <= es_to_pms_bus;
@@ -297,10 +298,14 @@ assign clear_all = (inst2_pms_except | inst1_pms_except | inst1_pms_eret | inst2
 reg [31:0] HI;
 reg [31:0] LO;
 
+reg  mul_res_save_done;
+
 wire [31:0] inst1_write_hi;
 wire [31:0] inst1_write_lo;
 wire [31:0] inst2_write_hi;
 wire [31:0] inst2_write_lo;
+
+
 
 assign inst1_write_hi = {32{inst1_hl_src_from_mul}} & {pms_inst1_mul_res[63:32]} |
                         {32{inst1_hl_src_from_div}} & {pms_alu_inst1_div_res[31:0]} |
@@ -320,37 +325,47 @@ assign inst2_write_lo = {32{inst2_hl_src_from_mul}} & {pms_inst2_mul_res[31:0]} 
 
 always @(posedge clk) begin
     if(reset)
+        mul_res_save_done <= 1'b0; 
+    else if(pms_to_ms_valid && ms_allowin)
+        mul_res_save_done <= 1'b0; 
+    else if(pms_valid & ((inst1_hi_we & inst1_lo_we) | (inst2_hi_we & inst2_lo_we)) & ~inst1_pms_except)
+        mul_res_save_done <= 1'b1; 
+    
+end
+
+always @(posedge clk) begin
+    if(reset)
         HI <= 32'b0;
-    else if(inst1_hi_we & inst2_hi_we & !inst1_pms_except & !inst2_pms_except)
+    else if(pms_valid & ~mul_res_save_done & inst1_hi_we & inst2_hi_we & !inst1_pms_except & !inst2_pms_except)
         HI <= inst2_write_hi;
-    else if(inst1_hi_we & inst2_hi_we & !inst1_pms_except & inst2_pms_except)
+    else if(pms_valid & ~mul_res_save_done & inst1_hi_we & inst2_hi_we & !inst1_pms_except & inst2_pms_except)
         HI <= inst1_write_hi;
-    else if(inst1_hi_we & ~inst2_hi_we & !inst1_pms_except)
+    else if(pms_valid & ~mul_res_save_done & inst1_hi_we & ~inst2_hi_we & !inst1_pms_except)
         HI <= inst1_write_hi;
-    else if(~inst1_hi_we & inst2_hi_we & !(inst1_pms_except | inst1_pms_eret) & !inst2_pms_except)
+    else if(pms_valid & ~mul_res_save_done & ~inst1_hi_we & inst2_hi_we & !(inst1_pms_except | inst1_pms_eret) & !inst2_pms_except)
         HI <= inst2_write_hi;
 end
 
 always @(posedge clk) begin
     if(reset)
         LO <= 32'b0;
-    else if(inst1_lo_we & inst2_lo_we & !inst1_pms_except & !inst2_pms_except)
+    else if(pms_valid & ~mul_res_save_done & inst1_lo_we & inst2_lo_we & !inst1_pms_except & !inst2_pms_except)
         LO <= inst2_write_lo;
-    else if(inst1_lo_we & inst2_lo_we & !inst1_pms_except & inst2_pms_except)
+    else if(pms_valid & ~mul_res_save_done & inst1_lo_we & inst2_lo_we & !inst1_pms_except & inst2_pms_except)
         LO <= inst1_write_lo;
-    else if(inst1_lo_we & ~inst2_lo_we & !inst1_pms_except)
+    else if(pms_valid & ~mul_res_save_done & inst1_lo_we & ~inst2_lo_we & !inst1_pms_except)
         LO <= inst1_write_lo;
-    else if(~inst1_lo_we & inst2_lo_we & !(inst1_pms_except | inst1_pms_eret) & !inst2_pms_except)
+    else if(pms_valid & ~mul_res_save_done & ~inst1_lo_we & inst2_lo_we & !(inst1_pms_except | inst1_pms_eret) & !inst2_pms_except)
         LO <= inst2_write_lo;
 end
 
 // cp0
 assign inst1_c0_wdata = inst1_rt_value;
 assign inst1_c0_addr = inst1_cp0_addr;
-assign inst1_mtc0_we = (inst1_cp0_we & ~((inst1_c0_addr == `CR_EPC) & inst2_pms_except));
+assign inst1_mtc0_we = (pms_valid & inst1_cp0_we & ~((inst1_c0_addr == `CR_EPC) & inst2_pms_except));
 assign inst2_c0_wdata = inst2_rt_value;
 assign inst2_c0_addr = inst2_cp0_addr;
-assign inst2_mtc0_we = (inst2_cp0_we & ~(inst1_pms_except | inst1_pms_eret));    
+assign inst2_mtc0_we = (pms_valid & inst2_cp0_we & ~(inst1_pms_except | inst1_pms_eret));    
 
 wire cp0_RAW;
 assign cp0_RAW = (inst1_cp0_addr == inst2_cp0_addr) & inst1_cp0_we & inst2_cp0_op & (~inst1_pms_except & ~inst2_pms_except);
@@ -591,8 +606,8 @@ wire [31:0] pms_inst2_cp0_final_res;
 wire [31:0] reg_hi_res;
 wire [31:0] reg_lo_res;
 
-assign reg_hi_res = inst1_hi_we ? inst1_write_hi : HI;
-assign reg_lo_res = inst1_lo_we ? inst1_write_lo : LO;
+assign reg_hi_res = (inst1_hi_we & ~mul_res_save_done) ? inst1_write_hi : HI;
+assign reg_lo_res = (inst1_lo_we & ~mul_res_save_done) ? inst1_write_lo : LO;
 
 assign pms_inst1_cal_result = {32{inst1_hi_op}} & {HI} |
                               {32{inst1_lo_op}} & {LO} |
