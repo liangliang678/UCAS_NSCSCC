@@ -296,7 +296,7 @@ id_stage id_stage(
     .ds_forward_bus         (ds_forward_bus),
 
     //handle interrupt
-    .has_int                (ext_int       ),
+    .has_int                (has_int       ),
     
     //clear stage
     .clear_all              (clear_all     )
