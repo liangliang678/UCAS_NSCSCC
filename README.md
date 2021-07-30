@@ -35,7 +35,7 @@
 | 2021-06-18 |4way icache                 | 70  | 9ac78    | 45ea55      | 91e9ae   | 676acb| 12683f    | 46b482     | 37f90c      | 43a431 | 51595       | 2f78cd       | 28.183 |
 | 2021-06-18 |icache plru & prefetcher opt| 70  | 9ac7a    | 45ea54      | 90633a   | 67508e| 1239a7    | 4622a5     | 37d5e8      | 43463a | 49d9d       | 2f2730       | 28.582 |
 | 2021-06-18 |fix bugs                    | 70  | 9c381    | 461a1a      | 90c794   | 6773c6| 127130    | 46b7ac     | 380426      | 43a71a | 515f3       | 2f79ba       | 28.160 |
-
+| 2021-07-30 |dual issue                  | 90  | 5131c    | 2ae904      | 622d7c   | 4af94b| d8978    | 303c81     | 367971      | 2959b0 | 3e3b3       | 1fefab       | 40.901 |
 ## 参考资料
 
 1. [AXI总线概述](https://blog.csdn.net/bleauchat/article/details/96891619)
