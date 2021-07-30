@@ -214,49 +214,49 @@ assign tag_addr = (_1_cache_req && addr_ok1)  ? index1 :
 
 assign data_way0_bank0_en = (_1_cache_req && addr_ok1) || 
                             (_2_cache_req && addr_ok2) || 
-                            (state == `PRELOOK) ||
+                            (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b00 && !wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b00 && !wb_hit_way) || 
                             (state == `REFILL && ret_valid && !rp_way);
 assign data_way0_bank1_en = (_1_cache_req && addr_ok1) || 
                             (_2_cache_req && addr_ok2) || 
-                            (state == `PRELOOK) ||
+                            (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b01 && !wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b01 && !wb_hit_way) || 
                             (state == `REFILL && ret_valid && !rp_way);
 assign data_way0_bank2_en = (_1_cache_req && addr_ok1) || 
                             (_2_cache_req && addr_ok2) || 
-                            (state == `PRELOOK) ||
+                            (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b10 && !wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b10 && !wb_hit_way) || 
                             (state == `REFILL && ret_valid && !rp_way);
 assign data_way0_bank3_en = (_1_cache_req && addr_ok1) || 
                             (_2_cache_req && addr_ok2) || 
-                            (state == `PRELOOK) ||
+                            (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b11 && !wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b11 && !wb_hit_way) || 
                             (state == `REFILL && ret_valid && !rp_way);
 assign data_way1_bank0_en = (_1_cache_req && addr_ok1) || 
                             (_2_cache_req && addr_ok2) || 
-                            (state == `PRELOOK) ||
+                            (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b00 &&  wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b00 &&  wb_hit_way) || 
                             (state == `REFILL && ret_valid &&  rp_way);
 assign data_way1_bank1_en = (_1_cache_req && addr_ok1) || 
                             (_2_cache_req && addr_ok2) || 
-                            (state == `PRELOOK) ||
+                            (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b01 &&  wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b01 &&  wb_hit_way) || 
                             (state == `REFILL && ret_valid &&  rp_way);
 assign data_way1_bank2_en = (_1_cache_req && addr_ok1) || 
                             (_2_cache_req && addr_ok2) || 
-                            (state == `PRELOOK) ||
+                            (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b10 &&  wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b10 &&  wb_hit_way) || 
                             (state == `REFILL && ret_valid &&  rp_way);
 assign data_way1_bank3_en = (_1_cache_req && addr_ok1) || 
                             (_2_cache_req && addr_ok2) ||
-                            (state == `PRELOOK) || 
+                            (state == `PRELOOK && wstate != `WRITE) || 
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b11 &&  wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b11 &&  wb_hit_way) || 
                             (state == `REFILL && ret_valid &&  rp_way);
