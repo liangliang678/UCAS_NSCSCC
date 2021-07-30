@@ -55,7 +55,8 @@ assign {inst2_valid,
         inst1_pc
        } = ms_to_ws_bus_r;
 
-assign ws_ready_go = ~double_write | double_write & double_write_wait;
+//assign ws_ready_go = ~double_write | double_write & double_write_wait;
+assign ws_ready_go = 1'b1;
 assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
     if (reset) begin
@@ -84,7 +85,7 @@ assign inst1_write = ws_valid & inst1_gr_we;
 assign inst2_write = ws_valid & inst2_gr_we & inst2_valid;
 assign double_write = inst1_write & inst2_write;
 assign write_same_reg = double_write & (inst2_dest == inst1_dest);
-
+/*
 always @(posedge clk) begin
     if (reset) begin
         double_write_wait <= 1'b0;
@@ -95,29 +96,31 @@ always @(posedge clk) begin
     else if (double_write_wait == 1'b1) begin
         double_write_wait <= 1'b0;
     end
-end
+end*/
 
-assign rf_we_01    = inst1_write | inst2_write;
-assign rf_waddr_01 = {5{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_dest | 
-                     {5{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_dest;
+//assign rf_we_01    = inst1_write | inst2_write;
+//assign rf_waddr_01 = {5{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_dest | 
+                     //{5{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_dest;
 
-assign rf_wdata_01 = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_final_result | 
-                     {32{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_final_result;
+//assign rf_wdata_01 = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_final_result | 
+                     //{32{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_final_result;
 
-assign rf_we_02    = 1'b0;
-assign rf_waddr_02 = 5'b0;
-assign rf_wdata_02 = 32'b0;
+//assign rf_we_02    = 1'b0;
+//assign rf_waddr_02 = 5'b0;
+//assign rf_wdata_02 = 32'b0;
 
-//assign rf_we_01    = inst1_write;
-//assign rf_waddr_01 = inst1_dest;
-//assign rf_wdata_01 = write_same_reg ? inst2_final_result : inst1_final_result;
-//assign rf_we_02    = write_same_reg ? 1'b0 : inst2_write;
-//assign rf_waddr_02 = inst2_dest;
-//assign rf_wdata_02 = inst2_final_result;
+assign rf_we_01    = inst1_write;
+assign rf_waddr_01 = inst1_dest;
+assign rf_wdata_01 = write_same_reg ? inst2_final_result : inst1_final_result;
+assign rf_we_02    = write_same_reg ? 1'b0 : inst2_write;
+assign rf_waddr_02 = inst2_dest;
+assign rf_wdata_02 = inst2_final_result;
 
 // debug info generate
-assign debug_wb_pc       = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_pc | 
-                           {32{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_pc;
+//assign debug_wb_pc       = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_pc | 
+                           //{32{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_pc;
+
+assign debug_wb_pc       = inst1_pc;
 assign debug_wb_rf_wen   = {4{rf_we_01}};
 assign debug_wb_rf_wnum  = rf_waddr_01;
 assign debug_wb_rf_wdata = rf_wdata_01;
