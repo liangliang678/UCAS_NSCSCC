@@ -879,7 +879,9 @@ assign wr_req   = (state == `MISS && write_back) ||
                   (state == `UWREQ);
 assign wr_type  = (state == `UWREQ) ? 1'b0 : 1'b1;
 assign wr_addr  = (state == `UWREQ && rb_valid[0]) ? {rb_tag1, rb_index1, rb_offset1} :
-                  (state == `UWREQ && rb_valid[1]) ? {rb_tag2, rb_index2, rb_offset2} : {rp_way_tag, rb_index1, 4'b0};
+                  (state == `UWREQ && rb_valid[1]) ? {rb_tag2, rb_index2, rb_offset2} :
+                  (rb_valid[0]) ? {rp_way_tag, rb_index1, 4'b0} :
+                  (rb_valid[1]) ? {rp_way_tag, rb_index2, 4'b0} : 32'b0;
 assign wr_size  = (state == `UWREQ && rb_valid[0]) ? {1'b0, rb_size1} :
                   (state == `UWREQ && rb_valid[1]) ? {1'b0, rb_size2} : 3'd2;
 assign wr_wstrb = (state == `UWREQ && rb_valid[0]) ? rb_wstrb1 :
