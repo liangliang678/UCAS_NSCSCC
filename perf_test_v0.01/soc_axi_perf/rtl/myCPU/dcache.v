@@ -456,7 +456,7 @@ wire _2_req_raw;
 
 assign _1_cache_req = valid1 && !uncache1;
 assign _2_cache_req = valid2 && !uncache2;
-assign req_same_line = (rb_index1 == rb_index2) && (rb_tag1 == rb_tag2);
+assign req_same_line = (rb_index1 == rb_index2) && (rb_tag1 == rb_tag2) && !rb_uncache1 && !rb_uncache2;
 assign req_read_write = (rb_op1 != rb_op2);
 assign _1_req_raw = (wstate == `WRITE) && (index1 == wb_index);
 assign _2_req_raw = (wstate == `WRITE) && (index2 == wb_index) ;
@@ -486,7 +486,7 @@ always @(posedge clk) begin
         rb_recv[1] <= 1'b0;
     end
 end
-assign dual_req = rb_recv[0] && rb_recv[1];
+assign dual_req = rb_recv[0] && rb_recv[1] && !req_same_line;
 
 assign rb_valid[0] = rb_recv[0];
 assign rb_valid[1] = rb_recv[1] && (rb_uncache2 && !rb_recv[0] || !rb_uncache2 && (!rb_recv[0] || req_same_line && !req_read_write));
@@ -831,7 +831,7 @@ always @(posedge clk) begin
     if (!resetn) begin
         data_ok1_r <= 1'b0;
     end
-    else if (data_ok1_raw) begin
+    else if (data_ok1_raw && !data_ok1) begin
         data_ok1_r <= 1'b1;
     end
     else if (data_ok1) begin
@@ -842,7 +842,7 @@ always @(posedge clk) begin
     if (!resetn) begin
         data_ok2_r <= 1'b0;
     end
-    else if (data_ok2_raw) begin
+    else if (data_ok2_raw && !data_ok2) begin
         data_ok2_r <= 1'b1;
     end
     else if (data_ok2) begin
@@ -870,8 +870,8 @@ end
 // Output
 assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid1 && (wstate != `WRITE);
 assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid2 && (wstate != `WRITE);
-assign data_ok1 = data_ok1_r && !dual_req;
-assign data_ok2 = data_ok2_r && !dual_req;
+assign data_ok1 = data_ok1_raw && !dual_req || data_ok1_r && !dual_req;
+assign data_ok2 = data_ok2_raw && !dual_req || data_ok2_r && !dual_req;
 assign rdata1 = data_ok1_raw ? rdata1_raw : rdata1_r;
 assign rdata2 = data_ok2_raw ? rdata2_raw : rdata2_r;
 
