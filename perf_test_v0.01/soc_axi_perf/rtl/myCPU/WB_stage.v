@@ -97,23 +97,23 @@ always @(posedge clk) begin
     end
 end
 
-assign rf_we_01    = inst1_write | inst2_write;
-assign rf_waddr_01 = {5{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_dest | 
-                     {5{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_dest;
+//assign rf_we_01    = inst1_write | inst2_write;
+//assign rf_waddr_01 = {5{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_dest | 
+                     //{5{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_dest;
 
-assign rf_wdata_01 = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_final_result | 
-                     {32{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_final_result;
+//assign rf_wdata_01 = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_final_result | 
+                     //{32{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_final_result;
 
-assign rf_we_02    = 1'b0;
-assign rf_waddr_02 = 5'b0;
-assign rf_wdata_02 = 32'b0;
+//assign rf_we_02    = 1'b0;
+//assign rf_waddr_02 = 5'b0;
+//assign rf_wdata_02 = 32'b0;
 
-//assign rf_we_01    = inst1_write;
-//assign rf_waddr_01 = inst1_dest;
-//assign rf_wdata_01 = write_same_reg ? inst2_final_result : inst1_final_result;
-//assign rf_we_02    = write_same_reg ? 1'b0 : inst2_write;
-//assign rf_waddr_02 = inst2_dest;
-//assign rf_wdata_02 = inst2_final_result;
+assign rf_we_01    = inst1_write;
+assign rf_waddr_01 = inst1_dest;
+assign rf_wdata_01 = write_same_reg ? inst2_final_result : inst1_final_result;
+assign rf_we_02    = write_same_reg ? 1'b0 : inst2_write;
+assign rf_waddr_02 = inst2_dest;
+assign rf_wdata_02 = inst2_final_result;
 
 // debug info generate
 assign debug_wb_pc       = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_pc | 
