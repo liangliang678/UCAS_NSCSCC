@@ -18,8 +18,8 @@ module preif_stage(
     output           inst_cache_valid,
     output           inst_cache_uncache,
     output  [ 19:0]  inst_cache_tag,
-    output  [  7:0]  inst_cache_index,
-    output  [  3:0]  inst_cache_offset,
+    output  [  6:0]  inst_cache_index,
+    output  [  4:0]  inst_cache_offset,
     input            inst_cache_addr_ok,
 
     // //TLB search port 0
@@ -206,8 +206,8 @@ assign inst_cache_valid     = fs_allowin & ~reset & ~fs_no_inst_wait; //& tlb_re
 //[tag,index,offset] 20:8:4
 assign inst_addr    = {3'b0, nextpc[28:0]};//fs_use_tlb ? {3'b0,pfn[16:0], nextpc[11:0]} : {3'b0, nextpc[28:0]};
 assign inst_cache_tag   = inst_addr[31:12];
-assign inst_cache_index = inst_addr[11: 4];
-assign inst_cache_offset= inst_addr[ 3: 0];
+assign inst_cache_index = inst_addr[11: 5];
+assign inst_cache_offset= inst_addr[ 4: 0];
 //kseg 1
 // 1: uncached; 0: cached
 assign inst_cache_uncache = nextpc[31] & ~nextpc[30] & nextpc[29];

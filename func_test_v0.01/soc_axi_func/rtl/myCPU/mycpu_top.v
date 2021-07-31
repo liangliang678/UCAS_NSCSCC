@@ -98,8 +98,8 @@ wire [ 5:0]  inst_offset;
 wire           inst_cache_valid;
 wire           inst_cache_uncache;
 wire  [ 19:0]  inst_cache_tag;
-wire  [  7:0]  inst_cache_index;
-wire  [  3:0]  inst_cache_offset;
+wire  [  6:0]  inst_cache_index;
+wire  [  4:0]  inst_cache_offset;
 wire           inst_cache_addr_ok;
 wire           inst_cache_data_ok;
 wire [255:0]   inst_cache_rdata;
@@ -109,7 +109,7 @@ wire           inst_cache_rd_type;
 wire [ 31:0]   inst_cache_rd_addr;
 wire           inst_cache_rd_rdy;
 wire           inst_cache_ret_valid;
-wire  [127:0]  inst_cache_ret_data;
+wire  [255:0]  inst_cache_ret_data;
 
 //mul
 wire [63:0]    es_inst1_mul_res;
@@ -184,7 +184,7 @@ wire [  1:0]  axi_rd_type;
 wire [ 31:0]  axi_rd_addr;
 wire          axi_rd_rdy;
 wire          axi_ret_valid;
-wire [255:0]  axi_ret_data;
+wire [511:0]  axi_ret_data;
 wire          axi_ret_half;
 preif_stage preif_stage(
     .clk                 (aclk),

@@ -486,7 +486,7 @@ always @(posedge clk) begin
         rb_recv[1] <= 1'b0;
     end
 end
-assign dual_req = rb_recv[0] && rb_recv[1] && !req_same_line;
+assign dual_req = rb_recv[0] && rb_recv[1] && (req_read_write || !req_same_line);
 
 assign rb_valid[0] = rb_recv[0];
 assign rb_valid[1] = rb_recv[1] && (rb_uncache2 && !rb_recv[0] || !rb_uncache2 && (!rb_recv[0] || req_same_line && !req_read_write));
@@ -868,8 +868,8 @@ always @(posedge clk) begin
 end
 
 // Output
-assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid1 && (wstate != `WRITE);
-assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid2 && (wstate != `WRITE);
+assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid1 && (wstate != `WRITE) && !wait_write1 && !wait_write2;
+assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid2 && (wstate != `WRITE) && !wait_write1 && !wait_write2;
 assign data_ok1 = data_ok1_raw && !dual_req || data_ok1_r && !dual_req;
 assign data_ok2 = data_ok2_raw && !dual_req || data_ok2_r && !dual_req;
 assign rdata1 = data_ok1_raw ? rdata1_raw : rdata1_r;
@@ -1110,6 +1110,11 @@ always @(posedge clk) begin
         wb_valid <= 2'b10;
     end
 end
+
+wire wait_write1;
+wire wait_write2;
+assign wait_write1 = (state == `LOOKUP) && rb_valid[0] && rb_op1;
+assign wait_write2 = (state == `LOOKUP) && rb_valid[1] && rb_op2;
 
 // Write FSM
 reg  [1:0] wstate;

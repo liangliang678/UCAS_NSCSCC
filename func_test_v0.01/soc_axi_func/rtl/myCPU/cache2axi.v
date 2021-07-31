@@ -18,7 +18,7 @@ module cache2axi(
     input   [ 31:0] inst_rd_addr,
     output          inst_rd_rdy,
     output          inst_ret_valid,
-    output  [255:0] inst_ret_data,
+    output  [511:0] inst_ret_data,
     // for prefetcher
     output          inst_ret_half,
     // data cache interface - slave
@@ -175,9 +175,9 @@ always @(posedge clk) begin
         if (inst_rd_type == 2'b00)
             arlen <= 4'd0;
         else if (inst_rd_type == 2'b01)
-            arlen <= 4'd3;
-        else if (inst_rd_type == 2'b10)
             arlen <= 4'd7;
+        else if (inst_rd_type == 2'b10)
+            arlen <= 4'd15;
     end
 end
 
@@ -199,8 +199,8 @@ assign data_rd_rdy = (ar_state == `AR_IDLE);
 // R
 reg [127:0] data_rdata;
 reg [  1:0] data_rcount;
-reg [255:0] inst_rdata;
-reg [  2:0] inst_rcount;
+reg [511:0] inst_rdata;
+reg [  3:0] inst_rcount;
 
 assign axi_rready = 1'b1;
 
@@ -229,21 +229,21 @@ end
 
 always @(posedge clk) begin
     if (!resetn) begin
-        inst_rcount <= 2'b0;
+        inst_rcount <= 4'b0;
     end 
     else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
         if (axi_rlast) begin
-            inst_rcount <= 2'b0;
+            inst_rcount <= 4'b0;
         end
         else begin
-            inst_rcount <= inst_rcount + 2'b1;
+            inst_rcount <= inst_rcount + 4'b1;
         end
     end
 end
 
 always @(posedge clk) begin
     if (!resetn) begin
-        inst_rdata <= 128'b0;
+        inst_rdata <= 512'b0;
     end 
     else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
         inst_rdata[inst_rcount*32 +: 32] <= axi_rdata;
@@ -280,7 +280,7 @@ always @(posedge clk) begin
     if (!resetn) begin
         to_icache_half <= 1'b0;
     end
-    else if (axi_rready && axi_rvalid && inst_rcount == 3'd3 && axi_rid == 4'b0) begin
+    else if (axi_rready && axi_rvalid && inst_rcount == 3'd7 && axi_rid == 4'b0) begin
         to_icache_half <= 1'b1;
     end
     else if (to_icache_half == 1'b1) begin

@@ -14,19 +14,19 @@ module prefetcher1 (
     input   [ 31:0] cache_rd_addr,
     output          cache_rd_rdy,
     output          cache_ret_valid,
-    output  [127:0] cache_ret_data,
+    output  [255:0] cache_ret_data,
     // AXI
     output          axi_rd_req,
     output  [  1:0] axi_rd_type,
     output  [ 31:0] axi_rd_addr,
     input           axi_rd_rdy,
     input           axi_ret_valid,
-    input   [255:0] axi_ret_data,
+    input   [511:0] axi_ret_data,
     input           axi_ret_half
 );
 
 // Buffer
-reg [127:0] buffer;
+reg [255:0] buffer;
 reg [ 31:0] addr;
 reg [ 31:0] req_addr;
 
@@ -38,22 +38,22 @@ always @(posedge clk) begin
         req_addr <= axi_rd_addr;
     end
     else if (axi_rd_req && axi_rd_rdy && buffer_miss) begin
-        req_addr <= axi_rd_addr + 32'd16;
+        req_addr <= axi_rd_addr + 32'd32;
     end
     else if (axi_rd_req && axi_rd_rdy && bad_fill) begin
-        req_addr <= axi_rd_addr + 32'd16;
+        req_addr <= axi_rd_addr + 32'd32;
     end
 end
 
 always @(posedge clk) begin
     if(!resetn) begin
-        buffer <= 127'b0;
+        buffer <= 256'b0;
     end
     else if ((state == `FILL) && axi_ret_valid) begin
-        buffer <= axi_ret_data[255:128];
+        buffer <= axi_ret_data[511:256];
     end
     else if ((state == `HIT) && axi_ret_valid) begin
-        buffer <= axi_ret_data[127:0];
+        buffer <= axi_ret_data[255:0];
     end
 end
 
@@ -78,12 +78,12 @@ assign buffer_miss = cache_rd_req && (cache_rd_type == 1'b1) && (cache_rd_addr !
 assign uncache_req = cache_rd_req && (cache_rd_type == 1'b0);
 assign bad_fill = (state == `HIT) && cache_rd_req && (cache_rd_type == 1'b1) && (cache_rd_addr != req_addr);
 
-reg [127:0] ret_data;
+reg [255:0] ret_data;
 reg         ret_valid;
 
 always @(posedge clk) begin
     if(!resetn) begin
-        ret_data <= 127'b0;
+        ret_data <= 256'b0;
     end
     else if (buffer_hit && axi_rd_req && axi_rd_rdy) begin
         ret_data <= buffer;
@@ -104,12 +104,12 @@ end
 
 assign axi_rd_req = (state == `IDLE) && cache_rd_req || bad_fill;
 assign axi_rd_type = (buffer_miss || bad_fill) ? 2'b10 : {1'b0, cache_rd_type};
-assign axi_rd_addr = buffer_hit ? (cache_rd_addr + 32'd16) : cache_rd_addr;
+assign axi_rd_addr = buffer_hit ? (cache_rd_addr + 32'd32) : cache_rd_addr;
 assign cache_rd_rdy = (state == `IDLE) && axi_rd_rdy || bad_fill && axi_rd_rdy;
 assign cache_ret_valid = (state == `HIT)     && ret_valid    ||
                          (state == `MISS)    && axi_ret_half ||
                          (state == `UNCACHE) && axi_ret_valid;
-assign cache_ret_data = (state == `HIT) ? ret_data : axi_ret_data[127:0];
+assign cache_ret_data = (state == `HIT) ? ret_data : axi_ret_data[255:0];
 
 // FSM
 reg [5:0] state;
