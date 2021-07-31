@@ -5,11 +5,11 @@ module alu(
   input  [31:0] alu_src1,
   input  [31:0] alu_src2,
   output [31:0] alu_result,
-  output [63:0] alu_div_res,
-  output [63:0] alu_mul_res,
-  output        complete,
-  output        overflow,
-  input         exception
+  //output [63:0] alu_div_res,
+  //output [63:0] alu_mul_res,
+  //output        complete,
+  output        overflow
+  //input         exception
 );
 
 wire op_add;   //�ӷ�����
@@ -108,41 +108,41 @@ assign sr64_result = {{32{op_sra & alu_src2[31]}}, alu_src2[31:0]} >> alu_src1[4
 
 assign sr_result   = sr64_result[31:0];
 
-//MULT, MULTU
-mul u_mul(
-    .mul_clk    (clk              ),
-    .resetn     (~reset           ),
-    .mul_signed (op_mult          ),
-    .x          (alu_src1         ),
-    .y          (alu_src2         ),
-    .result     (mult_result      )
-    );
+// //MULT, MULTU
+// mul u_mul(
+//     .mul_clk    (clk              ),
+//     .resetn     (~reset           ),
+//     .mul_signed (op_mult          ),
+//     .x          (alu_src1         ),
+//     .y          (alu_src2         ),
+//     .result     (mult_result      )
+//     );
 
-// DIV, DIVU result
-reg div;
+// // DIV, DIVU result
+// reg div;
 
-always @(posedge clk) begin
-  if (reset) begin
-    div <= 0;
-  end else if (complete) begin
-    div <= 0;
-  end else if (op_divu | op_div) begin
-    div <= 1;
-  end
-end
+// always @(posedge clk) begin
+//   if (reset) begin
+//     div <= 0;
+//   end else if (complete) begin
+//     div <= 0;
+//   end else if (op_divu | op_div) begin
+//     div <= 1;
+//   end
+// end
 
-div u_div(
-    .div_clk    (clk              ),
-    .resetn     (~reset           ),
-    .div        (div              ),
-    .div_signed (op_div           ),
-    .x          (alu_src1         ),
-    .y          (alu_src2         ),
-    .s          (div_result[63:32]),
-    .r          (div_result[31:0] ),
-    .complete   (div_complete     ),
-    .exception  (exception        )
-    );
+// div u_div(
+//     .div_clk    (clk              ),
+//     .resetn     (~reset           ),
+//     .div        (div              ),
+//     .div_signed (op_div           ),
+//     .x          (alu_src1         ),
+//     .y          (alu_src2         ),
+//     .s          (div_result[63:32]),
+//     .r          (div_result[31:0] ),
+//     .complete   (div_complete     ),
+//     .exception  (exception        )
+//     );
 
 // final result mux
 assign alu_result = ({32{op_add|op_sub }}   & add_sub_result)
@@ -157,10 +157,10 @@ assign alu_result = ({32{op_add|op_sub }}   & add_sub_result)
                   | ({32{op_srl|op_sra }}   & sr_result);
 
 
-assign alu_div_res = div_result;
+// assign alu_div_res = div_result;
 
-assign alu_mul_res = mult_result;
+// assign alu_mul_res = mult_result;
 
-assign complete = ~(op_div | op_divu) | div_complete;
+assign complete = ~(op_div | op_divu); //| div_complete;
 
 endmodule

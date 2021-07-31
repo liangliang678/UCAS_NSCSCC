@@ -114,6 +114,7 @@ wire  [255:0]  inst_cache_ret_data;
 //mul
 wire [63:0]    es_inst1_mul_res;
 wire [63:0]    es_inst2_mul_res;
+wire [63:0]    es_mul_res;
 
 //cache related
 wire           inst1_data_cache_valid;
@@ -314,8 +315,9 @@ exe_stage exe_stage(
     //to pms
     .es_to_pms_valid        (es_to_pms_valid),
     .es_to_pms_bus          (es_to_pms_bus  ),
-    .es_inst1_mul_res       (es_inst1_mul_res),
-    .es_inst2_mul_res       (es_inst2_mul_res),
+    .es_mul_res             (es_mul_res     ),
+    // .es_inst1_mul_res       (es_inst1_mul_res),
+    // .es_inst2_mul_res       (es_inst2_mul_res),
 
     //relevant bus
     .es_forward_bus         (es_forward_bus),
@@ -333,8 +335,9 @@ premem_stage premem_stage(
     //from es
     .es_to_pms_valid            (es_to_pms_valid),
     .es_to_pms_bus              (es_to_pms_bus),
-    .pms_inst1_mul_res          (es_inst1_mul_res),
-    .pms_inst2_mul_res          (es_inst2_mul_res),
+    // .pms_inst1_mul_res          (es_inst1_mul_res),
+    // .pms_inst2_mul_res          (es_inst2_mul_res),
+    .pms_mul_res                (es_mul_res),
     //to ms
     .pms_to_ms_valid            (pms_to_ms_valid),
     .pms_to_ms_bus              (pms_to_ms_bus),

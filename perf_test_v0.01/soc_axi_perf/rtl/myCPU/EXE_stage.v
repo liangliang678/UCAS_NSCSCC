@@ -12,8 +12,9 @@ module exe_stage(
     //to pms
     output                         es_to_pms_valid,
     output [`ES_TO_PMS_BUS_WD -1:0] es_to_pms_bus  ,
-    output [63:0]                  es_inst1_mul_res,
-    output [63:0]                  es_inst2_mul_res,
+    // output [63:0]                  es_inst1_mul_res,
+    // output [63:0]                  es_inst2_mul_res,
+    output [63:0]                  es_mul_res,
 
     //relevant bus
     output [`ES_FORWARD_BUS_WD -1:0] es_forward_bus,
@@ -208,18 +209,22 @@ end
 wire [31:0] es_alu_inst1_src1   ;
 wire [31:0] es_alu_inst1_src2   ;
 wire [31:0] es_alu_inst1_result ;
-wire [63:0] es_alu_inst1_div_res;
-wire [63:0] es_alu_inst1_mul_res;
-wire        es_alu_inst1_complete ;
+// wire [63:0] es_alu_inst1_div_res;
+// wire [63:0] es_alu_inst1_mul_res;
+// wire        es_alu_inst1_complete ;
 wire        es_alu_inst1_overflow;
 
 wire [31:0] es_alu_inst2_src1   ;
 wire [31:0] es_alu_inst2_src2   ;
 wire [31:0] es_alu_inst2_result ;
-wire [63:0] es_alu_inst2_div_res;
-wire [63:0] es_alu_inst2_mul_res;
-wire        es_alu_inst2_complete ;
+// wire [63:0] es_alu_inst2_div_res;
+// wire [63:0] es_alu_inst2_mul_res;
+// wire        es_alu_inst2_complete ;
 wire        es_alu_inst2_overflow;
+
+wire [63:0] es_alu_div_res;
+wire [63:0] es_alu_mul_res;
+//wire        es_alu_complete;
 
 reg  [31:0] es_alu_inst2_rs;
 reg  [31:0] es_alu_inst2_rt;
@@ -273,11 +278,11 @@ alu u_alu_inst1(
     .alu_src1           (es_alu_inst1_src1    ),
     .alu_src2           (es_alu_inst1_src2    ),
     .alu_result         (es_alu_inst1_result  ),
-    .alu_div_res        (es_alu_inst1_div_res ),
-    .alu_mul_res        (es_alu_inst1_mul_res ),
-    .complete           (es_alu_inst1_complete),
-    .overflow           (es_alu_inst1_overflow),
-    .exception          (clear_all            )
+    //.alu_div_res        (es_alu_inst1_div_res ),
+    //.alu_mul_res        (es_alu_inst1_mul_res ),
+    //.complete           (es_alu_inst1_complete),
+    .overflow           (es_alu_inst1_overflow)
+    //.exception          (clear_all            )
     );
 
 alu u_alu_inst2(
@@ -287,15 +292,84 @@ alu u_alu_inst2(
     .alu_src1           (es_alu_inst2_src1    ),
     .alu_src2           (es_alu_inst2_src2    ),
     .alu_result         (es_alu_inst2_result  ),
-    .alu_div_res        (es_alu_inst2_div_res ),
-    .alu_mul_res        (es_alu_inst2_mul_res ),
-    .complete           (es_alu_inst2_complete),
-    .overflow           (es_alu_inst2_overflow),
-    .exception          (clear_all            )
+    //.alu_div_res        (es_alu_inst2_div_res ),
+    //.alu_mul_res        (es_alu_inst2_mul_res ),
+    //.complete           (es_alu_inst2_complete),
+    .overflow           (es_alu_inst2_overflow)
+    //.exception          (clear_all            )
     );
 
-assign es_inst1_mul_res = es_alu_inst1_mul_res;
-assign es_inst2_mul_res = es_alu_inst2_mul_res;
+wire op_mult;
+wire op_multu;
+assign op_mult = inst2_alu_op[12] | inst1_alu_op[12];
+assign op_multu = inst2_alu_op[13] | inst1_alu_op[13];
+
+wire op_div;
+wire op_divu;
+assign op_div  = inst2_alu_op[14] | inst1_alu_op[14];
+assign op_divu = inst2_alu_op[15] | inst1_alu_op[15];
+
+wire [31:0] mul_src1;
+wire [31:0] mul_src2;
+wire [31:0] div_src1;
+wire [31:0] div_src2;
+
+assign mul_src1 = (inst1_alu_op[12] | inst1_alu_op[13]) ? es_alu_inst1_src1 : 
+                  (inst2_alu_op[12] | inst2_alu_op[13]) ? es_alu_inst2_src1 : 32'b0;
+
+assign mul_src2 = (inst1_alu_op[12] | inst1_alu_op[13]) ? es_alu_inst1_src2 : 
+                  (inst2_alu_op[12] | inst2_alu_op[13]) ? es_alu_inst2_src2 : 32'b0;          
+
+assign div_src1 = (inst1_alu_op[14] | inst1_alu_op[15]) ? es_alu_inst1_src1 : 
+                  (inst2_alu_op[14] | inst2_alu_op[15]) ? es_alu_inst2_src1 : 32'b1; 
+
+assign div_src2 = (inst1_alu_op[14] | inst1_alu_op[15]) ? es_alu_inst1_src2 : 
+                  (inst2_alu_op[14] | inst2_alu_op[15]) ? es_alu_inst2_src2 : 32'b1;   
+
+mul u_mul(
+    .mul_clk    (clk              ),
+    .resetn     (~reset           ),
+    .mul_signed (op_mult          ),
+    .x          (mul_src1         ),
+    .y          (mul_src2         ),
+    .result     (es_alu_mul_res   )
+    );
+
+// DIV, DIVU result
+reg div;
+
+wire div_complete;
+wire complete;
+
+always @(posedge clk) begin
+  if (reset) begin
+    div <= 0;
+  end else if (complete) begin
+    div <= 0;
+  end else if (op_divu | op_div) begin
+    div <= 1;
+  end
+end
+
+div u_div(
+    .div_clk    (clk              ),
+    .resetn     (~reset           ),
+    .div        (div              ),
+    .div_signed (op_div           ),
+    .x          (div_src1         ),
+    .y          (div_src2         ),
+    .s          (es_alu_div_res[63:32]),
+    .r          (es_alu_div_res[31:0] ),
+    .complete   (div_complete  ),
+    .exception  (clear_all        )
+    );
+
+assign complete = ~(op_div | op_divu) | div_complete;
+
+assign es_mul_res = es_alu_mul_res;
+
+// assign es_inst1_mul_res = es_alu_inst1_mul_res;
+// assign es_inst2_mul_res = es_alu_inst2_mul_res;
 
 //self stall control
 reg self_relevant_stall;
@@ -308,9 +382,9 @@ always @(posedge clk) begin
         self_relevant_stall <= 1'b0;
 end
 
-assign inst1_readygo = ~(inst1_alu_op[14] | inst1_alu_op[15]) | es_alu_inst1_complete;
+assign inst1_readygo = ~(inst1_alu_op[14] | inst1_alu_op[15]) | (div_complete);
 assign inst2_readygo = ~(inst2_alu_op[14] | inst2_alu_op[15]) & ~(self_r1_relevant | self_r2_relevant) | 
-                        (inst2_alu_op[14] | inst2_alu_op[15]) & es_alu_inst2_complete | 
+                        (inst2_alu_op[14] | inst2_alu_op[15]) & (div_complete) | 
                        ~(inst2_alu_op[14] | inst2_alu_op[15]) & (self_r1_relevant | self_r2_relevant) & self_relevant_stall;
 
 //exception
@@ -374,7 +448,7 @@ assign es_to_pms_bus = {
                         inst2_hl_src_from_mul,
                         inst2_hl_src_from_div,
                         es_alu_inst2_result,
-                        es_alu_inst2_div_res,
+                        //es_alu_inst2_div_res,
                         inst2_gr_we,
                         inst2_mem_we,
                         inst2_dest,
@@ -384,6 +458,7 @@ assign es_to_pms_bus = {
                         es_inst2_mem_addr,
 
                         br_target,
+                        es_alu_div_res,
 
                         inst1_refill,
                         inst1_es_except,
@@ -406,7 +481,7 @@ assign es_to_pms_bus = {
                         inst1_hl_src_from_mul,
                         inst1_hl_src_from_div,
                         es_alu_inst1_result,
-                        es_alu_inst1_div_res,
+                        //es_alu_inst1_div_res,
                         inst1_gr_we,
                         inst1_mem_we,
                         inst1_dest,
