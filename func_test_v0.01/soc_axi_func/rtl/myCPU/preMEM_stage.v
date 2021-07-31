@@ -9,8 +9,9 @@ module premem_stage(
     //from es
     input                          es_to_pms_valid,
     input [`ES_TO_PMS_BUS_WD -1:0] es_to_pms_bus  ,
-    input [63:0]                   pms_inst1_mul_res,
-    input [63:0]                   pms_inst2_mul_res,
+    input [63:0]                   pms_mul_res,
+    // input [63:0]                   pms_inst1_mul_res,
+    // input [63:0]                   pms_inst2_mul_res,
     //to ms
     output                           pms_to_ms_valid,
     output  [`PMS_TO_MS_BUS_WD -1:0] pms_to_ms_bus  ,
@@ -175,6 +176,8 @@ wire        inst2_es_except;
 wire [4:0]  inst2_es_exccode;
 wire [31:0] inst2_es_BadVAddr;
 
+wire [63:0] pms_alu_div_res;
+
 assign {
         inst2_valid,
         inst2_refill,
@@ -198,7 +201,7 @@ assign {
         inst2_hl_src_from_mul,
         inst2_hl_src_from_div,
         pms_alu_inst2_result,
-        pms_alu_inst2_div_res,
+        //pms_alu_inst2_div_res,
         inst2_gr_we,
         inst2_mem_we,
         inst2_dest,
@@ -208,6 +211,7 @@ assign {
         pms_inst2_mem_addr,
 
         br_target,
+        pms_alu_div_res,
 
         inst1_refill,
         inst1_es_except,
@@ -230,7 +234,7 @@ assign {
         inst1_hl_src_from_mul,
         inst1_hl_src_from_div,
         pms_alu_inst1_result,
-        pms_alu_inst1_div_res,
+        //pms_alu_inst1_div_res,
         inst1_gr_we,
         inst1_mem_we,
         inst1_dest,
@@ -307,20 +311,20 @@ wire [31:0] inst2_write_lo;
 
 
 
-assign inst1_write_hi = {32{inst1_hl_src_from_mul}} & {pms_inst1_mul_res[63:32]} |
-                        {32{inst1_hl_src_from_div}} & {pms_alu_inst1_div_res[31:0]} |
+assign inst1_write_hi = {32{inst1_hl_src_from_mul}} & {pms_mul_res[63:32]} |
+                        {32{inst1_hl_src_from_div}} & {pms_alu_div_res[31:0]} |
                         {32{~inst1_hl_src_from_div & ~inst1_hl_src_from_mul & inst1_hi_we}} & {inst1_rs_value};
 
-assign inst1_write_lo = {32{inst1_hl_src_from_mul}} & {pms_inst1_mul_res[31:0]} |
-                        {32{inst1_hl_src_from_div}} & {pms_alu_inst1_div_res[63:32]} |
+assign inst1_write_lo = {32{inst1_hl_src_from_mul}} & {pms_mul_res[31:0]} |
+                        {32{inst1_hl_src_from_div}} & {pms_alu_div_res[63:32]} |
                         {32{~inst1_hl_src_from_div & ~inst1_hl_src_from_mul & inst1_lo_we}} & {inst1_rs_value};
 
-assign inst2_write_hi = {32{inst2_hl_src_from_mul}} & {pms_inst2_mul_res[63:32]} |
-                        {32{inst2_hl_src_from_div}} & {pms_alu_inst2_div_res[31:0]} |
+assign inst2_write_hi = {32{inst2_hl_src_from_mul}} & {pms_mul_res[63:32]} |
+                        {32{inst2_hl_src_from_div}} & {pms_alu_div_res[31:0]} |
                         {32{~inst2_hl_src_from_div & ~inst2_hl_src_from_mul & inst2_hi_we}} & {inst2_rs_value};
 
-assign inst2_write_lo = {32{inst2_hl_src_from_mul}} & {pms_inst2_mul_res[31:0]} |
-                        {32{inst2_hl_src_from_div}} & {pms_alu_inst2_div_res[63:32]} |
+assign inst2_write_lo = {32{inst2_hl_src_from_mul}} & {pms_mul_res[31:0]} |
+                        {32{inst2_hl_src_from_div}} & {pms_alu_div_res[63:32]} |
                         {32{~inst2_hl_src_from_div & ~inst2_hl_src_from_mul & inst2_lo_we}} & {inst2_rs_value};
 
 always @(posedge clk) begin
