@@ -43,7 +43,6 @@ module if_stage(
 );
 
 reg  [`PF_TO_FS_BUS_WD -1:0] preif_to_fs_bus_r;
-reg         fs_valid;
 wire        fs_ready_go;
 wire        fs_inst1_readygo;
 
