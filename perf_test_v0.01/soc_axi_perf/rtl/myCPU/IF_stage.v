@@ -668,16 +668,13 @@ wire        ds_inst2_gr_we;
 wire [ 4:0] ds_inst2_dest;
 
 wire        es_valid;
-wire        es_res_valid;
-wire        es_inst1_mfhilo;
-wire        es_inst1_mfc0;
-wire        es_inst1_load;
+wire        es_inst1_res_valid;
+wire        es_inst1_mfhiloc0_load;
 wire        es_inst1_gr_we;
 wire [ 4:0] es_inst1_dest;
 wire [31:0] es_inst1_result;
-wire        es_inst2_mfhilo;
-wire        es_inst2_mfc0;
-wire        es_inst2_load;
+wire        es_inst2_res_valid;
+wire        es_inst2_mfhiloc0_load;
 wire        es_inst2_gr_we;
 wire [ 4:0] es_inst2_dest;
 wire [31:0] es_inst2_result;
@@ -693,11 +690,12 @@ wire [ 4:0] pms_inst2_dest;
 wire [31:0] pms_inst2_result;
 
 wire        ms_valid;
-wire        ms_res_valid;
+wire        ms_inst1_res_valid;
 wire        ms_inst1_load;
 wire        ms_inst1_gr_we;
 wire [ 4:0] ms_inst1_dest;
 wire [31:0] ms_inst1_result;
+wire        ms_inst2_res_valid;
 wire        ms_inst2_load;
 wire        ms_inst2_gr_we;
 wire [ 4:0] ms_inst2_dest;
@@ -743,17 +741,17 @@ assign {ds_valid,
         ds_inst1_gr_we, ds_inst1_dest, 
         ds_inst2_gr_we, ds_inst2_dest} = ds_forward_bus;
 
-assign {es_valid, es_res_valid, 
-        es_inst1_mfhilo, es_inst1_mfc0, es_inst1_load, es_inst1_gr_we, es_inst1_dest, es_inst1_result, 
-        es_inst2_mfhilo, es_inst2_mfc0, es_inst2_load, es_inst2_gr_we, es_inst2_dest, es_inst2_result } = es_forward_bus;
+assign {es_valid, //es_res_valid, 
+        es_inst1_res_valid, es_inst1_mfhiloc0_load, es_inst1_gr_we, es_inst1_dest, es_inst1_result, 
+        es_inst2_res_valid, es_inst2_mfhiloc0_load, es_inst2_gr_we, es_inst2_dest, es_inst2_result } = es_forward_bus;
 
 assign {pms_valid, 
         pms_inst1_load, pms_inst1_gr_we, pms_inst1_dest, pms_inst1_result, 
         pms_inst2_load, pms_inst2_gr_we, pms_inst2_dest, pms_inst2_result } = pms_forward_bus;
 
-assign {ms_valid, ms_res_valid, 
-        ms_inst1_load, ms_inst1_gr_we, ms_inst1_dest, ms_inst1_result, 
-        ms_inst2_load, ms_inst2_gr_we, ms_inst2_dest, ms_inst2_result } = ms_forward_bus;
+assign {ms_valid, //ms_res_valid, 
+        ms_inst1_res_valid, ms_inst1_load, ms_inst1_gr_we, ms_inst1_dest, ms_inst1_result, 
+        ms_inst2_res_valid, ms_inst2_load, ms_inst2_gr_we, ms_inst2_dest, ms_inst2_result } = ms_forward_bus;
 
 assign {ws_valid, 
         ws_inst1_gr_we, ws_inst1_dest, ws_inst1_result, 
@@ -787,14 +785,14 @@ assign ws_inst2_r2_relevant = ~fifo_empty & r2_need & ws_valid & ws_inst2_gr_we 
 
 assign ds_block = ds_inst1_r1_relevant | ds_inst2_r1_relevant | ds_inst1_r2_relevant | ds_inst2_r2_relevant;
 
-assign es_block = es_inst1_r1_relevant & (es_inst1_load | es_inst1_mfc0 | es_inst1_mfhilo | ~es_res_valid) | es_inst2_r1_relevant & (es_inst2_load | es_inst2_mfc0 | es_inst2_mfhilo | ~es_res_valid) | 
-                  es_inst1_r2_relevant & (es_inst1_load | es_inst1_mfc0 | es_inst1_mfhilo | ~es_res_valid) | es_inst2_r2_relevant & (es_inst2_load | es_inst2_mfc0 | es_inst2_mfhilo | ~es_res_valid);
+assign es_block = es_inst1_r1_relevant & (es_inst1_mfhiloc0_load | ~es_inst1_res_valid) | es_inst2_r1_relevant & (es_inst2_mfhiloc0_load | ~es_inst2_res_valid) | 
+                  es_inst1_r2_relevant & (es_inst1_mfhiloc0_load | ~es_inst1_res_valid) | es_inst2_r2_relevant & (es_inst2_mfhiloc0_load | ~es_inst2_res_valid);
 
 assign pms_block = pms_inst1_r1_relevant & pms_inst1_load | pms_inst2_r1_relevant & pms_inst2_load | 
                    pms_inst1_r2_relevant & pms_inst1_load | pms_inst2_r2_relevant & pms_inst2_load;
 
-assign ms_block = ms_inst1_r1_relevant & (ms_inst1_load & ~ms_res_valid) | ms_inst2_r1_relevant & (ms_inst2_load & ~ms_res_valid) | 
-                  ms_inst1_r2_relevant & (ms_inst1_load & ~ms_res_valid) | ms_inst2_r2_relevant & (ms_inst2_load & ~ms_res_valid);
+assign ms_block = ms_inst1_r1_relevant & (ms_inst1_load & ~ms_inst1_res_valid) | ms_inst2_r1_relevant & (ms_inst2_load & ~ms_inst2_res_valid) | 
+                  ms_inst1_r2_relevant & (ms_inst1_load & ~ms_inst1_res_valid) | ms_inst2_r2_relevant & (ms_inst2_load & ~ms_inst2_res_valid);
 
 assign fs_inst1_readygo = ~inst1_br | inst1_br & ~(ds_block | es_block | pms_block | ms_block);
 

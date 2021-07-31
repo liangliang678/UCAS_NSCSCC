@@ -259,8 +259,8 @@ assign inst2_final_result = (inst2_mem_ok) ? inst2_mem_result_reg :
 assign inst2_ready_go = ~(inst2_res_from_mem | inst2_mem_we) | data_cache_data_ok_02 | inst2_mem_ok | ~inst2_valid;
 
 // ms_forward_bus
-assign ms_forward_bus = {ms_valid, ms_to_ws_valid, 
-                         inst1_res_from_mem, inst1_gr_we, inst1_dest, inst1_final_result, 
-                         inst2_res_from_mem, inst2_gr_we, inst2_dest, inst2_final_result };
+assign ms_forward_bus = {ms_valid, //ms_to_ws_valid, 
+                         inst1_mem_ok, inst1_res_from_mem, inst1_gr_we, inst1_dest, inst1_final_result, 
+                         inst2_mem_ok, inst2_res_from_mem, inst2_gr_we, inst2_dest, inst2_final_result };
 
 endmodule

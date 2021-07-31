@@ -196,7 +196,8 @@ always @(posedge clk) begin
         case(fs_state)
         `WAIT_PREIF: begin
             if (to_fs_valid && fs_allowin && (clear_all || ds_branch)) begin
-                fs_state <= `CLEAR_ALL;
+                //fs_state <= `CLEAR_ALL;
+                fs_state <= `RECV_INST;
             end
             else if (to_fs_valid && fs_allowin && !fs_no_inst_wait) begin
                 fs_state <= `RECV_INST;
@@ -601,8 +602,11 @@ wire        inst1_lbu;
 wire        inst1_lh;
 wire        inst1_lhu;
 wire        inst1_mfc0;
+wire        inst1_mfhi;
+wire        inst1_mflo;
 
 wire        inst1_load_mfc0hilo;
+wire [ 4:0] inst1_dest;
 
 assign inst1_op   = fs_inst1[31:26];
 assign inst1_rs   = fs_inst1[25:21];
@@ -648,6 +652,8 @@ assign inst1_mflo   = inst1_op_d[6'h00] & inst1_func_d[6'h12] & inst1_rs_d[5'h00
 assign inst1_load_mfc0hilo = inst1_lb | inst1_lbu | inst1_lh | inst1_lhu | inst1_lw | inst1_lwl | inst1_lwr | inst1_mfc0 | inst1_mfhi | inst1_mflo;
 assign inst1_br = inst1_beq | inst1_bne | inst1_bgez | inst1_bgezal | inst1_bgtz | inst1_blez | inst1_bltz | inst1_bltzal | inst1_j | inst1_jal | inst1_jalr | inst1_jr;
 
+assign inst1_dest = {5{inst1_mfhi | inst1_mflo}} & inst1_rd | {5{~(inst1_mfhi | inst1_mflo)}} & inst1_rt;
+
 assign inst1_pc       = fifo_pc[head];
 assign inst1_inst     = fs_inst1;
 assign inst1_except   = fifo_except[head];
@@ -662,16 +668,13 @@ wire        ds_inst2_gr_we;
 wire [ 4:0] ds_inst2_dest;
 
 wire        es_valid;
-wire        es_res_valid;
-wire        es_inst1_mfhilo;
-wire        es_inst1_mfc0;
-wire        es_inst1_load;
+wire        es_inst1_res_valid;
+wire        es_inst1_mfhiloc0_load;
 wire        es_inst1_gr_we;
 wire [ 4:0] es_inst1_dest;
 wire [31:0] es_inst1_result;
-wire        es_inst2_mfhilo;
-wire        es_inst2_mfc0;
-wire        es_inst2_load;
+wire        es_inst2_res_valid;
+wire        es_inst2_mfhiloc0_load;
 wire        es_inst2_gr_we;
 wire [ 4:0] es_inst2_dest;
 wire [31:0] es_inst2_result;
@@ -687,11 +690,12 @@ wire [ 4:0] pms_inst2_dest;
 wire [31:0] pms_inst2_result;
 
 wire        ms_valid;
-wire        ms_res_valid;
+wire        ms_inst1_res_valid;
 wire        ms_inst1_load;
 wire        ms_inst1_gr_we;
 wire [ 4:0] ms_inst1_dest;
 wire [31:0] ms_inst1_result;
+wire        ms_inst2_res_valid;
 wire        ms_inst2_load;
 wire        ms_inst2_gr_we;
 wire [ 4:0] ms_inst2_dest;
@@ -737,17 +741,17 @@ assign {ds_valid,
         ds_inst1_gr_we, ds_inst1_dest, 
         ds_inst2_gr_we, ds_inst2_dest} = ds_forward_bus;
 
-assign {es_valid, es_res_valid, 
-        es_inst1_mfhilo, es_inst1_mfc0, es_inst1_load, es_inst1_gr_we, es_inst1_dest, es_inst1_result, 
-        es_inst2_mfhilo, es_inst2_mfc0, es_inst2_load, es_inst2_gr_we, es_inst2_dest, es_inst2_result } = es_forward_bus;
+assign {es_valid, //es_res_valid, 
+        es_inst1_res_valid, es_inst1_mfhiloc0_load, es_inst1_gr_we, es_inst1_dest, es_inst1_result, 
+        es_inst2_res_valid, es_inst2_mfhiloc0_load, es_inst2_gr_we, es_inst2_dest, es_inst2_result } = es_forward_bus;
 
 assign {pms_valid, 
         pms_inst1_load, pms_inst1_gr_we, pms_inst1_dest, pms_inst1_result, 
         pms_inst2_load, pms_inst2_gr_we, pms_inst2_dest, pms_inst2_result } = pms_forward_bus;
 
-assign {ms_valid, ms_res_valid, 
-        ms_inst1_load, ms_inst1_gr_we, ms_inst1_dest, ms_inst1_result, 
-        ms_inst2_load, ms_inst2_gr_we, ms_inst2_dest, ms_inst2_result } = ms_forward_bus;
+assign {ms_valid, //ms_res_valid, 
+        ms_inst1_res_valid, ms_inst1_load, ms_inst1_gr_we, ms_inst1_dest, ms_inst1_result, 
+        ms_inst2_res_valid, ms_inst2_load, ms_inst2_gr_we, ms_inst2_dest, ms_inst2_result } = ms_forward_bus;
 
 assign {ws_valid, 
         ws_inst1_gr_we, ws_inst1_dest, ws_inst1_result, 
@@ -781,14 +785,14 @@ assign ws_inst2_r2_relevant = ~fifo_empty & r2_need & ws_valid & ws_inst2_gr_we 
 
 assign ds_block = ds_inst1_r1_relevant | ds_inst2_r1_relevant | ds_inst1_r2_relevant | ds_inst2_r2_relevant;
 
-assign es_block = es_inst1_r1_relevant & (es_inst1_load | es_inst1_mfc0 | es_inst1_mfhilo | ~es_res_valid) | es_inst2_r1_relevant & (es_inst2_load | es_inst2_mfc0 | es_inst2_mfhilo | ~es_res_valid) | 
-                  es_inst1_r2_relevant & (es_inst1_load | es_inst1_mfc0 | es_inst1_mfhilo | ~es_res_valid) | es_inst2_r2_relevant & (es_inst2_load | es_inst2_mfc0 | es_inst2_mfhilo | ~es_res_valid);
+assign es_block = es_inst1_r1_relevant & (es_inst1_mfhiloc0_load | ~es_inst1_res_valid) | es_inst2_r1_relevant & (es_inst2_mfhiloc0_load | ~es_inst2_res_valid) | 
+                  es_inst1_r2_relevant & (es_inst1_mfhiloc0_load | ~es_inst1_res_valid) | es_inst2_r2_relevant & (es_inst2_mfhiloc0_load | ~es_inst2_res_valid);
 
 assign pms_block = pms_inst1_r1_relevant & pms_inst1_load | pms_inst2_r1_relevant & pms_inst2_load | 
                    pms_inst1_r2_relevant & pms_inst1_load | pms_inst2_r2_relevant & pms_inst2_load;
 
-assign ms_block = ms_inst1_r1_relevant & (ms_inst1_load & ~ms_res_valid) | ms_inst2_r1_relevant & (ms_inst2_load & ~ms_res_valid) | 
-                  ms_inst1_r2_relevant & (ms_inst1_load & ~ms_res_valid) | ms_inst2_r2_relevant & (ms_inst2_load & ~ms_res_valid);
+assign ms_block = ms_inst1_r1_relevant & (ms_inst1_load & ~ms_inst1_res_valid) | ms_inst2_r1_relevant & (ms_inst2_load & ~ms_inst2_res_valid) | 
+                  ms_inst1_r2_relevant & (ms_inst1_load & ~ms_inst1_res_valid) | ms_inst2_r2_relevant & (ms_inst2_load & ~ms_inst2_res_valid);
 
 assign fs_inst1_readygo = ~inst1_br | inst1_br & ~(ds_block | es_block | pms_block | ms_block);
 
@@ -1027,8 +1031,8 @@ assign inst2_r2_need = inst2_add  || inst2_addu  || inst2_sub || inst2_subu ||
                        inst2_beq  || inst2_bne   || inst2_lwl || inst2_lwr  ||
                        inst2_sw   || inst2_sb    || inst2_sh  || inst2_swl  || inst2_swr || inst2_mtc0;
 
-assign inst2_r1_relevant = inst2_r1_need & inst1_load_mfc0hilo & ~inst2_rs_d[5'h00] & (inst2_rs == inst1_rt);
-assign inst2_r2_relevant = inst2_r2_need & inst1_load_mfc0hilo & ~inst2_rt_d[5'h00] & (inst2_rt == inst1_rt);
+assign inst2_r1_relevant = inst2_r1_need & inst1_load_mfc0hilo & ~inst2_rs_d[5'h00] & (inst2_rs == inst1_dest);
+assign inst2_r2_relevant = inst2_r2_need & inst1_load_mfc0hilo & ~inst2_rt_d[5'h00] & (inst2_rt == inst1_dest);
 
 assign self_relevant = inst2_r1_relevant | inst2_r2_relevant;
 assign single_shoot = self_relevant | inst2_br;

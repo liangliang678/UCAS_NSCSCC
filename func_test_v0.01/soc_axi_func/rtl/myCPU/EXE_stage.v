@@ -339,9 +339,9 @@ assign inst2_es_BadVAddr = inst2_ds_except ? inst2_pc : es_inst2_mem_addr;
 
 
 //forward bus
-assign es_forward_bus = {es_valid, es_to_pms_valid,
-                        (inst1_hi_op | inst1_lo_op), inst1_cp0_op, inst1_load_op, inst1_gr_we, inst1_dest, es_alu_inst1_result, 
-                        (inst2_hi_op | inst2_lo_op), inst2_cp0_op, inst2_load_op, inst2_gr_we, inst2_dest, es_alu_inst2_result };
+assign es_forward_bus = {es_valid, //es_to_pms_valid,
+                        inst1_readygo, inst1_hi_op | inst1_lo_op | inst1_cp0_op | inst1_load_op, inst1_gr_we, inst1_dest, es_alu_inst1_result, 
+                        inst2_readygo, inst2_hi_op | inst2_lo_op | inst2_cp0_op | inst2_load_op, inst2_gr_we, inst2_dest, es_alu_inst2_result };
 
 // assign {es_valid, es_res_valid, 
 //         es_inst1_mfhilo, es_inst1_mfc0, es_inst1_load, es_inst1_gr_we, es_inst1_dest, es_inst1_result, 

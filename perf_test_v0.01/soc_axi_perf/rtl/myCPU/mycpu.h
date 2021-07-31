@@ -13,9 +13,9 @@
     `define WS_TO_RF_BUS_WD    76
 
     `define DS_FORWARD_BUS_WD  13
-    `define ES_FORWARD_BUS_WD  84
+    `define ES_FORWARD_BUS_WD  81
     `define PMS_FORWARD_BUS_WD 79
-    `define MS_FORWARD_BUS_WD  80
+    `define MS_FORWARD_BUS_WD  81
     `define WS_FORWARD_BUS_WD  77
 
     `define EXCEPTION_ADEL          0
