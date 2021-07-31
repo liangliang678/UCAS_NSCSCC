@@ -486,7 +486,7 @@ always @(posedge clk) begin
         rb_recv[1] <= 1'b0;
     end
 end
-assign dual_req = rb_recv[0] && rb_recv[1] && !req_same_line;
+assign dual_req = rb_recv[0] && rb_recv[1] && (req_read_write || !req_same_line);
 
 assign rb_valid[0] = rb_recv[0];
 assign rb_valid[1] = rb_recv[1] && (rb_uncache2 && !rb_recv[0] || !rb_uncache2 && (!rb_recv[0] || req_same_line && !req_read_write));
