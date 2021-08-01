@@ -614,10 +614,10 @@ assign data_way3_bank0_din = rd_way_data_bank0;
 assign data_way3_bank1_din = rd_way_data_bank1;
 assign data_way3_bank2_din = rd_way_data_bank2;
 assign data_way3_bank3_din = rd_way_data_bank3;
-assign data_way3_bank0_din = rd_way_data_bank4;
-assign data_way3_bank1_din = rd_way_data_bank5;
-assign data_way3_bank2_din = rd_way_data_bank6;
-assign data_way3_bank3_din = rd_way_data_bank7;
+assign data_way3_bank4_din = rd_way_data_bank4;
+assign data_way3_bank5_din = rd_way_data_bank5;
+assign data_way3_bank6_din = rd_way_data_bank6;
+assign data_way3_bank7_din = rd_way_data_bank7;
 assign data_addr = (valid && !uncache && addr_ok)  ? index : 
                    (state == `REFILL && ret_valid) ? rb_index : 7'b0;
 
