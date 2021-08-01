@@ -329,19 +329,36 @@ end
 
 assign fs_to_preif_offset = pc_offset;
 
+wire  data_num_01;
+wire  data_num_02;
+wire  data_num_03;
+wire  data_num_04;
+wire  data_num_05;
+wire  data_num_06;
+wire  data_num_07;
+wire  data_num_08;
+
+assign data_num_01 = ~inst_cache_data_num[2] & ~inst_cache_data_num[1] &  inst_cache_data_num[0];
+assign data_num_02 = ~inst_cache_data_num[2] &  inst_cache_data_num[1] & ~inst_cache_data_num[0];
+assign data_num_03 = ~inst_cache_data_num[2] &  inst_cache_data_num[1] &  inst_cache_data_num[0];
+assign data_num_04 =  inst_cache_data_num[2] & ~inst_cache_data_num[1] & ~inst_cache_data_num[0];
+assign data_num_05 =  inst_cache_data_num[2] & ~inst_cache_data_num[1] &  inst_cache_data_num[0];
+assign data_num_06 =  inst_cache_data_num[2] &  inst_cache_data_num[1] & ~inst_cache_data_num[0];
+assign data_num_07 =  inst_cache_data_num[2] &  inst_cache_data_num[1] &  inst_cache_data_num[0];
+assign data_num_08 =  inst_cache_data_num[3];
+
 always @(posedge clk) begin
     if (fs_state == `RECV_INST && inst_cache_data_ok && !(clear_all || ds_branch)) begin
-        case (inst_cache_data_num)
-        4'd1: begin
-            fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
+        if (data_num_01) begin
+            fifo_inst[tail]      <= inst_cache_rdata[255:224];
             fifo_pc[tail]        <= fs_pc;
             fifo_except[tail]    <= fs_except;
             fifo_exccode[tail]   <= fs_exccode;
             fifo_refill[tail]    <= fs_refill;
         end
-        4'd2: begin
-            fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
-            fifo_inst[tail_1]    <= inst_cache_rdata[ 63: 32];
+        if (data_num_02) begin
+            fifo_inst[tail]      <= inst_cache_rdata[223:192];
+            fifo_inst[tail_1]    <= inst_cache_rdata[255:224];
 
             fifo_pc[tail]        <= fs_pc;
             fifo_pc[tail_1]      <= fs_pc_4;
@@ -355,10 +372,10 @@ always @(posedge clk) begin
             fifo_refill[tail]    <= fs_refill;
             fifo_refill[tail_1]  <= fs_refill;
         end
-        4'd3: begin
-            fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
-            fifo_inst[tail_1]    <= inst_cache_rdata[ 63: 32];
-            fifo_inst[tail_2]    <= inst_cache_rdata[ 95: 64];
+        if (data_num_03) begin
+            fifo_inst[tail]      <= inst_cache_rdata[191:160];
+            fifo_inst[tail_1]    <= inst_cache_rdata[223:192];
+            fifo_inst[tail_2]    <= inst_cache_rdata[255:224];
 
             fifo_pc[tail]        <= fs_pc;
             fifo_pc[tail_1]      <= fs_pc_4;
@@ -376,11 +393,11 @@ always @(posedge clk) begin
             fifo_refill[tail_1]  <= fs_refill;
             fifo_refill[tail_2]  <= fs_refill;
         end
-        4'd4: begin
-            fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
-            fifo_inst[tail_1]    <= inst_cache_rdata[ 63: 32];
-            fifo_inst[tail_2]    <= inst_cache_rdata[ 95: 64];
-            fifo_inst[tail_3]    <= inst_cache_rdata[127: 96];
+        if (data_num_04) begin
+            fifo_inst[tail]      <= inst_cache_rdata[159:128];
+            fifo_inst[tail_1]    <= inst_cache_rdata[191:160];
+            fifo_inst[tail_2]    <= inst_cache_rdata[223:192];
+            fifo_inst[tail_3]    <= inst_cache_rdata[255:224];
 
             fifo_pc[tail]        <= fs_pc;
             fifo_pc[tail_1]      <= fs_pc_4;
@@ -402,12 +419,12 @@ always @(posedge clk) begin
             fifo_refill[tail_2]  <= fs_refill;
             fifo_refill[tail_3]  <= fs_refill;
         end
-        4'd5: begin
-            fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
-            fifo_inst[tail_1]    <= inst_cache_rdata[ 63: 32];
-            fifo_inst[tail_2]    <= inst_cache_rdata[ 95: 64];
-            fifo_inst[tail_3]    <= inst_cache_rdata[127: 96];
-            fifo_inst[tail_4]    <= inst_cache_rdata[159:128];
+        if (data_num_05) begin
+            fifo_inst[tail]      <= inst_cache_rdata[127: 96];
+            fifo_inst[tail_1]    <= inst_cache_rdata[159:128];
+            fifo_inst[tail_2]    <= inst_cache_rdata[191:160];
+            fifo_inst[tail_3]    <= inst_cache_rdata[223:192];
+            fifo_inst[tail_4]    <= inst_cache_rdata[255:224];
 
             fifo_pc[tail]        <= fs_pc;
             fifo_pc[tail_1]      <= fs_pc_4;
@@ -433,13 +450,13 @@ always @(posedge clk) begin
             fifo_refill[tail_3]  <= fs_refill;
             fifo_refill[tail_4]  <= fs_refill;
         end
-        4'd6: begin
-            fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
-            fifo_inst[tail_1]    <= inst_cache_rdata[ 63: 32];
-            fifo_inst[tail_2]    <= inst_cache_rdata[ 95: 64];
-            fifo_inst[tail_3]    <= inst_cache_rdata[127: 96];
-            fifo_inst[tail_4]    <= inst_cache_rdata[159:128];
-            fifo_inst[tail_5]    <= inst_cache_rdata[191:160];
+        if (data_num_06) begin
+            fifo_inst[tail]      <= inst_cache_rdata[ 95: 64];
+            fifo_inst[tail_1]    <= inst_cache_rdata[127: 96];
+            fifo_inst[tail_2]    <= inst_cache_rdata[159:128];
+            fifo_inst[tail_3]    <= inst_cache_rdata[191:160];
+            fifo_inst[tail_4]    <= inst_cache_rdata[223:192];
+            fifo_inst[tail_5]    <= inst_cache_rdata[255:224];
 
             fifo_pc[tail]        <= fs_pc;
             fifo_pc[tail_1]      <= fs_pc_4;
@@ -469,14 +486,14 @@ always @(posedge clk) begin
             fifo_refill[tail_4]  <= fs_refill;
             fifo_refill[tail_5]  <= fs_refill;
         end
-        4'd7: begin
-            fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
-            fifo_inst[tail_1]    <= inst_cache_rdata[ 63: 32];
-            fifo_inst[tail_2]    <= inst_cache_rdata[ 95: 64];
-            fifo_inst[tail_3]    <= inst_cache_rdata[127: 96];
-            fifo_inst[tail_4]    <= inst_cache_rdata[159:128];
-            fifo_inst[tail_5]    <= inst_cache_rdata[191:160];
-            fifo_inst[tail_6]    <= inst_cache_rdata[223:192];
+        if (data_num_07) begin
+            fifo_inst[tail]      <= inst_cache_rdata[ 63: 32];
+            fifo_inst[tail_1]    <= inst_cache_rdata[ 95: 64];
+            fifo_inst[tail_2]    <= inst_cache_rdata[127: 96];
+            fifo_inst[tail_3]    <= inst_cache_rdata[159:128];
+            fifo_inst[tail_4]    <= inst_cache_rdata[191:160];
+            fifo_inst[tail_5]    <= inst_cache_rdata[223:192];
+            fifo_inst[tail_6]    <= inst_cache_rdata[255:224];
 
             fifo_pc[tail]        <= fs_pc;
             fifo_pc[tail_1]      <= fs_pc_4;
@@ -510,7 +527,7 @@ always @(posedge clk) begin
             fifo_refill[tail_5]  <= fs_refill;
             fifo_refill[tail_6]  <= fs_refill;
         end
-        4'd8: begin
+        if (data_num_08) begin
             fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
             fifo_inst[tail_1]    <= inst_cache_rdata[ 63: 32];
             fifo_inst[tail_2]    <= inst_cache_rdata[ 95: 64];
@@ -556,7 +573,6 @@ always @(posedge clk) begin
             fifo_refill[tail_6]  <= fs_refill;
             fifo_refill[tail_7]  <= fs_refill;
         end
-        endcase
     end
     if (fs_state == `RECV_NO_INST && !(clear_all || ds_branch)) begin
         fifo_inst[tail]       <= 32'b0;
