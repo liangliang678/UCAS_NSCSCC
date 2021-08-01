@@ -851,33 +851,14 @@ assign rd_way_data_bank5 = ret_data[191:160];
 assign rd_way_data_bank6 = ret_data[223:192];
 assign rd_way_data_bank7 = ret_data[255:224];
 
-// Shift
-wire [255:0] load_res_final;
-wire [255:0] ret_data_final;
-assign load_res_final = {256{rb_offset[4:2] == 3'b000}} & load_res |
-                        {256{rb_offset[4:2] == 3'b001}} & {32'b0, load_res[255:32]} |
-                        {256{rb_offset[4:2] == 3'b010}} & {64'b0, load_res[255:64]} |
-                        {256{rb_offset[4:2] == 3'b011}} & {96'b0, load_res[255:96]} |
-                        {256{rb_offset[4:2] == 3'b100}} & {128'b0, load_res[255:128]} |
-                        {256{rb_offset[4:2] == 3'b101}} & {160'b0, load_res[255:160]} |
-                        {256{rb_offset[4:2] == 3'b110}} & {192'b0, load_res[255:192]} |
-                        {256{rb_offset[4:2] == 3'b111}} & {224'b0, load_res[255:224]};
-assign ret_data_final = {256{rb_offset[4:2] == 3'b000}} & ret_data |
-                        {256{rb_offset[4:2] == 3'b001}} & {32'b0, ret_data[255:32]} |
-                        {256{rb_offset[4:2] == 3'b010}} & {64'b0, ret_data[255:64]} |
-                        {256{rb_offset[4:2] == 3'b011}} & {96'b0, ret_data[255:96]} |
-                        {256{rb_offset[4:2] == 3'b100}} & {128'b0, ret_data[255:128]} |
-                        {256{rb_offset[4:2] == 3'b101}} & {160'b0, ret_data[255:160]} |
-                        {256{rb_offset[4:2] == 3'b110}} & {192'b0, ret_data[255:192]} |
-                        {256{rb_offset[4:2] == 3'b111}} & {224'b0, ret_data[255:224]};
 // Output
 assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid;
 assign data_ok = (state == `LOOKUP) && cache_hit || 
                  (state == `REFILL) && ret_valid ||
                  (state == `URESP)  && ret_valid;
-assign rdata = {256{(state == `LOOKUP) && cache_hit}} & load_res_final | 
-               {256{(state == `REFILL) && ret_valid}} & ret_data_final | 
-               {256{(state == `URESP)  && ret_valid}} & {224'b0, ret_data[31:0]}; 
+assign rdata = {256{(state == `LOOKUP) && cache_hit}} & load_res | 
+               {256{(state == `REFILL) && ret_valid}} & ret_data | 
+               {256{(state == `URESP)  && ret_valid}} & {ret_data[31:0], 224'b0}; 
 assign rnum = (state == `URESP) ? 4'b1 : {1'b0, ~(rb_offset[4:2])} + 4'b1;
 
 assign rd_req  = (state == `UREQ) || (state == `REPLACE);

@@ -12,7 +12,7 @@ module preif_stage(
     output                         to_fs_valid    ,
     output [`PF_TO_FS_BUS_WD -1:0] preif_to_fs_bus,
     output                         fs_no_inst_wait,
-    input  [4:0]                   inst_offset    ,//0~16
+    input  [ 5:0]                   inst_offset    ,//0~16
 
     // inst cache interface
     output           inst_cache_valid,
