@@ -176,7 +176,7 @@ wire [31:0] data_way3_bank5_dout;
 wire [31:0] data_way3_bank6_dout;
 wire [31:0] data_way3_bank7_dout;
 
-Tag_RAM Tag_RAM_Way0(
+Tag_RAM_8 Tag_RAM_8_Way0(
     .clka   (clk          ),
     .addra  (tag_addr     ),
     .ena    (tag_way0_en  ),
@@ -184,7 +184,7 @@ Tag_RAM Tag_RAM_Way0(
     .dina   (tag_way0_din ),
     .douta  (tag_way0_dout)
 );
-Tag_RAM Tag_RAM_Way1(
+Tag_RAM_8 Tag_RAM_8_Way1(
     .clka   (clk          ),
     .addra  (tag_addr     ),
     .ena    (tag_way1_en  ),
@@ -192,7 +192,7 @@ Tag_RAM Tag_RAM_Way1(
     .dina   (tag_way1_din ),
     .douta  (tag_way1_dout)
 );
-Tag_RAM Tag_RAM_Way2(
+Tag_RAM_8 Tag_RAM_8_Way2(
     .clka   (clk          ),
     .addra  (tag_addr     ),
     .ena    (tag_way2_en  ),
@@ -200,7 +200,7 @@ Tag_RAM Tag_RAM_Way2(
     .dina   (tag_way2_din ),
     .douta  (tag_way2_dout)
 );
-Tag_RAM Tag_RAM_Way3(
+Tag_RAM_8 Tag_RAM_8_Way3(
     .clka   (clk          ),
     .addra  (tag_addr     ),
     .ena    (tag_way3_en  ),
@@ -724,10 +724,10 @@ assign cache_hit = (way0_hit | way1_hit | way2_hit | way3_hit);
 
 // Data Select
 wire [255:0] load_res;
-assign load_res = {255{way0_hit}} & way0_data |
-                  {255{way1_hit}} & way1_data |
-                  {255{way2_hit}} & way2_data |
-                  {255{way3_hit}} & way3_data;
+assign load_res = {256{way0_hit}} & way0_data |
+                  {256{way1_hit}} & way1_data |
+                  {256{way2_hit}} & way2_data |
+                  {256{way3_hit}} & way3_data;
 
 // PLRU
 reg [127:0] way0_mru;
