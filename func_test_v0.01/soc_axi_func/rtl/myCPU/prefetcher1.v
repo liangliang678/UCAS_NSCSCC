@@ -73,10 +73,22 @@ wire buffer_hit;
 wire buffer_miss;
 wire uncache_req;
 wire bad_fill;
+reg bad_fill_r;
 assign buffer_hit  = cache_rd_req && (cache_rd_type == 1'b1) && (cache_rd_addr == addr);
 assign buffer_miss = cache_rd_req && (cache_rd_type == 1'b1) && (cache_rd_addr != addr);
 assign uncache_req = cache_rd_req && (cache_rd_type == 1'b0);
 assign bad_fill = (state == `HIT) && cache_rd_req && (cache_rd_type == 1'b1) && (cache_rd_addr != req_addr);
+always @(posedge clk) begin
+    if(!resetn) begin
+        bad_fill_r <= 1'b0;
+    end
+    else if (bad_fill && axi_rd_req && !axi_rd_rdy) begin
+        bad_fill_r <= 1'b1;
+    end
+    else if (bad_fill_r && axi_rd_rdy) begin
+        bad_fill_r <= 1'b0;
+    end
+end
 
 reg [255:0] ret_data;
 reg         ret_valid;
@@ -102,7 +114,7 @@ always @(posedge clk) begin
     end
 end
 
-assign axi_rd_req = (state == `IDLE) && cache_rd_req || bad_fill;
+assign axi_rd_req = (state == `IDLE) && cache_rd_req || bad_fill || bad_fill_r;
 assign axi_rd_type = (buffer_miss || bad_fill) ? 2'b10 : {1'b0, cache_rd_type};
 assign axi_rd_addr = buffer_hit ? (cache_rd_addr + 32'd32) : cache_rd_addr;
 assign cache_rd_rdy = (state == `IDLE) && axi_rd_rdy || bad_fill && axi_rd_rdy;
