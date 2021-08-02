@@ -1,7 +1,7 @@
 -- Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
--- Date        : Sun Aug  1 22:36:20 2021
+-- Date        : Mon Aug  2 20:31:24 2021
 -- Host        : LAPTOP-C6621M6M running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode synth_stub
 --               D:/share/NSCSCC/perf_test_v0.01/soc_axi_perf/rtl/xilinx_ip/clk_pll/clk_pll_stub.vhdl

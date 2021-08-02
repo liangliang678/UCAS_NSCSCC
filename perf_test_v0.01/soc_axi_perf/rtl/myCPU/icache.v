@@ -668,7 +668,7 @@ end endgenerate
 
 // Request Buffer
 reg  [ 19:0] rb_tag;
-reg  [  6:0] rb_index;
+(* max_fanout = 50 *)reg  [  6:0] rb_index;
 reg  [  4:0] rb_offset;
 
 wire         way0_v;

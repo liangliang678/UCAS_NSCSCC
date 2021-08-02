@@ -569,7 +569,7 @@ always @(posedge clk) begin
         end
         endcase
     end
-    if (fs_state == `RECV_NO_INST && !(clear_all || ds_branch)) begin
+    else if (fs_state == `RECV_NO_INST && !(clear_all || ds_branch)) begin
         fifo_inst[tail]       <= 32'b0;
         fifo_pc[tail]         <= fs_pc;
         fifo_except[tail]     <= fs_except;
