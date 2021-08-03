@@ -458,8 +458,8 @@ assign _1_cache_req = valid1 && !uncache1;
 assign _2_cache_req = valid2 && !uncache2;
 assign req_same_line = (rb_index1 == rb_index2) && (rb_tag1 == rb_tag2) && !rb_uncache1 && !rb_uncache2;
 assign req_read_write = (rb_op1 != rb_op2);
-assign _1_req_raw = (wstate == `WRITE) && (index1 == wb_index);
-assign _2_req_raw = (wstate == `WRITE) && (index2 == wb_index) ;
+assign _1_req_raw = (wstate == `WRITE) && (index1 != wb_index);
+assign _2_req_raw = (wstate == `WRITE) && (index2 != wb_index);
 
 reg [1:0] rb_recv;
 wire [1:0] rb_valid;
@@ -870,6 +870,10 @@ end
 // Output
 assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid1 && (wstate != `WRITE) && !wait_write1 && !wait_write2;
 assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid2 && (wstate != `WRITE) && !wait_write1 && !wait_write2;
+/* assign addr_ok1 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid1 && !_1_req_raw && !wait_write1 &&
+                  !(valid2 && _2_req_raw) && !(valid2 && wait_write2);
+assign addr_ok2 = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid2 && !_2_req_raw && !wait_write2 &&
+                  !(valid1 && _1_req_raw) && !(valid1 && wait_write1); */
 assign data_ok1 = data_ok1_raw && !dual_req || data_ok1_r && !dual_req;
 assign data_ok2 = data_ok2_raw && !dual_req || data_ok2_r && !dual_req;
 assign rdata1 = data_ok1_raw ? rdata1_raw : rdata1_r;
@@ -1113,8 +1117,10 @@ end
 
 wire wait_write1;
 wire wait_write2;
-assign wait_write1 = (state == `LOOKUP) && rb_valid[0] && rb_op1;
-assign wait_write2 = (state == `LOOKUP) && rb_valid[1] && rb_op2;
+assign wait_write1 = (state == `LOOKUP) && rb_valid[0] && rb_op1 && (rb_index1 == index1) ||
+                     (state == `LOOKUP) && rb_valid[1] && rb_op2 && (rb_index2 == index1);
+assign wait_write2 = (state == `LOOKUP) && rb_valid[0] && rb_op1 && (rb_index1 == index2)||
+                     (state == `LOOKUP) && rb_valid[1] && rb_op2 && (rb_index2 == index2);
 
 // Write FSM
 reg  [1:0] wstate;
