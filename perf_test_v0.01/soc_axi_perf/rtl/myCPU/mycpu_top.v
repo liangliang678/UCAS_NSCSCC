@@ -480,7 +480,7 @@ wb_stage wb_stage(
 );
 
 
-icache icache(
+icache2 icache2(
     .clk        (aclk   ),
     .resetn     (aresetn),
 

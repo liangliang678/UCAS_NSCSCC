@@ -20,7 +20,7 @@ module cp0(
     output [31:0] inst1_c0_rdata    ,
     output [31:0] inst2_c0_rdata    ,
     output        has_int           ,
-    output [31:0] epc_res           ，
+    output [31:0] epc_res           ,
 
     input  [ 5:0] ext_int_in
 
