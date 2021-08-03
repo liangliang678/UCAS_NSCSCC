@@ -417,7 +417,8 @@ cp0 cp0(
     .inst1_c0_rdata             (inst1_c0_rdata),
     .inst2_c0_rdata             (inst2_c0_rdata),
     .has_int                    (has_int),
-    .epc_res                    (pms_epc)
+    .epc_res                    (pms_epc),
+    .ext_int_in                 (ext_int)
 
     // //for TLB
     // output [31:0] cp0_index   ,

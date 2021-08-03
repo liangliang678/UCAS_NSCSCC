@@ -852,18 +852,18 @@ assign rd_way_data_bank6 = ret_data[223:192];
 assign rd_way_data_bank7 = ret_data[255:224];
 
 // Output
-assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid;
-assign data_ok = (state == `LOOKUP) && cache_hit || 
-                 (state == `REFILL) && ret_valid ||
-                 (state == `URESP)  && ret_valid;
-assign rdata = {256{(state == `LOOKUP) && cache_hit}} & load_res | 
-               {256{(state == `REFILL) && ret_valid}} & ret_data | 
-               {256{(state == `URESP)  && ret_valid}} & {ret_data[31:0], 224'b0}; 
-assign rnum = (state == `URESP) ? 4'b1 : {1'b0, ~(rb_offset[4:2])} + 4'b1;
+assign addr_ok = (state[0] || (state[1] && cache_hit)) && valid;
+assign data_ok = (state[1]) && cache_hit || 
+                 (state[3]) && ret_valid ||
+                 (state[5])  && ret_valid;
+assign rdata = ({256{state[1] & cache_hit}} & load_res) | 
+               ({256{state[3] & ret_valid}} & ret_data) | 
+               ({256{state[5] & ret_valid}} & {ret_data[31:0], 224'b0}); 
+assign rnum = (state[5]) ? 4'b1 : {1'b0, ~(rb_offset[4:2])} + 4'b1;
 
-assign rd_req  = (state == `UREQ) || (state == `REPLACE);
-assign rd_type = (state == `UREQ) ? 1'b0 : 1'b1;
-assign rd_addr = (state == `UREQ) ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 5'b0};
+assign rd_req  = (state[4]) || (state[2]);
+assign rd_type = (state[4]) ? 1'b0 : 1'b1;
+assign rd_addr = (state[4]) ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 5'b0};
 
 // Main FSM
 reg [5:0] state;
