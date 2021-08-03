@@ -307,13 +307,32 @@ reg [31:0] HI;
 reg [31:0] LO;
 
 reg  mul_res_save_done;
+wire [31:0] lo32_for_mul;
+reg  [31:0] lo32_for_mul_save;
+reg  lo32_for_mul_save_done;
 
 wire [31:0] inst1_write_hi;
 wire [31:0] inst1_write_lo;
 wire [31:0] inst2_write_hi;
 wire [31:0] inst2_write_lo;
 
+always@(posedge clk)begin
+    if(reset)
+        lo32_for_mul_save <= 32'b0;
+    else if(pms_valid & (inst1_mul | inst2_mul) & ~inst1_pms_except) 
+        lo32_for_mul_save <= pms_mul_res[31:0];
+end
 
+always @(posedge clk) begin
+    if(reset)
+        lo32_for_mul_save_done <= 1'b0;
+    else if(pms_to_ms_valid && ms_allowin)
+        lo32_for_mul_save_done <= 1'b0;
+    else if(pms_valid & (inst1_mul | inst2_mul) & ~inst1_pms_except)
+        lo32_for_mul_save_done <= 1'b1;
+end
+
+assign lo32_for_mul = ~lo32_for_mul_save_done ? pms_mul_res[31:0] : lo32_for_mul_save;
 
 assign inst1_write_hi = {32{inst1_hl_src_from_mul}} & {pms_mul_res[63:32]} |
                         {32{inst1_hl_src_from_div}} & {pms_alu_div_res[31:0]} |
@@ -638,9 +657,9 @@ assign inst2_cp0_res_update = {32{(inst2_cp0_addr == `CR_EPC)}} & inst1_rt_value
 assign pms_inst2_cp0_final_res = cp0_RAW ? inst2_cp0_res_update : inst2_c0_rdata;
 
 assign pms_inst1_result = inst1_cp0_op ? inst1_c0_rdata : 
-                             inst1_mul ? pms_mul_res[31:0] : pms_inst1_cal_result;
+                             inst1_mul ? lo32_for_mul : pms_inst1_cal_result;
 assign pms_inst2_result = inst2_cp0_op ? pms_inst2_cp0_final_res : 
-                             inst2_mul ? pms_mul_res[31:0] : pms_inst2_cal_result;
+                             inst2_mul ? lo32_for_mul : pms_inst2_cal_result;
 
 assign pms_forward_bus = {
     pms_valid,
