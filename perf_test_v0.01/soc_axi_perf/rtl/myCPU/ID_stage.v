@@ -626,7 +626,7 @@ assign br_target = (inst1_beq || inst1_bne || inst1_bgez || inst1_bgtz ||
                    (inst1_jr || inst1_jalr)                                   ? inst1_br_rs_value :
                     /*inst_jal || inst_j*/                                      {inst2_pc[31:28], inst1_jidx[25:0], 2'b0};
 
-assign br_leave = br_taken & ds_to_es_valid;// & es_allowin;
+assign br_leave = br_taken; //& ds_to_es_valid & es_allowin;
 
 assign br_bus = {br_leave, br_target};
 assign ds_branch = br_leave;
