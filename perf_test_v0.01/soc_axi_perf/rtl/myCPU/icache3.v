@@ -28,299 +28,86 @@ module icache3(
 );
 
 // RAM
-wire        data_way0_bank0_en;
-wire        data_way0_bank1_en;
-wire        data_way0_bank2_en;
-wire        data_way0_bank3_en;
-wire        data_way0_bank4_en;
-wire        data_way0_bank5_en;
-wire        data_way0_bank6_en;
-wire        data_way0_bank7_en;
-wire        data_way1_bank0_en;
-wire        data_way1_bank1_en;
-wire        data_way1_bank2_en;
-wire        data_way1_bank3_en;
-wire        data_way1_bank4_en;
-wire        data_way1_bank5_en;
-wire        data_way1_bank6_en;
-wire        data_way1_bank7_en;
-wire [ 3:0] data_way0_bank0_we;
-wire [ 3:0] data_way0_bank1_we;
-wire [ 3:0] data_way0_bank2_we;
-wire [ 3:0] data_way0_bank3_we;
-wire [ 3:0] data_way0_bank4_we;
-wire [ 3:0] data_way0_bank5_we;
-wire [ 3:0] data_way0_bank6_we;
-wire [ 3:0] data_way0_bank7_we;
-wire [ 3:0] data_way1_bank0_we;
-wire [ 3:0] data_way1_bank1_we;
-wire [ 3:0] data_way1_bank2_we;
-wire [ 3:0] data_way1_bank3_we;
-wire [ 3:0] data_way1_bank4_we;
-wire [ 3:0] data_way1_bank5_we;
-wire [ 3:0] data_way1_bank6_we;
-wire [ 3:0] data_way1_bank7_we;
-wire [ 6:0] data_addr;
-wire [31:0] data_way0_bank0_din;
-wire [31:0] data_way0_bank1_din;
-wire [31:0] data_way0_bank2_din;
-wire [31:0] data_way0_bank3_din;
-wire [31:0] data_way0_bank4_din;
-wire [31:0] data_way0_bank5_din;
-wire [31:0] data_way0_bank6_din;
-wire [31:0] data_way0_bank7_din;
-wire [31:0] data_way1_bank0_din;
-wire [31:0] data_way1_bank1_din;
-wire [31:0] data_way1_bank2_din;
-wire [31:0] data_way1_bank3_din;
-wire [31:0] data_way1_bank4_din;
-wire [31:0] data_way1_bank5_din;
-wire [31:0] data_way1_bank6_din;
-wire [31:0] data_way1_bank7_din;
-wire [31:0] data_way0_bank0_dout;
-wire [31:0] data_way0_bank1_dout;
-wire [31:0] data_way0_bank2_dout;
-wire [31:0] data_way0_bank3_dout;
-wire [31:0] data_way0_bank4_dout;
-wire [31:0] data_way0_bank5_dout;
-wire [31:0] data_way0_bank6_dout;
-wire [31:0] data_way0_bank7_dout;
-wire [31:0] data_way1_bank0_dout;
-wire [31:0] data_way1_bank1_dout;
-wire [31:0] data_way1_bank2_dout;
-wire [31:0] data_way1_bank3_dout;
-wire [31:0] data_way1_bank4_dout;
-wire [31:0] data_way1_bank5_dout;
-wire [31:0] data_way1_bank6_dout;
-wire [31:0] data_way1_bank7_dout;
+wire        tag_way0_en;
+wire        tag_way1_en;
+wire        tag_way0_we;
+wire        tag_way1_we;
+wire [ 6:0] tag_addr;
+wire [19:0] tag_way0_din;
+wire [19:0] tag_way1_din;
+wire [19:0] tag_way0_dout;
+wire [19:0] tag_way1_dout;
 
-Data_RAM_8 Data_RAM_Way0_Bank0(
+wire        data_way0_en;
+wire        data_way1_en;
+wire        data_way0_we;
+wire        data_way1_we;
+wire [ 6:0] data_addr;
+wire [255:0] data_way0_din;
+wire [255:0] data_way1_din;
+wire [255:0] data_way0_dout;
+wire [255:0] data_way1_dout;
+
+Tag_RAM_8 Tag_RAM_8_Way0(
+    .clka   (clk          ),
+    .addra  (tag_addr     ),
+    .ena    (tag_way0_en  ),
+    .wea    (tag_way0_we  ),
+    .dina   (tag_way0_din ),
+    .douta  (tag_way0_dout)
+);
+Tag_RAM_8 Tag_RAM_8_Way1(
+    .clka   (clk          ),
+    .addra  (tag_addr     ),
+    .ena    (tag_way1_en  ),
+    .wea    (tag_way1_we  ),
+    .dina   (tag_way1_din ),
+    .douta  (tag_way1_dout)
+);
+
+Data_RAM_Single Data_RAM_Way0(
     .clka   (clk                 ),
     .addra  (data_addr           ),
-    .ena    (data_way0_bank0_en  ),
-    .wea    (data_way0_bank0_we  ),
-    .dina   (data_way0_bank0_din ),
-    .douta  (data_way0_bank0_dout)
+    .ena    (data_way0_en  ),
+    .wea    (data_way0_we  ),
+    .dina   (data_way0_din ),
+    .douta  (data_way0_dout)
 );
-Data_RAM_8 Data_RAM_Way0_Bank1(
+Data_RAM_Single Data_RAM_Way1(
     .clka   (clk                 ),
     .addra  (data_addr           ),
-    .ena    (data_way0_bank1_en  ),
-    .wea    (data_way0_bank1_we  ),
-    .dina   (data_way0_bank1_din ),
-    .douta  (data_way0_bank1_dout)
+    .ena    (data_way1_en  ),
+    .wea    (data_way1_we  ),
+    .dina   (data_way1_din ),
+    .douta  (data_way1_dout)
 );
-Data_RAM_8 Data_RAM_Way0_Bank2(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank2_en  ),
-    .wea    (data_way0_bank2_we  ),
-    .dina   (data_way0_bank2_din ),
-    .douta  (data_way0_bank2_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank3(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank3_en  ),
-    .wea    (data_way0_bank3_we  ),
-    .dina   (data_way0_bank3_din ),
-    .douta  (data_way0_bank3_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank4(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank4_en  ),
-    .wea    (data_way0_bank4_we  ),
-    .dina   (data_way0_bank4_din ),
-    .douta  (data_way0_bank4_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank5(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank5_en  ),
-    .wea    (data_way0_bank5_we  ),
-    .dina   (data_way0_bank5_din ),
-    .douta  (data_way0_bank5_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank6(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank6_en  ),
-    .wea    (data_way0_bank6_we  ),
-    .dina   (data_way0_bank6_din ),
-    .douta  (data_way0_bank6_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank7(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank7_en  ),
-    .wea    (data_way0_bank7_we  ),
-    .dina   (data_way0_bank7_din ),
-    .douta  (data_way0_bank7_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank0(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank0_en  ),
-    .wea    (data_way1_bank0_we  ),
-    .dina   (data_way1_bank0_din ),
-    .douta  (data_way1_bank0_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank1(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank1_en  ),
-    .wea    (data_way1_bank1_we  ),
-    .dina   (data_way1_bank1_din ),
-    .douta  (data_way1_bank1_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank2(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank2_en  ),
-    .wea    (data_way1_bank2_we  ),
-    .dina   (data_way1_bank2_din ),
-    .douta  (data_way1_bank2_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank3(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank3_en  ),
-    .wea    (data_way1_bank3_we  ),
-    .dina   (data_way1_bank3_din ),
-    .douta  (data_way1_bank3_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank4(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank4_en  ),
-    .wea    (data_way1_bank4_we  ),
-    .dina   (data_way1_bank4_din ),
-    .douta  (data_way1_bank4_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank5(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank5_en  ),
-    .wea    (data_way1_bank5_we  ),
-    .dina   (data_way1_bank5_din ),
-    .douta  (data_way1_bank5_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank6(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank6_en  ),
-    .wea    (data_way1_bank6_we  ),
-    .dina   (data_way1_bank6_din ),
-    .douta  (data_way1_bank6_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank7(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank7_en  ),
-    .wea    (data_way1_bank7_we  ),
-    .dina   (data_way1_bank7_din ),
-    .douta  (data_way1_bank7_dout)
-);
+
 
 reg V_Way0 [127:0];
 reg V_Way1 [127:0];
 
-reg [19:0] tag_way0 [127:0];
-reg [19:0] tag_way1 [127:0];
-
 // RAM Port
-wire [6:0] tag_addr;
+assign tag_way0_en = (valid && !uncache && addr_ok) || 
+                     (state == `REFILL && ret_valid && rp_way == 1'b0);
+assign tag_way1_en = (valid && !uncache && addr_ok) || 
+                     (state == `REFILL && ret_valid && rp_way == 1'b1);
+assign tag_way0_we = (state == `REFILL && ret_valid && rp_way == 1'b0);
+assign tag_way1_we = (state == `REFILL && ret_valid && rp_way == 1'b1);
+assign tag_way0_din = rb_tag;
+assign tag_way1_din = rb_tag;
 assign tag_addr = (valid && !uncache && addr_ok)  ? index : 
                   (state == `REFILL && ret_valid) ? rb_index : 7'b0;
 
-genvar it0;
-generate for (it0=0; it0<128; it0=it0+1) begin :gen_for_Tag_Way0
-    always @(posedge clk) begin
-        if (!resetn) begin
-            tag_way0[it0] <= 20'b0;
-        end
-        else if (state == `REFILL && ret_valid && rp_way == 1'b0 && it0 == tag_addr) begin
-            tag_way0[it0] <= rb_tag;
-        end
-    end
-end endgenerate
-genvar it1;
-generate for (it1=0; it1<128; it1=it1+1) begin :gen_for_Tag_Way1
-    always @(posedge clk) begin
-        if (!resetn) begin
-            tag_way1[it1] <= 20'b0;
-        end
-        else if (state == `REFILL && ret_valid && rp_way == 1'b1 && it1 == tag_addr) begin
-            tag_way1[it1] <= rb_tag;
-        end
-    end
-end endgenerate
-
-assign data_way0_bank0_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b0);
-assign data_way0_bank1_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b0);
-assign data_way0_bank2_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b0);
-assign data_way0_bank3_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b0);
-assign data_way0_bank4_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b0);
-assign data_way0_bank5_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b0);
-assign data_way0_bank6_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b0);
-assign data_way0_bank7_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b0);                            
-assign data_way1_bank0_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b1);
-assign data_way1_bank1_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b1);
-assign data_way1_bank2_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b1);
-assign data_way1_bank3_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b1);
-assign data_way1_bank4_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b1);
-assign data_way1_bank5_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b1);
-assign data_way1_bank6_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b1);
-assign data_way1_bank7_en = (valid && !uncache && addr_ok) ||
-                            (state == `REFILL && ret_valid && rp_way == 1'b1);                                                     
-assign data_way0_bank0_we = (state == `REFILL && ret_valid && rp_way == 1'b0) ? 4'b1111 : 4'b0000;
-assign data_way0_bank1_we = (state == `REFILL && ret_valid && rp_way == 1'b0) ? 4'b1111 : 4'b0000;
-assign data_way0_bank2_we = (state == `REFILL && ret_valid && rp_way == 1'b0) ? 4'b1111 : 4'b0000;
-assign data_way0_bank3_we = (state == `REFILL && ret_valid && rp_way == 1'b0) ? 4'b1111 : 4'b0000;
-assign data_way0_bank4_we = (state == `REFILL && ret_valid && rp_way == 1'b0) ? 4'b1111 : 4'b0000;
-assign data_way0_bank5_we = (state == `REFILL && ret_valid && rp_way == 1'b0) ? 4'b1111 : 4'b0000;
-assign data_way0_bank6_we = (state == `REFILL && ret_valid && rp_way == 1'b0) ? 4'b1111 : 4'b0000;
-assign data_way0_bank7_we = (state == `REFILL && ret_valid && rp_way == 1'b0) ? 4'b1111 : 4'b0000;
-assign data_way1_bank0_we = (state == `REFILL && ret_valid && rp_way == 1'b1) ? 4'b1111 : 4'b0000;
-assign data_way1_bank1_we = (state == `REFILL && ret_valid && rp_way == 1'b1) ? 4'b1111 : 4'b0000;
-assign data_way1_bank2_we = (state == `REFILL && ret_valid && rp_way == 1'b1) ? 4'b1111 : 4'b0000;
-assign data_way1_bank3_we = (state == `REFILL && ret_valid && rp_way == 1'b1) ? 4'b1111 : 4'b0000;
-assign data_way1_bank4_we = (state == `REFILL && ret_valid && rp_way == 1'b1) ? 4'b1111 : 4'b0000;
-assign data_way1_bank5_we = (state == `REFILL && ret_valid && rp_way == 1'b1) ? 4'b1111 : 4'b0000;
-assign data_way1_bank6_we = (state == `REFILL && ret_valid && rp_way == 1'b1) ? 4'b1111 : 4'b0000;
-assign data_way1_bank7_we = (state == `REFILL && ret_valid && rp_way == 1'b1) ? 4'b1111 : 4'b0000;
-assign data_way0_bank0_din = rd_way_data_bank0;
-assign data_way0_bank1_din = rd_way_data_bank1;
-assign data_way0_bank2_din = rd_way_data_bank2;
-assign data_way0_bank3_din = rd_way_data_bank3;
-assign data_way0_bank4_din = rd_way_data_bank4;
-assign data_way0_bank5_din = rd_way_data_bank5;
-assign data_way0_bank6_din = rd_way_data_bank6;
-assign data_way0_bank7_din = rd_way_data_bank7;
-assign data_way1_bank0_din = rd_way_data_bank0;
-assign data_way1_bank1_din = rd_way_data_bank1;
-assign data_way1_bank2_din = rd_way_data_bank2;
-assign data_way1_bank3_din = rd_way_data_bank3;
-assign data_way1_bank4_din = rd_way_data_bank4;
-assign data_way1_bank5_din = rd_way_data_bank5;
-assign data_way1_bank6_din = rd_way_data_bank6;
-assign data_way1_bank7_din = rd_way_data_bank7;
+assign data_way0_en = (valid && !uncache && addr_ok) ||
+                      (state == `REFILL && ret_valid && rp_way == 1'b0);
+                          
+assign data_way1_en = (valid && !uncache && addr_ok) ||
+                      (state == `REFILL && ret_valid && rp_way == 1'b1);
+                                                   
+assign data_way0_we = (state == `REFILL && ret_valid && rp_way == 1'b0);
+assign data_way1_we = (state == `REFILL && ret_valid && rp_way == 1'b1);
+assign data_way0_din = ret_data;
+assign data_way1_din = ret_data;
 assign data_addr = (valid && !uncache && addr_ok)  ? index : 
                    (state == `REFILL && ret_valid) ? rb_index : 7'b0;
 
@@ -356,8 +143,6 @@ wire         way0_v;
 wire         way1_v;
 wire [ 19:0] way0_tag;
 wire [ 19:0] way1_tag;
-wire [255:0] way0_data;
-wire [255:0] way1_data;
 
 always @(posedge clk) begin
     if (valid && addr_ok) begin
@@ -369,26 +154,20 @@ end
 
 assign way0_v = V_Way0[rb_index];
 assign way1_v = V_Way1[rb_index];
-assign way0_tag = tag_way0[rb_index];
-assign way1_tag = tag_way1[rb_index];
-assign way0_data = {data_way0_bank7_dout, data_way0_bank6_dout, data_way0_bank5_dout, data_way0_bank4_dout,
-                    data_way0_bank3_dout, data_way0_bank2_dout, data_way0_bank1_dout, data_way0_bank0_dout};
-assign way1_data = {data_way1_bank7_dout, data_way1_bank6_dout, data_way1_bank5_dout, data_way1_bank4_dout,
-                    data_way1_bank3_dout, data_way1_bank2_dout, data_way1_bank1_dout, data_way1_bank0_dout};
 
 // Tag Compare
 wire         way0_hit;
 wire         way1_hit;
 wire         cache_hit;
 
-assign way0_hit = way0_v & (way0_tag == rb_tag);
-assign way1_hit = way1_v & (way1_tag == rb_tag);
+assign way0_hit = way0_v & (tag_way0_dout == rb_tag);
+assign way1_hit = way1_v & (tag_way1_dout == rb_tag);
 assign cache_hit = (way0_hit | way1_hit);
 
 // Data Select
 wire [255:0] load_res;
-assign load_res = {256{way0_hit}} & way0_data |
-                  {256{way1_hit}} & way1_data;
+assign load_res = {256{way0_hit}} & data_way0_dout |
+                  {256{way1_hit}} & data_way1_dout;
 
 // PLRU
 reg [127:0] way0_mru;
@@ -442,25 +221,6 @@ always @(posedge clk) begin
         end
     end
 end
-
-// Miss Buffer
-wire [ 31:0] rd_way_data_bank0;
-wire [ 31:0] rd_way_data_bank1;
-wire [ 31:0] rd_way_data_bank2;
-wire [ 31:0] rd_way_data_bank3;
-wire [ 31:0] rd_way_data_bank4;
-wire [ 31:0] rd_way_data_bank5;
-wire [ 31:0] rd_way_data_bank6;
-wire [ 31:0] rd_way_data_bank7;
-
-assign rd_way_data_bank0 = ret_data[ 31:  0];
-assign rd_way_data_bank1 = ret_data[ 63: 32];
-assign rd_way_data_bank2 = ret_data[ 95: 64];
-assign rd_way_data_bank3 = ret_data[127: 96];
-assign rd_way_data_bank4 = ret_data[159:128];
-assign rd_way_data_bank5 = ret_data[191:160];
-assign rd_way_data_bank6 = ret_data[223:192];
-assign rd_way_data_bank7 = ret_data[255:224];
 
 // Output
 assign addr_ok = (state[0] || (state[1] && cache_hit)) && valid;
