@@ -29,6 +29,7 @@ wire        es_ready_go;
 reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
 
 wire [15:0] inst1_imm;
+wire        inst1_mul;
 wire        inst1_refill;
 wire [31:0] inst1_pc;
 wire        inst1_ds_except;
@@ -64,6 +65,7 @@ wire [31:0] inst1_rs_value;
 wire [31:0] inst1_rt_value;
 
 wire [15:0] inst2_imm;
+wire        inst2_mul;
 wire        inst2_refill;
 wire        inst2_valid;
 wire [31:0] inst2_pc;
@@ -108,6 +110,7 @@ wire [31:0] inst2_rt_update_value;
 
 
 assign {inst2_valid,
+        inst2_mul,
         inst2_refill,
         inst2_ds_except,
         inst2_ds_exccode,
@@ -146,6 +149,7 @@ assign {inst2_valid,
         self_r1_relevant,
         self_r2_relevant,
 
+        inst1_mul,
         inst1_refill,
         inst1_ds_except,
         inst1_ds_exccode,
@@ -414,8 +418,8 @@ assign inst2_es_BadVAddr = inst2_ds_except ? inst2_pc : es_inst2_mem_addr;
 
 //forward bus
 assign es_forward_bus = {es_valid, //es_to_pms_valid,
-                        inst1_readygo, inst1_hi_op | inst1_lo_op | inst1_cp0_op | inst1_load_op, inst1_gr_we, inst1_dest, es_alu_inst1_result, 
-                        inst2_readygo, inst2_hi_op | inst2_lo_op | inst2_cp0_op | inst2_load_op, inst2_gr_we, inst2_dest, es_alu_inst2_result };
+                        inst1_readygo, inst1_hi_op | inst1_lo_op | inst1_cp0_op | inst1_load_op | inst1_mul, inst1_gr_we, inst1_dest, es_alu_inst1_result, 
+                        inst2_readygo, inst2_hi_op | inst2_lo_op | inst2_cp0_op | inst2_load_op | inst2_mul, inst2_gr_we, inst2_dest, es_alu_inst2_result };
 
 // assign {es_valid, es_res_valid, 
 //         es_inst1_mfhilo, es_inst1_mfc0, es_inst1_load, es_inst1_gr_we, es_inst1_dest, es_inst1_result, 
@@ -427,6 +431,7 @@ assign inst2_rt_update_value = self_r2_relevant ? es_alu_inst1_result : inst2_rt
 
 assign es_to_pms_bus = {
                         inst2_valid,
+                        inst2_mul,
                         inst2_refill,
                         inst2_es_except,
                         inst2_es_exccode,
@@ -460,6 +465,7 @@ assign es_to_pms_bus = {
                         br_target,
                         es_alu_div_res,
 
+                        inst1_mul,
                         inst1_refill,
                         inst1_es_except,
                         inst1_es_exccode,
