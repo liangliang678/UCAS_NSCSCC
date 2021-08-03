@@ -261,45 +261,45 @@ assign data_way1_bank3_en = (_1_cache_req && addr_ok1) ||
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b11 &&  wb_hit_way) || 
                             (state[5] && ret_valid &&  rp_way);
 
-assign data_way0_bank0_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
+assign data_way0_bank0_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] && !wb_hit_way &&
                             wb_offset1[3:2] == 2'b00 && wb_offset2[3:2] == 2'b00) ? (wb_wstrb2 | wb_wstrb1) :
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b00) ? wb_wstrb2 :
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b00) ? wb_wstrb1 :
+                            (wstate == `WRITE && wb_valid[1] && !wb_hit_way && wb_offset2[3:2] == 2'b00) ? wb_wstrb2 :
+                            (wstate == `WRITE && wb_valid[0] && !wb_hit_way && wb_offset1[3:2] == 2'b00) ? wb_wstrb1 :
                             (state[5] && ret_valid && !rp_way) ? 4'b1111 : 4'b0000;
-assign data_way0_bank1_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
+assign data_way0_bank1_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] && !wb_hit_way &&
                             wb_offset1[3:2] == 2'b01 && wb_offset2[3:2] == 2'b01) ? (wb_wstrb2 | wb_wstrb1) :
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b01) ? wb_wstrb2 :
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b01) ? wb_wstrb1 :
+                            (wstate == `WRITE && wb_valid[1] && !wb_hit_way && wb_offset2[3:2] == 2'b01) ? wb_wstrb2 :
+                            (wstate == `WRITE && wb_valid[0] && !wb_hit_way && wb_offset1[3:2] == 2'b01) ? wb_wstrb1 :
                             (state[5] && ret_valid && !rp_way) ? 4'b1111 : 4'b0000;
-assign data_way0_bank2_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
+assign data_way0_bank2_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] && !wb_hit_way &&
                             wb_offset1[3:2] == 2'b10 && wb_offset2[3:2] == 2'b10) ? (wb_wstrb2 | wb_wstrb1) :
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b10) ? wb_wstrb2 :
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b10) ? wb_wstrb1 :
+                            (wstate == `WRITE && wb_valid[1] && !wb_hit_way && wb_offset2[3:2] == 2'b10) ? wb_wstrb2 :
+                            (wstate == `WRITE && wb_valid[0] && !wb_hit_way && wb_offset1[3:2] == 2'b10) ? wb_wstrb1 :
                             (state[5] && ret_valid && !rp_way) ? 4'b1111 : 4'b0000;
-assign data_way0_bank3_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
+assign data_way0_bank3_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] && !wb_hit_way &&
                             wb_offset1[3:2] == 2'b11 && wb_offset2[3:2] == 2'b11) ? (wb_wstrb2 | wb_wstrb1) :
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b11) ? wb_wstrb2 :
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b11) ? wb_wstrb1 :
+                            (wstate == `WRITE && wb_valid[1] && !wb_hit_way && wb_offset2[3:2] == 2'b11) ? wb_wstrb2 :
+                            (wstate == `WRITE && wb_valid[0] && !wb_hit_way && wb_offset1[3:2] == 2'b11) ? wb_wstrb1 :
                             (state[5] && ret_valid && !rp_way) ? 4'b1111 : 4'b0000;
-assign data_way1_bank0_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
+assign data_way1_bank0_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] && wb_hit_way &&
                             wb_offset1[3:2] == 2'b00 && wb_offset2[3:2] == 2'b00) ? (wb_wstrb2 | wb_wstrb1) :
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b00) ? wb_wstrb2 :
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b00) ? wb_wstrb1 :
+                            (wstate == `WRITE && wb_valid[1] && wb_hit_way && wb_offset2[3:2] == 2'b00) ? wb_wstrb2 :
+                            (wstate == `WRITE && wb_valid[0] && wb_hit_way && wb_offset1[3:2] == 2'b00) ? wb_wstrb1 :
                             (state[5] && ret_valid &&  rp_way) ? 4'b1111 : 4'b0000;
-assign data_way1_bank1_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
+assign data_way1_bank1_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] && wb_hit_way &&
                             wb_offset1[3:2] == 2'b01 && wb_offset2[3:2] == 2'b01) ? (wb_wstrb2 | wb_wstrb1) :
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b01) ? wb_wstrb2 :
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b01) ? wb_wstrb1 :
+                            (wstate == `WRITE && wb_valid[1] && wb_hit_way && wb_offset2[3:2] == 2'b01) ? wb_wstrb2 :
+                            (wstate == `WRITE && wb_valid[0] && wb_hit_way && wb_offset1[3:2] == 2'b01) ? wb_wstrb1 :
                             (state[5] && ret_valid &&  rp_way) ? 4'b1111 : 4'b0000;
-assign data_way1_bank2_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
+assign data_way1_bank2_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] && wb_hit_way &&
                             wb_offset1[3:2] == 2'b10 && wb_offset2[3:2] == 2'b10) ? (wb_wstrb2 | wb_wstrb1) :
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b10) ? wb_wstrb2 :
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b10) ? wb_wstrb1 :
+                            (wstate == `WRITE && wb_valid[1] && wb_hit_way && wb_offset2[3:2] == 2'b10) ? wb_wstrb2 :
+                            (wstate == `WRITE && wb_valid[0] && wb_hit_way && wb_offset1[3:2] == 2'b10) ? wb_wstrb1 :
                             (state[5] && ret_valid &&  rp_way) ? 4'b1111 : 4'b0000;
-assign data_way1_bank3_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
+assign data_way1_bank3_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] && wb_hit_way &&
                             wb_offset1[3:2] == 2'b11 && wb_offset2[3:2] == 2'b11) ? (wb_wstrb2 | wb_wstrb1) :
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b11) ? wb_wstrb2 :
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b11) ? wb_wstrb1 :
+                            (wstate == `WRITE && wb_valid[1] && wb_hit_way && wb_offset2[3:2] == 2'b11) ? wb_wstrb2 :
+                            (wstate == `WRITE && wb_valid[0] && wb_hit_way && wb_offset1[3:2] == 2'b11) ? wb_wstrb1 :
                             (state[5] && ret_valid &&  rp_way) ? 4'b1111 : 4'b0000;
 
 assign data_way0_bank0_din = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
