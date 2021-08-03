@@ -474,9 +474,9 @@ assign addr_ok = (state[0] || (state[1] && cache_hit)) && valid;
 assign data_ok = (state[1]) && cache_hit || 
                  (state[3]) && ret_valid ||
                  (state[5])  && ret_valid;
-assign rdata = ({256{state[1] & cache_hit}} & load_res) | 
-               ({256{state[3] & ret_valid}} & ret_data) | 
-               ({256{state[5] & ret_valid}} & {ret_data[31:0], 224'b0}); 
+assign rdata = ({256{state[1]}} & load_res) | 
+               ({256{state[3]}} & ret_data) | 
+               ({256{state[5]}} & {ret_data[31:0], 224'b0}); 
 assign rnum = (state[5]) ? 4'b1 : {1'b0, ~(rb_offset[4:2])} + 4'b1;
 
 assign rd_req  = (state[4]) || (state[2]);
