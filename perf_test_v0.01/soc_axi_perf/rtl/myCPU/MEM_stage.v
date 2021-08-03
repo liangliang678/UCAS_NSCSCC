@@ -114,10 +114,10 @@ wire inst1_align_off_1;
 wire inst1_align_off_2;
 wire inst1_align_off_3;
 
-assign inst1_align_off_0 = (inst1_load_store_offset == 2'b00);
-assign inst1_align_off_1 = (inst1_load_store_offset == 2'b01);
-assign inst1_align_off_2 = (inst1_load_store_offset == 2'b10);
-assign inst1_align_off_3 = (inst1_load_store_offset == 2'b11);
+assign inst1_align_off_0 = ~inst1_load_store_offset[1] & ~inst1_load_store_offset[0];
+assign inst1_align_off_1 = ~inst1_load_store_offset[1] &  inst1_load_store_offset[0];
+assign inst1_align_off_2 =  inst1_load_store_offset[1] & ~inst1_load_store_offset[0];
+assign inst1_align_off_3 =  inst1_load_store_offset[1] &  inst1_load_store_offset[0];
 
 wire inst1_lb_mem_res;
 wire inst1_lbu_mem_res;
@@ -136,7 +136,7 @@ assign {inst1_lb_mem_res  ,  //6
         inst1_lwr_mem_res    //0
         } = inst1_load_store_type;
 
-reg [31:0] inst1_mem_result_reg;
+//reg [31:0] inst1_mem_result_reg;
 reg        inst1_mem_ok;
 
 assign inst1_mem_result = {32{inst1_lb_mem_res  & inst1_align_off_0}} & { {24{data_cache_rdata_01[ 7]}}, data_cache_rdata_01[ 7: 0] } |  //lb
@@ -172,14 +172,12 @@ always @(posedge clk) begin
         inst1_mem_ok <= 1'b1;
     end
 
-    if (inst1_res_from_mem & data_cache_data_ok_01 & (~ms_ready_go | ~ws_allowin)) begin
+    /*if (inst1_res_from_mem & data_cache_data_ok_01 & (~ms_ready_go | ~ws_allowin)) begin
         inst1_mem_result_reg  <= inst1_mem_result;
-    end
+    end*/
 end
 
-assign inst1_final_result = (inst1_mem_ok) ? inst1_mem_result_reg : 
-                      (inst1_res_from_mem) ? inst1_mem_result : 
-                                             inst1_alu_result;
+assign inst1_final_result = {32{inst1_res_from_mem}} & inst1_mem_result | {32{~inst1_res_from_mem}} & inst1_alu_result;
 
 assign inst1_ready_go = ~(inst1_res_from_mem | inst1_mem_we) | data_cache_data_ok_01 | inst1_mem_ok;
 
@@ -189,10 +187,10 @@ wire inst2_align_off_1;
 wire inst2_align_off_2;
 wire inst2_align_off_3;
 
-assign inst2_align_off_0 = (inst2_load_store_offset == 2'b00);
-assign inst2_align_off_1 = (inst2_load_store_offset == 2'b01);
-assign inst2_align_off_2 = (inst2_load_store_offset == 2'b10);
-assign inst2_align_off_3 = (inst2_load_store_offset == 2'b11);
+assign inst2_align_off_0 = ~inst2_load_store_offset[1] & ~inst2_load_store_offset[0];
+assign inst2_align_off_1 = ~inst2_load_store_offset[1] &  inst2_load_store_offset[0];
+assign inst2_align_off_2 =  inst2_load_store_offset[1] & ~inst2_load_store_offset[0];
+assign inst2_align_off_3 =  inst2_load_store_offset[1] &  inst2_load_store_offset[0];
 
 wire inst2_lb_mem_res;
 wire inst2_lbu_mem_res;
@@ -211,7 +209,7 @@ assign {inst2_lb_mem_res  ,  //6
         inst2_lwr_mem_res    //0
         } = inst2_load_store_type;
 
-reg [31:0] inst2_mem_result_reg;
+//reg [31:0] inst2_mem_result_reg;
 reg        inst2_mem_ok;
 
 assign inst2_mem_result = {32{inst2_lb_mem_res  & inst2_align_off_0}} & { {24{data_cache_rdata_02[ 7]}}, data_cache_rdata_02[ 7: 0] } |  //lb
@@ -247,20 +245,18 @@ always @(posedge clk) begin
         inst2_mem_ok <= 1'b1;
     end
 
-    if (inst2_res_from_mem & data_cache_data_ok_02 & (~ms_ready_go | ~ws_allowin)) begin
+    /*if (inst2_res_from_mem & data_cache_data_ok_02 & (~ms_ready_go | ~ws_allowin)) begin
         inst2_mem_result_reg  <= inst2_mem_result;
-    end
+    end*/
 end
 
-assign inst2_final_result = (inst2_mem_ok) ? inst2_mem_result_reg : 
-                      (inst2_res_from_mem) ? inst2_mem_result : 
-                                             inst2_alu_result;
+assign inst2_final_result = {32{inst2_res_from_mem}} & inst2_mem_result | {32{~inst2_res_from_mem}} & inst2_alu_result;
 
 assign inst2_ready_go = ~(inst2_res_from_mem | inst2_mem_we) | data_cache_data_ok_02 | inst2_mem_ok | ~inst2_valid;
 
 // ms_forward_bus
 assign ms_forward_bus = {ms_valid, //ms_to_ws_valid, 
-                         inst1_mem_ok, inst1_res_from_mem, inst1_gr_we, inst1_dest, inst1_final_result, 
-                         inst2_mem_ok, inst2_res_from_mem, inst2_gr_we, inst2_dest, inst2_final_result };
+                         inst1_ready_go, inst1_res_from_mem, inst1_gr_we, inst1_dest, inst1_final_result, 
+                         inst2_ready_go, inst2_res_from_mem, inst2_gr_we, inst2_dest, inst2_final_result };
 
 endmodule
