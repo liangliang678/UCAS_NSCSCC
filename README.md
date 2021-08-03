@@ -38,6 +38,7 @@
 | 2021-07-30 |dual issue                  | 90  | 5131c    | 2ae904      | 622d7c   | 4af94b| d8978    | 303c81     | 367971      | 2959b0 | 3e3b3       | 1fefab       | 40.901 |
 | 2021-07-31 |dual issue fix bug; modified mul div rf and forward                  | 80  | 6f3a7    | 2efd25      | 73a13f   | 584fc9| fd666    | 388344     | 40837d      | 32eb04 | 468ac       | 24f637       | 34.517 |
 | 2021-08-1 |dual issue: larger cache line| 90  | 50ed0    | 297476      | 6221a5   | 4e3bdc| d84e9    | 3207b4     | 353179      | 2a8b96 | 3e422       | 1fad2c       | 40.752 |
+| 2021-08-3 |dual issue: higher frequency| 100  | 4ace2    | 264784      | 5dad1c   | 468ed5| c43a0    | 2ced66     | 2fe20d      | 266ddb | 3ab03       | 1c4681       | 44.557 |
 ## 参考资料
 
 1. [AXI总线概述](https://blog.csdn.net/bleauchat/article/details/96891619)
