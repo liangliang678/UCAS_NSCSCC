@@ -101,6 +101,7 @@ end
 assign inst1_ready_go = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok | inst1_addr_ok_reg) | inst1_pms_except; //不访存 访存请求接受 有例外
 assign inst2_ready_go = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok | inst2_addr_ok_reg) | inst2_pms_except;
 
+wire        inst1_mul;
 wire        inst1_refill;
 wire [31:0] inst1_pc;
 wire        inst1_pms_except;
@@ -132,6 +133,7 @@ wire [31:0] inst1_rs_value;
 wire [31:0] inst1_rt_value;
 wire [31:0] pms_inst1_mem_addr;
 
+wire        inst2_mul;
 wire        inst2_refill;
 wire        inst2_valid;
 wire [31:0] inst2_pc;
@@ -180,6 +182,7 @@ wire [63:0] pms_alu_div_res;
 
 assign {
         inst2_valid,
+        inst2_mul,
         inst2_refill,
         inst2_es_except,
         inst2_es_exccode,
@@ -213,6 +216,7 @@ assign {
         br_target,
         pms_alu_div_res,
 
+        inst1_mul,
         inst1_refill,
         inst1_es_except,
         inst1_es_exccode,
@@ -633,8 +637,10 @@ assign inst2_cp0_res_update = {32{(inst2_cp0_addr == `CR_EPC)}} & inst1_rt_value
 
 assign pms_inst2_cp0_final_res = cp0_RAW ? inst2_cp0_res_update : inst2_c0_rdata;
 
-assign pms_inst1_result = inst1_cp0_op ? inst1_c0_rdata : pms_inst1_cal_result;
-assign pms_inst2_result = inst2_cp0_op ? pms_inst2_cp0_final_res : pms_inst2_cal_result;
+assign pms_inst1_result = inst1_cp0_op ? inst1_c0_rdata : 
+                             inst1_mul ? pms_mul_res[31:0] : pms_inst1_cal_result;
+assign pms_inst2_result = inst2_cp0_op ? pms_inst2_cp0_final_res : 
+                             inst2_mul ? pms_mul_res[31:0] : pms_inst2_cal_result;
 
 assign pms_forward_bus = {
     pms_valid,
