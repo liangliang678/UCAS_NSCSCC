@@ -79,7 +79,7 @@ assign {
 always @(posedge clk) begin
     if(reset)
         br_bus_r[32:0] <= 33'b0;
-    else if(pfs_reflush | preif_ready_go)   //例外 或者 跳转地址访问已经接受了，标记为无效
+    else if(pfs_reflush | preif_ready_go)   //例外 或�?? 跳转地址访问已经接受了，标记为无�?
         br_bus_r[32] <= 1'b0;                                 
     else if(br_take_branch)
         br_bus_r[32:0] <= br_bus[32:0];
@@ -113,7 +113,7 @@ always @(posedge clk) begin                              //we need a register to
 end
 
 // pre-IF stage
-assign preif_ready_go = (inst_cache_valid & inst_cache_addr_ok) | fs_no_inst_wait & fs_allowin;  //请求接受 或者 不发请求（有例外）
+assign preif_ready_go = (inst_cache_valid & inst_cache_addr_ok) | fs_no_inst_wait & fs_allowin;  //请求接受 或�?? 不发请求（有例外�?
 assign to_fs_valid    = ~reset & preif_ready_go;
 assign seq_pc         = fs_pc + inst_offset;
 assign nextpc         = (pfs_reflush ) ? reflush_pc : 

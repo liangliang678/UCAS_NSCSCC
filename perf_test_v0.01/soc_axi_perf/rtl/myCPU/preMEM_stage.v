@@ -22,28 +22,6 @@ module premem_stage(
     output         clear_all                      ,
     output [31:0]  reflush_pc                     ,
 
-    // data cache interface
-    output           inst1_data_cache_valid,
-    output           inst1_data_cache_op,
-    output           inst1_data_cache_uncache,
-    output  [ 19:0]  inst1_data_cache_tag,
-    output  [  7:0]  inst1_data_cache_index,
-    output  [  3:0]  inst1_data_cache_offset,
-    output  [  1:0]  inst1_data_cache_size, 
-    output  [  3:0]  inst1_data_cache_wstrb,
-    output  [ 31:0]  inst1_data_cache_wdata,
-    input            inst1_data_cache_addr_ok,
-
-    output           inst2_data_cache_valid,
-    output           inst2_data_cache_op,
-    output           inst2_data_cache_uncache,
-    output  [ 19:0]  inst2_data_cache_tag,
-    output  [  7:0]  inst2_data_cache_index,
-    output  [  3:0]  inst2_data_cache_offset,
-    output  [  1:0]  inst2_data_cache_size, 
-    output  [  3:0]  inst2_data_cache_wstrb,
-    output  [ 31:0]  inst2_data_cache_wdata,
-    input            inst2_data_cache_addr_ok,
 
     //cp0
     //signals of mtc0, from pms
@@ -75,7 +53,7 @@ wire        pms_ready_go;
 
 reg [`ES_TO_PMS_BUS_WD -1:0] es_to_pms_bus_r;
 
-wire        inst1_ready_go; //TODO
+wire        inst1_ready_go; 
 wire        inst2_ready_go;
 
 assign pms_ready_go    = (inst1_ready_go & inst2_ready_go) | clear_all;
@@ -98,8 +76,10 @@ always @(posedge clk) begin
     end
 end
 
-assign inst1_ready_go = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok | inst1_addr_ok_reg) | inst1_pms_except; //不访存 访存请求接受 有例外
-assign inst2_ready_go = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok | inst2_addr_ok_reg) | inst2_pms_except;
+// assign inst1_ready_go = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok | inst1_addr_ok_reg) | inst1_pms_except; //不访�? 访存请求接受 有例�?
+// assign inst2_ready_go = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok | inst2_addr_ok_reg) | inst2_pms_except;
+assign inst1_ready_go = 1'b1;
+assign inst2_ready_go = 1'b1;
 
 wire        inst1_mul;
 wire        inst1_refill;
@@ -212,6 +192,7 @@ assign {
         inst2_rt_value,
         inst2_pc,
         pms_inst2_mem_addr,
+        inst2_load_store_offset,
 
         br_target,
         pms_alu_div_res,
@@ -245,45 +226,21 @@ assign {
         inst1_rs_value,
         inst1_rt_value,
         inst1_pc,
-        pms_inst1_mem_addr       
+        pms_inst1_mem_addr, 
+        inst1_load_store_offset      
        } = es_to_pms_bus_r;
 
 // exception
-wire pms_inst2_valid;
-assign pms_inst2_valid = inst2_valid & ~(inst1_pms_except | inst2_pms_except | inst1_pms_eret);
+assign inst1_pms_except = inst1_es_except;
+assign inst2_pms_except = inst2_es_except;
 
-wire inst1_exception_adel, inst1_exception_ades;
-wire inst2_exception_adel, inst2_exception_ades;
-//TLB EXCEPTION IS NOT ADD HERE !!
-assign inst1_exception_adel  = inst1_load_op && (inst1_sh_mem_res  && ~(pms_inst1_mem_addr[0] == 0) ||
-                                                inst1_shu_mem_res && ~(pms_inst1_mem_addr[0] == 0) ||
-                                                inst1_sw_mem_res  && ~(pms_inst1_mem_addr[1:0] == 0));
+assign inst1_pms_exccode = inst1_es_exccode;                   
+assign inst2_pms_exccode = inst2_es_exccode;
+                      
 
-assign inst1_exception_ades  = inst1_mem_we  && (inst1_sh_mem_res  && ~(pms_inst1_mem_addr[0] == 0) ||
-                                                inst1_shu_mem_res && ~(pms_inst1_mem_addr[0] == 0) ||
-                                                inst1_sw_mem_res  && ~(pms_inst1_mem_addr[1:0] == 0));
+assign inst1_pms_BadVAddr = inst1_es_BadVAddr;
+assign inst2_pms_BadVAddr = inst2_es_BadVAddr;
 
-assign inst2_exception_adel  = inst2_load_op && (inst2_sh_mem_res  && ~(pms_inst2_mem_addr[0] == 0) ||
-                                                inst2_shu_mem_res && ~(pms_inst2_mem_addr[0] == 0) ||
-                                                inst2_sw_mem_res  && ~(pms_inst2_mem_addr[1:0] == 0));
-
-assign inst2_exception_ades  = inst2_mem_we  && (inst2_sh_mem_res  && ~(pms_inst2_mem_addr[0] == 0) ||
-                                                inst2_shu_mem_res && ~(pms_inst2_mem_addr[0] == 0) ||
-                                                inst2_sw_mem_res  && ~(pms_inst2_mem_addr[1:0] == 0));
-
-assign inst1_pms_except = inst1_es_except | (inst1_exception_adel | inst1_exception_ades);
-assign inst2_pms_except = inst2_es_except | (inst2_exception_adel | inst2_exception_ades);
-
-assign inst1_pms_exccode = inst1_es_except ? inst1_es_exccode : 
-                           inst1_exception_adel ? 5'h4 :
-                           inst1_exception_ades ? 5'h5 : 5'h0;
-
-assign inst2_pms_exccode = inst2_es_except ? inst2_es_exccode : 
-                           inst2_exception_adel ? 5'h4 :
-                           inst2_exception_ades ? 5'h5 : 5'h0;
-
-assign inst1_pms_BadVAddr = inst1_es_except ? inst1_es_BadVAddr : inst1_VA;
-assign inst2_pms_BadVAddr = inst2_es_except ? inst2_es_BadVAddr : inst2_VA;
 
 wire [31:0] exception_1_refush_pc;
 wire [31:0] exception_2_refush_pc;
@@ -409,197 +366,12 @@ assign pms_badvaddr = inst1_pms_except ? inst1_pms_BadVAddr :
                       inst2_pms_except ? inst2_pms_BadVAddr : 32'b0;//bad vaddr
 assign pms_eret = (inst1_pms_eret | inst2_pms_eret); //is eret
 
-// mem
-assign inst2_load_store_offset = pms_inst2_mem_addr[1:0];
-assign inst1_load_store_offset = pms_inst1_mem_addr[1:0];
 
-wire inst1_mem_align_off_0, inst2_mem_align_off_0;
-wire inst1_mem_align_off_1, inst2_mem_align_off_1;
-wire inst1_mem_align_off_2, inst2_mem_align_off_2;
-wire inst1_mem_align_off_3, inst2_mem_align_off_3;
-
-assign inst1_mem_align_off_0 = (inst1_load_store_offset == 2'b00);
-assign inst1_mem_align_off_1 = (inst1_load_store_offset == 2'b01);
-assign inst1_mem_align_off_2 = (inst1_load_store_offset == 2'b10);
-assign inst1_mem_align_off_3 = (inst1_load_store_offset == 2'b11);
-
-assign inst2_mem_align_off_0 = (inst2_load_store_offset == 2'b00);
-assign inst2_mem_align_off_1 = (inst2_load_store_offset == 2'b01);
-assign inst2_mem_align_off_2 = (inst2_load_store_offset == 2'b10);
-assign inst2_mem_align_off_3 = (inst2_load_store_offset == 2'b11);
-
-wire inst1_sb_mem_res,  inst2_sb_mem_res;
-wire inst1_sbu_mem_res, inst2_sbu_mem_res;
-wire inst1_sh_mem_res,  inst2_sh_mem_res;
-wire inst1_shu_mem_res, inst2_shu_mem_res;
-wire inst1_sw_mem_res,  inst2_sw_mem_res;
-wire inst1_swl_mem_res, inst2_swl_mem_res;
-wire inst1_swr_mem_res, inst2_swr_mem_res;
-
-assign inst1_sb_mem_res = inst1_load_store_type[6];
-assign inst1_sbu_mem_res = inst1_load_store_type[5];
-assign inst1_sh_mem_res = inst1_load_store_type[4];
-assign inst1_shu_mem_res = inst1_load_store_type[3];
-assign inst1_sw_mem_res = inst1_load_store_type[2];
-assign inst1_swl_mem_res = inst1_load_store_type[1];
-assign inst1_swr_mem_res = inst1_load_store_type[0];
-
-assign inst2_sb_mem_res = inst2_load_store_type[6];
-assign inst2_sbu_mem_res = inst2_load_store_type[5];
-assign inst2_sh_mem_res = inst2_load_store_type[4];
-assign inst2_shu_mem_res = inst2_load_store_type[3];
-assign inst2_sw_mem_res = inst2_load_store_type[2];
-assign inst2_swl_mem_res = inst2_load_store_type[1];
-assign inst2_swr_mem_res = inst2_load_store_type[0];
-
-wire [3:0] inst1_write_strb;
-wire [3:0] inst2_write_strb;
-
-assign inst1_write_strb = {4{inst1_sb_mem_res & inst1_mem_align_off_0}} & 4'b0001 |                           //sb
-                          {4{inst1_sb_mem_res & inst1_mem_align_off_1}} & 4'b0010 |
-                          {4{inst1_sb_mem_res & inst1_mem_align_off_2}} & 4'b0100 |
-                          {4{inst1_sb_mem_res & inst1_mem_align_off_3}} & 4'b1000 |
-                          {4{inst1_sh_mem_res & (inst1_mem_align_off_0 | inst1_mem_align_off_1)}} & 4'b0011 |       //sh
-                          {4{inst1_sh_mem_res & (inst1_mem_align_off_2 | inst1_mem_align_off_3)}} & 4'b1100 |
-                          {4{inst1_sw_mem_res}} & 4'b1111 |                                             //sw
-                          {4{inst1_swl_mem_res & inst1_mem_align_off_0}} & 4'b0001 |                          //swl
-                          {4{inst1_swl_mem_res & inst1_mem_align_off_1}} & 4'b0011 |
-                          {4{inst1_swl_mem_res & inst1_mem_align_off_2}} & 4'b0111 |
-                          {4{inst1_swl_mem_res & inst1_mem_align_off_3}} & 4'b1111 |
-                          {4{inst1_swr_mem_res & inst1_mem_align_off_0}} & 4'b1111 |                          //swr
-                          {4{inst1_swr_mem_res & inst1_mem_align_off_1}} & 4'b1110 |
-                          {4{inst1_swr_mem_res & inst1_mem_align_off_2}} & 4'b1100 |
-                          {4{inst1_swr_mem_res & inst1_mem_align_off_3}} & 4'b1000 ;
-
-assign inst2_write_strb = {4{inst2_sb_mem_res & inst2_mem_align_off_0}} & 4'b0001 |                           //sb
-                          {4{inst2_sb_mem_res & inst2_mem_align_off_1}} & 4'b0010 |
-                          {4{inst2_sb_mem_res & inst2_mem_align_off_2}} & 4'b0100 |
-                          {4{inst2_sb_mem_res & inst2_mem_align_off_3}} & 4'b1000 |
-                          {4{inst2_sh_mem_res & (inst2_mem_align_off_0 | inst2_mem_align_off_1)}} & 4'b0011 |       //sh
-                          {4{inst2_sh_mem_res & (inst2_mem_align_off_2 | inst2_mem_align_off_3)}} & 4'b1100 |
-                          {4{inst2_sw_mem_res}} & 4'b1111 |                                             //sw
-                          {4{inst2_swl_mem_res & inst2_mem_align_off_0}} & 4'b0001 |                          //swl
-                          {4{inst2_swl_mem_res & inst2_mem_align_off_1}} & 4'b0011 |
-                          {4{inst2_swl_mem_res & inst2_mem_align_off_2}} & 4'b0111 |
-                          {4{inst2_swl_mem_res & inst2_mem_align_off_3}} & 4'b1111 |
-                          {4{inst2_swr_mem_res & inst2_mem_align_off_0}} & 4'b1111 |                          //swr
-                          {4{inst2_swr_mem_res & inst2_mem_align_off_1}} & 4'b1110 |
-                          {4{inst2_swr_mem_res & inst2_mem_align_off_2}} & 4'b1100 |
-                          {4{inst2_swr_mem_res & inst2_mem_align_off_3}} & 4'b1000 ;
-
-assign inst1_data_cache_size = {2{inst1_sw_mem_res}} & 2'b10 |                                          //sw,lw
-                               {2{(inst1_sh_mem_res | inst1_shu_mem_res) & (inst1_mem_align_off_0 | inst1_mem_align_off_1)}} & 2'b01 |   //sh lh lhu             //wrong in handbook
-                               {2{(inst1_sh_mem_res | inst1_shu_mem_res) & (inst1_mem_align_off_2 | inst1_mem_align_off_3)}} & 2'b01 |
-                               {2{(inst1_sb_mem_res | inst1_sbu_mem_res) & (inst1_mem_align_off_0)}} & 2'b00 |      //sb  lb  lbu
-                               {2{(inst1_sb_mem_res | inst1_sbu_mem_res) & (inst1_mem_align_off_1)}} & 2'b00 |
-                               {2{(inst1_sb_mem_res | inst1_sbu_mem_res) & (inst1_mem_align_off_2)}} & 2'b00 |
-                               {2{(inst1_sb_mem_res | inst1_sbu_mem_res) & (inst1_mem_align_off_3)}} & 2'b00 |
-                               {2{(inst1_swl_mem_res ) & (inst1_mem_align_off_0)}} & 2'b00 |                  //swl  lwl
-                               {2{(inst1_swl_mem_res ) & (inst1_mem_align_off_1)}} & 2'b01 |
-                               {2{(inst1_swl_mem_res ) & (inst1_mem_align_off_2)}} & 2'b10 |
-                               {2{(inst1_swl_mem_res ) & (inst1_mem_align_off_3)}} & 2'b10 |
-                               {2{(inst1_swr_mem_res ) & (inst1_mem_align_off_0)}} & 2'b10 |                  //swr  lwr
-                               {2{(inst1_swr_mem_res ) & (inst1_mem_align_off_1)}} & 2'b10 |
-                               {2{(inst1_swr_mem_res ) & (inst1_mem_align_off_2)}} & 2'b01 |
-                               {2{(inst1_swr_mem_res ) & (inst1_mem_align_off_3)}} & 2'b00 ;
-
-assign inst2_data_cache_size = {2{inst2_sw_mem_res}} & 2'b10 |                                          //sw,lw
-                               {2{(inst2_sh_mem_res | inst2_shu_mem_res) & (inst2_mem_align_off_0 | inst2_mem_align_off_1)}} & 2'b01 |   //sh lh lhu             //wrong in handbook
-                               {2{(inst2_sh_mem_res | inst2_shu_mem_res) & (inst2_mem_align_off_2 | inst2_mem_align_off_3)}} & 2'b01 |
-                               {2{(inst2_sb_mem_res | inst2_sbu_mem_res) & (inst2_mem_align_off_0)}} & 2'b00 |      //sb  lb  lbu
-                               {2{(inst2_sb_mem_res | inst2_sbu_mem_res) & (inst2_mem_align_off_1)}} & 2'b00 |
-                               {2{(inst2_sb_mem_res | inst2_sbu_mem_res) & (inst2_mem_align_off_2)}} & 2'b00 |
-                               {2{(inst2_sb_mem_res | inst2_sbu_mem_res) & (inst2_mem_align_off_3)}} & 2'b00 |
-                               {2{(inst2_swl_mem_res ) & (inst2_mem_align_off_0)}} & 2'b00 |                  //swl  lwl
-                               {2{(inst2_swl_mem_res ) & (inst2_mem_align_off_1)}} & 2'b01 |
-                               {2{(inst2_swl_mem_res ) & (inst2_mem_align_off_2)}} & 2'b10 |
-                               {2{(inst2_swl_mem_res ) & (inst2_mem_align_off_3)}} & 2'b10 |
-                               {2{(inst2_swr_mem_res ) & (inst2_mem_align_off_0)}} & 2'b10 |                  //swr  lwr
-                               {2{(inst2_swr_mem_res ) & (inst2_mem_align_off_1)}} & 2'b10 |
-                               {2{(inst2_swr_mem_res ) & (inst2_mem_align_off_2)}} & 2'b01 |
-                               {2{(inst2_swr_mem_res ) & (inst2_mem_align_off_3)}} & 2'b00 ;
-
-assign inst1_data_cache_wdata = {32{inst1_sb_mem_res}} & {4{inst1_rt_value[ 7:0]}} |
-                                {32{inst1_sh_mem_res}} & {2{inst1_rt_value[15:0]}} |
-                                {32{inst1_sw_mem_res}} & {inst1_rt_value} |
-                                {32{inst1_swl_mem_res & inst1_mem_align_off_0}} & {24'b0, inst1_rt_value[31:24]} |
-                                {32{inst1_swl_mem_res & inst1_mem_align_off_1}} & {16'b0, inst1_rt_value[31:16]} |
-                                {32{inst1_swl_mem_res & inst1_mem_align_off_2}} & { 8'b0, inst1_rt_value[31: 8]} |
-                                {32{inst1_swl_mem_res & inst1_mem_align_off_3}} & inst1_rt_value |
-                                {32{inst1_swr_mem_res & inst1_mem_align_off_0}} & inst1_rt_value |
-                                {32{inst1_swr_mem_res & inst1_mem_align_off_1}} & {inst1_rt_value[23: 0], 8'b0} |
-                                {32{inst1_swr_mem_res & inst1_mem_align_off_2}} & {inst1_rt_value[15: 0],16'b0} |
-                                {32{inst1_swr_mem_res & inst1_mem_align_off_3}} & {inst1_rt_value[ 7: 0],24'b0} ;
-
-assign inst2_data_cache_wdata = {32{inst2_sb_mem_res}} & {4{inst2_rt_value[ 7:0]}} |
-                                {32{inst2_sh_mem_res}} & {2{inst2_rt_value[15:0]}} |
-                                {32{inst2_sw_mem_res}} & {inst2_rt_value} |
-                                {32{inst2_swl_mem_res & inst2_mem_align_off_0}} & {24'b0, inst2_rt_value[31:24]} |
-                                {32{inst2_swl_mem_res & inst2_mem_align_off_1}} & {16'b0, inst2_rt_value[31:16]} |
-                                {32{inst2_swl_mem_res & inst2_mem_align_off_2}} & { 8'b0, inst2_rt_value[31: 8]} |
-                                {32{inst2_swl_mem_res & inst2_mem_align_off_3}} & inst2_rt_value |
-                                {32{inst2_swr_mem_res & inst2_mem_align_off_0}} & inst2_rt_value |
-                                {32{inst2_swr_mem_res & inst2_mem_align_off_1}} & {inst2_rt_value[23: 0], 8'b0} |
-                                {32{inst2_swr_mem_res & inst2_mem_align_off_2}} & {inst2_rt_value[15: 0],16'b0} |
-                                {32{inst2_swr_mem_res & inst2_mem_align_off_3}} & {inst2_rt_value[ 7: 0],24'b0} ;
-
-wire [31:0] inst1_data_addr;
-wire [31:0] inst2_data_addr;
-wire [31:0] inst1_VA;
-wire [31:0] inst2_VA;
-
-reg inst1_addr_ok_reg;
-reg inst2_addr_ok_reg;
-
-always@(posedge clk) begin
-    if(reset) begin
-        inst1_addr_ok_reg <= 1'b0;
-    end
-    else if(pms_to_ms_valid && ms_allowin)
-        inst1_addr_ok_reg <= 1'b0;
-    else if(inst1_data_cache_addr_ok)
-        inst1_addr_ok_reg <= 1'b1;
-end
-
-always@(posedge clk) begin
-    if(reset) begin
-        inst2_addr_ok_reg <= 1'b0;
-    end
-    else if(pms_to_ms_valid && ms_allowin)
-        inst2_addr_ok_reg <= 1'b0;
-    else if(inst2_data_cache_addr_ok)
-        inst2_addr_ok_reg <= 1'b1;
-end
-
-assign inst1_VA = inst1_swl_mem_res ? {pms_inst1_mem_addr[31:2], 2'b0} : pms_inst1_mem_addr;
-assign inst2_VA = inst2_swl_mem_res ? {pms_inst2_mem_addr[31:2], 2'b0} : pms_inst2_mem_addr;
-assign inst1_data_addr = {3'b0, inst1_VA[28:0]};
-assign inst2_data_addr = {3'b0, inst2_VA[28:0]};
-
-
-assign inst1_data_cache_valid = (inst1_load_op | inst1_mem_we) & ms_allowin & pms_valid & ~inst1_pms_except & ~inst1_addr_ok_reg;
-assign inst1_data_cache_op = inst1_mem_we & pms_valid & ~inst1_pms_except;
-assign inst1_data_cache_uncache = inst1_VA[31] && ~inst1_VA[30] && inst1_VA[29];
-assign inst1_data_cache_tag = inst1_data_addr[31:12];
-assign inst1_data_cache_index = inst1_data_addr[11:4];
-assign inst1_data_cache_offset = inst1_data_addr[3:0];
-assign inst1_data_cache_wstrb = (inst1_mem_we & pms_valid & ~inst1_pms_except) ? inst1_write_strb : 4'h0;
-
-wire mem_RAW;
-assign mem_RAW = (inst1_VA[31:2] == inst2_VA[31:2]) & inst1_mem_we & inst2_load_op & ~inst1_pms_except & ~inst2_pms_except;
-
-assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & ms_allowin & pms_valid & ~(inst1_pms_except | inst1_pms_eret) & ~inst2_pms_except & ~inst2_addr_ok_reg;
-assign inst2_data_cache_op = inst2_mem_we & pms_valid & ~inst1_pms_except & ~inst2_pms_except;
-assign inst2_data_cache_uncache = inst2_VA[31] && ~inst2_VA[30] && inst2_VA[29];
-assign inst2_data_cache_tag = inst2_data_addr[31:12];
-assign inst2_data_cache_index = inst2_data_addr[11:4];
-assign inst2_data_cache_offset = inst2_data_addr[3:0];
-assign inst2_data_cache_wstrb = (inst2_mem_we & pms_valid & ~inst1_pms_except & ~inst2_pms_except) ? inst2_write_strb : 4'h0;
 
 
 // data bus
 assign pms_to_ms_bus = {
-        pms_inst2_valid,
+        inst2_valid,
         inst2_load_store_type,
         inst2_load_store_offset,
         inst2_load_op,

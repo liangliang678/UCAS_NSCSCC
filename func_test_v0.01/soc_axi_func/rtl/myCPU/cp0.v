@@ -20,7 +20,9 @@ module cp0(
     output [31:0] inst1_c0_rdata    ,
     output [31:0] inst2_c0_rdata    ,
     output        has_int           ,
-    output [31:0] epc_res      
+    output [31:0] epc_res           ,
+
+    input  [ 5:0] ext_int_in
 
     // //for TLB
     // output [31:0] cp0_index   ,
@@ -142,8 +144,10 @@ end
 always @(posedge cp0_clk) begin
     if (reset)
         c0_cause_ip[7:2] <= 6'b0;
-    else 
-        c0_cause_ip[7] <= c0_cause_ti;
+    else begin
+        c0_cause_ip[7]   <= ext_int_in[5] | c0_cause_ti;
+        c0_cause_ip[6:2] <= ext_int_in[4:0];
+    end
 end
 
 always @(posedge cp0_clk) begin

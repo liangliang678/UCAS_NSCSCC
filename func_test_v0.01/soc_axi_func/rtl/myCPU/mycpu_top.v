@@ -319,6 +319,29 @@ exe_stage exe_stage(
     // .es_inst1_mul_res       (es_inst1_mul_res),
     // .es_inst2_mul_res       (es_inst2_mul_res),
 
+    // data cache interface
+    .inst1_data_cache_valid     (inst1_data_cache_valid),
+    .inst1_data_cache_op        (inst1_data_cache_op),
+    .inst1_data_cache_uncache       (inst1_data_cache_uncache),
+    .inst1_data_cache_tag       (inst1_data_cache_tag),
+    .inst1_data_cache_index     (inst1_data_cache_index),
+    .inst1_data_cache_offset        (inst1_data_cache_offset),
+    .inst1_data_cache_size      (inst1_data_cache_size), 
+    .inst1_data_cache_wstrb     (inst1_data_cache_wstrb),
+    .inst1_data_cache_wdata     (inst1_data_cache_wdata),
+    .inst1_data_cache_addr_ok       (inst1_data_cache_addr_ok),
+
+    .inst2_data_cache_valid     (inst2_data_cache_valid),
+    .inst2_data_cache_op        (inst2_data_cache_op),
+    .inst2_data_cache_uncache       (inst2_data_cache_uncache),
+    .inst2_data_cache_tag       (inst2_data_cache_tag),
+    .inst2_data_cache_index     (inst2_data_cache_index),
+    .inst2_data_cache_offset        (inst2_data_cache_offset),
+    .inst2_data_cache_size      (inst2_data_cache_size), 
+    .inst2_data_cache_wstrb     (inst2_data_cache_wstrb),
+    .inst2_data_cache_wdata     (inst2_data_cache_wdata),
+    .inst2_data_cache_addr_ok       (inst2_data_cache_addr_ok),
+
     //relevant bus
     .es_forward_bus         (es_forward_bus),
   
@@ -348,28 +371,7 @@ premem_stage premem_stage(
     .clear_all                  (clear_all),
     .reflush_pc                 (reflush_pc),
 
-    // data cache interface
-    .inst1_data_cache_valid     (inst1_data_cache_valid),
-    .inst1_data_cache_op        (inst1_data_cache_op),
-    .inst1_data_cache_uncache       (inst1_data_cache_uncache),
-    .inst1_data_cache_tag       (inst1_data_cache_tag),
-    .inst1_data_cache_index     (inst1_data_cache_index),
-    .inst1_data_cache_offset        (inst1_data_cache_offset),
-    .inst1_data_cache_size      (inst1_data_cache_size), 
-    .inst1_data_cache_wstrb     (inst1_data_cache_wstrb),
-    .inst1_data_cache_wdata     (inst1_data_cache_wdata),
-    .inst1_data_cache_addr_ok       (inst1_data_cache_addr_ok),
 
-    .inst2_data_cache_valid     (inst2_data_cache_valid),
-    .inst2_data_cache_op        (inst2_data_cache_op),
-    .inst2_data_cache_uncache       (inst2_data_cache_uncache),
-    .inst2_data_cache_tag       (inst2_data_cache_tag),
-    .inst2_data_cache_index     (inst2_data_cache_index),
-    .inst2_data_cache_offset        (inst2_data_cache_offset),
-    .inst2_data_cache_size      (inst2_data_cache_size), 
-    .inst2_data_cache_wstrb     (inst2_data_cache_wstrb),
-    .inst2_data_cache_wdata     (inst2_data_cache_wdata),
-    .inst2_data_cache_addr_ok       (inst2_data_cache_addr_ok),
 
     //cp0
     //signals of mtc0, from pms
@@ -417,7 +419,8 @@ cp0 cp0(
     .inst1_c0_rdata             (inst1_c0_rdata),
     .inst2_c0_rdata             (inst2_c0_rdata),
     .has_int                    (has_int),
-    .epc_res                    (pms_epc)
+    .epc_res                    (pms_epc),
+    .ext_int_in                 (ext_int)
 
     // //for TLB
     // output [31:0] cp0_index   ,
@@ -479,7 +482,7 @@ wb_stage wb_stage(
 );
 
 
-icache icache(
+icache3 icache3(
     .clk        (aclk   ),
     .resetn     (aresetn),
 

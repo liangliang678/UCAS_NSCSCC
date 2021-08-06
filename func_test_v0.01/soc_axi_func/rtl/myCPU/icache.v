@@ -176,7 +176,7 @@ wire [31:0] data_way3_bank5_dout;
 wire [31:0] data_way3_bank6_dout;
 wire [31:0] data_way3_bank7_dout;
 
-Tag_RAM Tag_RAM_Way0(
+Tag_RAM_8 Tag_RAM_8_Way0(
     .clka   (clk          ),
     .addra  (tag_addr     ),
     .ena    (tag_way0_en  ),
@@ -184,7 +184,7 @@ Tag_RAM Tag_RAM_Way0(
     .dina   (tag_way0_din ),
     .douta  (tag_way0_dout)
 );
-Tag_RAM Tag_RAM_Way1(
+Tag_RAM_8 Tag_RAM_8_Way1(
     .clka   (clk          ),
     .addra  (tag_addr     ),
     .ena    (tag_way1_en  ),
@@ -192,7 +192,7 @@ Tag_RAM Tag_RAM_Way1(
     .dina   (tag_way1_din ),
     .douta  (tag_way1_dout)
 );
-Tag_RAM Tag_RAM_Way2(
+Tag_RAM_8 Tag_RAM_8_Way2(
     .clka   (clk          ),
     .addra  (tag_addr     ),
     .ena    (tag_way2_en  ),
@@ -200,7 +200,7 @@ Tag_RAM Tag_RAM_Way2(
     .dina   (tag_way2_din ),
     .douta  (tag_way2_dout)
 );
-Tag_RAM Tag_RAM_Way3(
+Tag_RAM_8 Tag_RAM_8_Way3(
     .clka   (clk          ),
     .addra  (tag_addr     ),
     .ena    (tag_way3_en  ),
@@ -668,7 +668,7 @@ end endgenerate
 
 // Request Buffer
 reg  [ 19:0] rb_tag;
-reg  [  6:0] rb_index;
+(* max_fanout = 50 *)reg  [  6:0] rb_index;
 reg  [  4:0] rb_offset;
 
 wire         way0_v;
@@ -724,10 +724,10 @@ assign cache_hit = (way0_hit | way1_hit | way2_hit | way3_hit);
 
 // Data Select
 wire [255:0] load_res;
-assign load_res = {255{way0_hit}} & way0_data |
-                  {255{way1_hit}} & way1_data |
-                  {255{way2_hit}} & way2_data |
-                  {255{way3_hit}} & way3_data;
+assign load_res = {256{way0_hit}} & way0_data |
+                  {256{way1_hit}} & way1_data |
+                  {256{way2_hit}} & way2_data |
+                  {256{way3_hit}} & way3_data;
 
 // PLRU
 reg [127:0] way0_mru;
@@ -852,18 +852,18 @@ assign rd_way_data_bank6 = ret_data[223:192];
 assign rd_way_data_bank7 = ret_data[255:224];
 
 // Output
-assign addr_ok = (state == `IDLE || (state == `LOOKUP && cache_hit)) && valid;
-assign data_ok = (state == `LOOKUP) && cache_hit || 
-                 (state == `REFILL) && ret_valid ||
-                 (state == `URESP)  && ret_valid;
-assign rdata = {256{(state == `LOOKUP) && cache_hit}} & load_res | 
-               {256{(state == `REFILL) && ret_valid}} & ret_data | 
-               {256{(state == `URESP)  && ret_valid}} & {ret_data[31:0], 224'b0}; 
-assign rnum = (state == `URESP) ? 4'b1 : {1'b0, ~(rb_offset[4:2])} + 4'b1;
+assign addr_ok = (state[0] || (state[1] && cache_hit)) && valid;
+assign data_ok = (state[1]) && cache_hit || 
+                 (state[3]) && ret_valid ||
+                 (state[5])  && ret_valid;
+assign rdata = ({256{state[1]}} & load_res) | 
+               ({256{state[3]}} & ret_data) | 
+               ({256{state[5]}} & {ret_data[31:0], 224'b0}); 
+assign rnum = (state[5]) ? 4'b1 : {1'b0, ~(rb_offset[4:2])} + 4'b1;
 
-assign rd_req  = (state == `UREQ) || (state == `REPLACE);
-assign rd_type = (state == `UREQ) ? 1'b0 : 1'b1;
-assign rd_addr = (state == `UREQ) ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 5'b0};
+assign rd_req  = (state[4]) || (state[2]);
+assign rd_type = (state[4]) ? 1'b0 : 1'b1;
+assign rd_addr = (state[4]) ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 5'b0};
 
 // Main FSM
 reg [5:0] state;

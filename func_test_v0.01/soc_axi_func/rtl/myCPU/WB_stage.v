@@ -56,6 +56,7 @@ assign {inst2_valid,
        } = ms_to_ws_bus_r;
 
 assign ws_ready_go = ~double_write | double_write & double_write_wait;
+//assign ws_ready_go = 1'b1;
 assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
     if (reset) begin
@@ -118,6 +119,8 @@ assign rf_wdata_02 = 32'b0;
 // debug info generate
 assign debug_wb_pc       = {32{double_write & ~double_write_wait | ~double_write & inst1_write}} & inst1_pc | 
                            {32{double_write & double_write_wait  | ~double_write & inst2_write}} & inst2_pc;
+
+//assign debug_wb_pc       = inst1_pc;
 assign debug_wb_rf_wen   = {4{rf_we_01}};
 assign debug_wb_rf_wnum  = rf_waddr_01;
 assign debug_wb_rf_wdata = rf_wdata_01;
