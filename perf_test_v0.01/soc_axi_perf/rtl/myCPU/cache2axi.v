@@ -1,10 +1,9 @@
 `define AR_IDLE          2'b01
 `define AR_SEND_REQ      2'b10
 
-`define W_IDLE           4'b0001
-`define W_RECV_REQ       4'b0010
-`define W_SEND_ADDR      4'b0100
-`define W_SEND_DATA      4'b1000
+`define W_IDLE           3'b001
+`define W_SEND_ADDR      3'b010
+`define W_SEND_DATA      3'b100
 
 `define B_IDLE           2'b01
 `define B_RESP           2'b10
@@ -19,7 +18,6 @@ module cache2axi(
     output          inst_rd_rdy,
     output          inst_ret_valid,
     output  [511:0] inst_ret_data,
-    // for prefetcher
     output          inst_ret_half,
     // data cache interface - slave
     input           data_rd_req,
@@ -83,10 +81,10 @@ module cache2axi(
 );
 
 reg [1:0] ar_state;
-reg [4:0] w_state;
+reg [2:0] w_state;
 reg [1:0] b_state;
 reg [1:0] ar_next_state;
-reg [4:0] w_next_state;
+reg [2:0] w_next_state;
 reg [1:0] b_next_state;
 
 // AR
@@ -103,7 +101,7 @@ assign axi_arburst = 2'b1;
 assign axi_arlock  = 2'b0;
 assign axi_arcache = 4'b0;
 assign axi_arprot  = 3'b0;
-assign axi_arvalid = (ar_state == `AR_SEND_REQ);
+assign axi_arvalid = ar_state[1];
 
 always @(posedge clk) begin
     if (!resetn) begin
@@ -166,18 +164,12 @@ always @(posedge clk) begin
         arlen <= 4'b0;
     end 
     else if (data_rd_req && data_rd_rdy) begin
-        if (data_rd_type == 1'b0)
-            arlen <= 4'd0;
-        else if (data_rd_type == 1'b1)
-            arlen <= 4'd3;
+        arlen <= data_rd_type ? 4'd3 : 4'd0;
     end 
     else if (inst_rd_req && inst_rd_rdy) begin
-        if (inst_rd_type == 2'b00)
-            arlen <= 4'd0;
-        else if (inst_rd_type == 2'b01)
-            arlen <= 4'd7;
-        else if (inst_rd_type == 2'b10)
-            arlen <= 4'd15;
+        arlen <= {4{inst_rd_type == 2'b00}} & 4'd0 |
+                 {4{inst_rd_type == 2'b01}} & 4'd7 |
+                 {4{inst_rd_type == 2'b10}} & 4'd15;
     end
 end
 
@@ -193,8 +185,8 @@ always @(posedge clk) begin
     end
 end
 
-assign inst_rd_rdy = (ar_state == `AR_IDLE) && !data_rd_req;
-assign data_rd_rdy = (ar_state == `AR_IDLE);
+assign inst_rd_rdy = ar_state[0] && !data_rd_req;
+assign data_rd_rdy = ar_state[0];
 
 // R
 reg [127:0] data_rdata;
@@ -208,7 +200,7 @@ always @(posedge clk) begin
     if (!resetn) begin
         data_rcount <= 2'b0;
     end 
-    else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
+    else if (axi_rready && axi_rvalid && axi_rid[0]) begin
         if (axi_rlast) begin
             data_rcount <= 2'b0;
         end
@@ -222,7 +214,7 @@ always @(posedge clk) begin
     if (!resetn) begin
         data_rdata <= 128'b0;
     end 
-    else if (axi_rready && axi_rvalid && axi_rid == 1'b1) begin
+    else if (axi_rready && axi_rvalid && axi_rid[0]) begin
         data_rdata[data_rcount*32 +: 32] <= axi_rdata;
     end
 end
@@ -231,7 +223,7 @@ always @(posedge clk) begin
     if (!resetn) begin
         inst_rcount <= 4'b0;
     end 
-    else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
+    else if (axi_rready && axi_rvalid && !axi_rid[0]) begin
         if (axi_rlast) begin
             inst_rcount <= 4'b0;
         end
@@ -245,23 +237,23 @@ always @(posedge clk) begin
     if (!resetn) begin
         inst_rdata <= 512'b0;
     end 
-    else if (axi_rready && axi_rvalid && axi_rid == 1'b0) begin
+    else if (axi_rready && axi_rvalid && !axi_rid[0]) begin
         inst_rdata[inst_rcount*32 +: 32] <= axi_rdata;
     end
 end
 
-// to cache
 reg to_icache_valid;
 reg to_dcache_valid;
 reg to_icache_half;
+
 always @(posedge clk) begin
     if (!resetn) begin
         to_icache_valid <= 1'b0;
     end
-    else if (axi_rready && axi_rvalid && axi_rlast && axi_rid == 4'b0) begin
+    else if (axi_rready && axi_rvalid && axi_rlast && !axi_rid[0]) begin
         to_icache_valid <= 1'b1;
     end
-    else if (to_icache_valid == 1'b1) begin
+    else if (to_icache_valid) begin
         to_icache_valid <= 1'b0;
     end
 end 
@@ -269,10 +261,10 @@ always @(posedge clk) begin
     if (!resetn) begin
         to_dcache_valid <= 1'b0;
     end
-    else if (axi_rready && axi_rvalid && axi_rlast && axi_rid == 4'b1) begin
+    else if (axi_rready && axi_rvalid && axi_rlast && axi_rid[0]) begin
         to_dcache_valid <= 1'b1;
     end
-    else if (to_dcache_valid == 1'b1) begin
+    else if (to_dcache_valid) begin
         to_dcache_valid <= 1'b0;
     end
 end
@@ -280,10 +272,10 @@ always @(posedge clk) begin
     if (!resetn) begin
         to_icache_half <= 1'b0;
     end
-    else if (axi_rready && axi_rvalid && inst_rcount == 3'd7 && axi_rid == 4'b0) begin
+    else if (axi_rready && axi_rvalid && inst_rcount == 4'd7 && !axi_rid[0]) begin
         to_icache_half <= 1'b1;
     end
-    else if (to_icache_half == 1'b1) begin
+    else if (to_icache_half) begin
         to_icache_half <= 1'b0;
     end
 end 
@@ -295,13 +287,13 @@ assign inst_ret_data = inst_rdata;
 assign data_ret_data = data_rdata;
 
 // W
-reg  [31:0] awaddr;
-reg  [ 7:0] awlen;
-reg  [ 2:0] awsize;
-reg  [ 3:0] wstrb;
+reg  [ 31:0] awaddr;
+reg  [  7:0] awlen;
+reg  [  2:0] awsize;
+reg  [  3:0] wstrb;
 
-reg  [ 1:0] wcount;
-reg [127:0] cache_data;
+reg  [  1:0] wcount;
+reg  [127:0] cache_data;
 
 assign axi_awid    = 4'b1;
 assign axi_awaddr  = awaddr;
@@ -311,51 +303,55 @@ assign axi_awburst = 2'b1;
 assign axi_awlock  = 2'b0;
 assign axi_awcache = 4'b0;
 assign axi_awprot  = 3'b0;
-assign axi_awvalid = (w_state == `W_SEND_ADDR);
+assign axi_awvalid = w_state[1];
 
 assign axi_wid     = 4'b1;
 assign axi_wdata   = cache_data[wcount*32 +: 32];
 assign axi_wstrb   = wstrb;
-assign axi_wlast   = (w_state == `W_SEND_DATA) && (awlen == wcount);
-assign axi_wvalid  = (w_state == `W_SEND_DATA);
+assign axi_wlast   = w_state[2] && (awlen == wcount);
+assign axi_wvalid  = w_state[2];
 
 always @(posedge clk) begin
     if (!resetn) begin
         w_state <= `W_IDLE;
-    end else begin
+    end
+    else begin
         w_state <= w_next_state; 
     end
 end
-
 always @(*) begin
     case(w_state)
-        `W_IDLE:
-            if (data_wr_req && data_wr_rdy) begin
-                w_next_state = `W_RECV_REQ;
-            end else begin
-                w_next_state = `W_IDLE;
-            end
-        `W_RECV_REQ:
+    `W_IDLE:
+        if (data_wr_req && data_wr_rdy) begin
             w_next_state = `W_SEND_ADDR;
-        `W_SEND_ADDR:
-            if (axi_awvalid && axi_awready) begin
-                w_next_state = `W_SEND_DATA;
-            end else begin
-                w_next_state = `W_SEND_ADDR;
-            end
-        `W_SEND_DATA:
-            if (axi_wvalid && axi_wready && axi_wlast) begin
-                w_next_state = `W_IDLE;
-            end else begin
-                w_next_state = `W_SEND_DATA;
-            end
+        end
+        else begin
+            w_next_state = `W_IDLE;
+        end
+    `W_SEND_ADDR:
+        if (axi_awvalid && axi_awready) begin
+            w_next_state = `W_SEND_DATA;
+        end
+        else begin
+            w_next_state = `W_SEND_ADDR;
+        end
+    `W_SEND_DATA:
+        if (axi_wvalid && axi_wready && axi_wlast) begin
+            w_next_state = `W_IDLE;
+        end
+        else begin
+            w_next_state = `W_SEND_DATA;
+        end
+    default:
+        w_next_state = `W_IDLE;
     endcase
 end
 
 always @(posedge clk) begin
     if (!resetn) begin
         awaddr <= 32'b0;
-    end else if (data_wr_req && data_wr_rdy) begin
+    end
+    else if (data_wr_req && data_wr_rdy) begin
         awaddr <= data_wr_addr;
     end
 end
@@ -363,33 +359,27 @@ end
 always @(posedge clk) begin
     if (!resetn) begin
         awlen <= 8'b0;
-    end else if (data_wr_req && data_wr_rdy) begin
-        if (data_wr_type == 1'b0)
-            awlen <= 8'd0;
-        else if (data_wr_type == 1'b1)
-            awlen <= 8'd3;
+    end
+    else if (data_wr_req && data_wr_rdy) begin
+        awlen <= data_wr_type ? 8'd3 : 8'd0;
     end
 end
 
 always @(posedge clk) begin
     if (!resetn) begin
         wstrb <= 4'b0;
-    end else if (data_wr_req && data_wr_rdy) begin
-        if (data_wr_type == 1'b0)
-            wstrb <= data_wr_wstrb;
-        else if (data_wr_type == 1'b1)
-            wstrb <= 4'b1111;
+    end
+    else if (data_wr_req && data_wr_rdy) begin
+        wstrb <= data_wr_wstrb;
     end
 end
 
 always @(posedge clk) begin
     if (!resetn) begin
         awsize <= 3'b0;
-    end else if (data_wr_req && data_wr_rdy) begin
-        if (data_wr_type == 1'b0)
-            awsize <= data_wr_size;
-        else if (data_wr_type == 1'b1)
-            awsize <= 3'd2;
+    end
+    else if (data_wr_req && data_wr_rdy) begin
+        awsize <= data_wr_size;
     end
 end
 
@@ -402,39 +392,44 @@ end
 always @(posedge clk) begin
     if (!resetn) begin
         wcount <= 2'b0;
-    end else if (w_state == `W_IDLE) begin
-        wcount <= 2'b0;
-    end else if (axi_wvalid && axi_wready) begin
-        wcount <= wcount + 2'b1;
+    end
+    else if (axi_wvalid && axi_wready) begin
+        if (axi_wlast) begin
+            wcount <= 2'b0;
+        end
+        else begin
+            wcount <= wcount + 2'b1;
+        end
     end
 end
 
+assign data_wr_rdy = w_state[0];
+
 // B
-assign axi_bready = (b_state == `B_IDLE);
+assign axi_bready = b_state[0];
 
 always @(posedge clk) begin
     if (!resetn) begin
         b_state <= `B_IDLE;
-    end else begin
+    end
+    else begin
         b_state <= b_next_state; 
     end
 end
-
 always @(*) begin
     case(b_state)
-        `B_IDLE:
-            if (axi_bready && axi_bvalid) begin
-                b_next_state = `B_RESP;
-            end else begin
-                b_next_state = `B_IDLE;
-            end
-        `B_RESP:
+    `B_IDLE:
+        if (axi_bready && axi_bvalid) begin
+            b_next_state = `B_RESP;
+        end
+        else begin
             b_next_state = `B_IDLE;
+        end
+    `B_RESP:
+        b_next_state = `B_IDLE;
     endcase
 end
 
-// to cache
-assign data_wr_rdy = (w_state == `W_IDLE);
-assign data_wr_ok = (b_state == `B_RESP);
+assign data_wr_ok = b_state[1];
 
 endmodule

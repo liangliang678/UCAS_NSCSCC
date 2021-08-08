@@ -15,7 +15,7 @@
 module dcache(
     input           clk,
     input           resetn,
-    // Cache and CPU Way1
+    // Cache and CPU Interface1
     input           valid1,
     input           op1,
     input           uncache1,
@@ -28,7 +28,7 @@ module dcache(
     output          addr_ok1,
     output          data_ok1,
     output [ 31:0]  rdata1,
-    // Cache and CPU Way2
+    // Cache and CPU Interface2
     input           valid2,
     input           op2,
     input           uncache2,
