@@ -132,7 +132,7 @@ wire [31:0] inst2_rs_update_value;
 wire [31:0] inst2_rt_update_value;
 
 
-assign {inst2_valid,       //390
+assign {inst2_valid,        //390
         inst2_mul,          //389
         inst2_refill,       //388
         inst2_ds_except,    //387
@@ -278,7 +278,6 @@ end
 assign es_alu_inst1_src1 = inst1_src1_is_sa  ? {27'b0, inst1_imm[10:6]} :
                            inst1_src1_is_pc  ? inst1_pc :
                                                inst1_rs_value ;
-                                               
 assign es_alu_inst1_src2 = inst1_src2_is_imm   ? {{16{inst1_imm[15]}}, inst1_imm[15:0]} :
                            inst1_src2_is_imm16 ? {16'b0, inst1_imm[15:0]} :
                            inst1_src2_is_8     ? 32'd8 :
@@ -288,15 +287,13 @@ assign es_alu_inst2_src1 = inst2_src1_is_sa  ? {27'b0, inst2_imm[10:6]} :
                            inst2_src1_is_pc  ? inst2_pc :
                            self_r1_relevant  ? es_alu_inst2_rs :
                                                inst2_rs_value ;
-                                               
 assign es_alu_inst2_src2 = inst2_src2_is_imm   ? {{16{inst2_imm[15]}}, inst2_imm[15:0]} :
                            inst2_src2_is_imm16 ? {16'b0, inst2_imm[15:0]} : 
                            inst2_src2_is_8     ? 32'd8 :
                            self_r2_relevant    ? es_alu_inst2_rt :
                                                  inst2_rt_value;
 
-assign es_inst2_mem_addr_adder = {32{self_r1_relevant}}  & es_alu_inst2_rs |
-                                  {32{~self_r1_relevant}} & inst2_rs_value;
+assign es_inst2_mem_addr_adder = self_r1_relevant ? es_alu_inst2_rs : inst2_rs_value;
 
 assign es_inst1_mem_addr = inst1_rs_value + {{16{inst1_imm[15]}}, inst1_imm[15:0]} ;
 assign es_inst2_mem_addr = es_inst2_mem_addr_adder + {{16{inst2_imm[15]}}, inst2_imm[15:0]} ;
@@ -354,7 +351,7 @@ assign div_src1 = (inst1_alu_op[14] | inst1_alu_op[15]) ? es_alu_inst1_src1 :
                   (inst2_alu_op[14] | inst2_alu_op[15]) ? es_alu_inst2_src1 : 32'b1; 
 
 assign div_src2 = (inst1_alu_op[14] | inst1_alu_op[15]) ? es_alu_inst1_src2 : 
-                  (inst2_alu_op[14] | inst2_alu_op[15]) ? es_alu_inst2_src2 : 32'b1;    
+                  (inst2_alu_op[14] | inst2_alu_op[15]) ? es_alu_inst2_src2 : 32'b1;   
 
 mul u_mul(
     .mul_clk    (clk              ),
@@ -417,7 +414,7 @@ wire inst2_div_readygo;
 wire inst1_mem_readygo;
 wire inst2_mem_readygo;
 
-assign inst1_mem_readygo = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok) | inst1_es_except; //不访�??? 访存请求接受 有例�???
+assign inst1_mem_readygo = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok) | inst1_es_except; //不访�?? 访存请求接受 有例�??
 assign inst2_mem_readygo = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok) | (inst1_es_except | inst1_es_eret | inst2_es_except);
 
 assign inst1_div_readygo = ~(inst1_alu_op[14] | inst1_alu_op[15]) | (div_complete);
@@ -447,7 +444,7 @@ assign es_to_pms_bus = {
                         es_inst2_valid,             //572
                         inst2_mul,                  //571
                         inst2_refill,               //570
-                        inst2_es_except,            //569   
+                        inst2_es_except,            //569
                         inst2_es_exccode,           //564:568
                         inst2_es_BadVAddr,          //532:563
                         inst2_es_tlbp,              //531
@@ -476,7 +473,7 @@ assign es_to_pms_bus = {
                         inst2_pc,                   //368:399
                         es_inst2_mem_addr,          //336:367
                         inst2_load_store_offset,    //334:335
-
+            
                         br_target,                  //302:333
                         es_alu_div_res,             //238:301
 
@@ -502,7 +499,7 @@ assign es_to_pms_bus = {
                         inst1_hl_src_from_mul,      //170
                         inst1_hl_src_from_div,      //169
                         es_alu_inst1_result,        //137:168
-                        //es_alu_inst1_div_res,
+                        //es_alu_inst1_div_res,         
                         inst1_gr_we,                //136
                         inst1_mem_we,               //135
                         inst1_dest,                 //130:134
@@ -510,7 +507,7 @@ assign es_to_pms_bus = {
                         inst1_rt_value,             //66:97
                         inst1_pc,                   //34:65
                         es_inst1_mem_addr,          //2:33
-                        inst1_load_store_offset     //0:1                 
+                        inst1_load_store_offset     //0:1                    
                        };
 
 
@@ -697,7 +694,7 @@ assign inst1_data_cache_wstrb = (inst1_mem_we & es_valid & ~inst1_es_except) ? i
 // wire mem_RAW;
 // assign mem_RAW = (inst1_VA[31:2] == inst2_VA[31:2]) & inst1_mem_we & inst2_load_op & ~inst1_es_except & ~inst2_es_except;
 
-assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & es_valid & ~(inst1_es_except | inst1_es_eret) & ~inst2_es_except & (inst1_load_op | inst1_mem_we | (~(self_r1_relevant | self_r2_relevant) | ((self_r1_relevant | self_r2_relevant) & self_relevant_stall)) | inst1_div_readygo);
+assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & es_valid & ~(inst1_es_except | inst1_es_eret) & ~inst2_es_except  & (inst1_load_op | inst1_mem_we | (inst1_div_readygo & (inst1_alu_op[14] | inst1_alu_op[15])) | (~(self_r1_relevant | self_r2_relevant) | ((self_r1_relevant | self_r2_relevant) & self_relevant_stall)));
 assign inst2_data_cache_op = inst2_mem_we;
 assign inst2_data_cache_uncache = inst2_VA[31] && ~inst2_VA[30] && inst2_VA[29];
 assign inst2_data_cache_tag = inst2_data_addr[31:12];
