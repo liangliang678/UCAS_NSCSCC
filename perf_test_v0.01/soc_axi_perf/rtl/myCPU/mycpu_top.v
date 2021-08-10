@@ -62,13 +62,11 @@ wire         ds_allowin;
 wire         es_allowin;
 wire         pms_allowin;
 wire         ms_allowin;
-wire         ws_allowin;
 wire         to_fs_valid;
 wire         fs_to_ds_valid;
 wire         ds_to_es_valid;
 wire         es_to_pms_valid;
 wire         pms_to_ms_valid;
-wire         ms_to_ws_valid;
  
 wire [ 4:0]  fs_rf_raddr1;
 wire [ 4:0]  fs_rf_raddr2;
@@ -83,13 +81,12 @@ wire  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus;
 wire  [`ES_TO_PMS_BUS_WD -1:0] es_to_pms_bus;
 wire  [`PMS_TO_MS_BUS_WD -1:0] pms_to_ms_bus;
 wire  [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus;
-wire  [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus;
+wire  [`WS_TO_RF_BUS_WD -1:0] ms_to_rf_bus;
 
 wire  [`DS_FORWARD_BUS_WD -1:0] ds_forward_bus;
 wire  [`ES_FORWARD_BUS_WD -1:0] es_forward_bus;
 wire  [`PMS_FORWARD_BUS_WD -1:0] pms_forward_bus;
 wire  [`MS_FORWARD_BUS_WD -1:0] ms_forward_bus;
-wire  [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus;
 
 wire         fs_no_inst_wait;
 wire [ 5:0]  inst_offset;
@@ -253,7 +250,7 @@ if_stage if_stage(
     .es_forward_bus        (es_forward_bus),
     .pms_forward_bus       (pms_forward_bus),
     .ms_forward_bus        (ms_forward_bus),
-    .ws_forward_bus        (ws_forward_bus),
+    //.ws_forward_bus        (ws_forward_bus),
 
     //icache output
     .inst_cache_data_ok       (inst_cache_data_ok),
@@ -287,13 +284,13 @@ id_stage id_stage(
     .ds_to_fs_rf_rdata2     (ds_rf_rdata2),
 
     //to rf: for write back
-    .ws_to_rf_bus           (ws_to_rf_bus ),
+    .ms_to_rf_bus           (ms_to_rf_bus ),
 
     //relevant bus
     .es_forward_bus         (es_forward_bus),
     .pms_forward_bus        (pms_forward_bus),
     .ms_forward_bus         (ms_forward_bus),
-    .ws_forward_bus         (ws_forward_bus),
+    //.ws_forward_bus         (ws_forward_bus),
     .ds_forward_bus         (ds_forward_bus),
 
     //handle interrupt
@@ -440,14 +437,12 @@ mem_stage mem_stage(
     .clk            (aclk            ),
     .reset          (reset          ),
     //allowin
-    .ws_allowin     (ws_allowin     ),
     .ms_allowin     (ms_allowin     ),
     //from es
     .pms_to_ms_valid (pms_to_ms_valid ),
     .pms_to_ms_bus   (pms_to_ms_bus   ),
-    //to ws
-    .ms_to_ws_valid (ms_to_ws_valid ),
-    .ms_to_ws_bus   (ms_to_ws_bus   ),
+    //to rf: for write back
+    .ms_to_rf_bus   (ms_to_rf_bus)  ,
     
     //data relevant
     .ms_forward_bus (ms_forward_bus),
@@ -456,9 +451,15 @@ mem_stage mem_stage(
     .data_cache_data_ok_01(data_cache_data_ok_01),
     .data_cache_rdata_01(data_cache_rdata_01),
     .data_cache_data_ok_02(data_cache_data_ok_02),
-    .data_cache_rdata_02(data_cache_rdata_02)
-);
+    .data_cache_rdata_02(data_cache_rdata_02),
 
+    //trace debug interface
+    .debug_wb_pc     (debug_wb_pc),
+    .debug_wb_rf_wen (debug_wb_rf_wen),
+    .debug_wb_rf_wnum(debug_wb_rf_wnum),
+    .debug_wb_rf_wdata(debug_wb_rf_wdata)
+);
+/*
 wb_stage wb_stage(
     .clk           (aclk)  ,
     .reset         (reset) ,
@@ -480,7 +481,7 @@ wb_stage wb_stage(
     .debug_wb_rf_wnum(debug_wb_rf_wnum),
     .debug_wb_rf_wdata(debug_wb_rf_wdata)
 );
-
+*/
 
 icache3 icache3(
     .clk        (aclk   ),
