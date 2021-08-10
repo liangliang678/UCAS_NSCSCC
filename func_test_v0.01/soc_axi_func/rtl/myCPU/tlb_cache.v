@@ -3,6 +3,7 @@ module tlb_cache
     input         reset,
     input         clk,
     
+    input  [ 3:0] s_index,
     input         s_found,
     input  [19:0] s_pfn,
     input         s_d,
@@ -17,6 +18,7 @@ module tlb_cache
     input          tlb_write,
 
     output [19 :0] inst_pfn,
+    output [ 3: 0] inst_tlb_index,
     output         inst_tlb_v,
     output         inst_tlb_d,
     output         inst_tlb_found
@@ -25,6 +27,7 @@ module tlb_cache
 reg [1 :0] state;
 reg [1 :0] nextstate;
 reg [18:0] vpn2;
+reg [ 3:0] index;
 reg odd_page;
 //reg [7 :0] asid;
 reg [19 :0] pfn;
@@ -65,6 +68,7 @@ begin
         vpn2 <= 19'd0;
         odd_page <= 1'b0;
         //asid <= 8'b0;
+        index <= 4'd0;
         pfn <= 20'b0;
         tlb_d <= 1'b0;
         tlb_v <= 1'b0 ;
@@ -75,6 +79,7 @@ begin
         vpn2 <= inst_VA[31:13];
         odd_page <= inst_VA[12];
         //asid <= cp0_entryhi[7:0];
+        index <= s_index;
         pfn <= s_pfn;
         tlb_v <= s_v;
         tlb_d <= s_d;
@@ -86,6 +91,7 @@ assign inst_pfn = pfn;
 assign inst_tlb_v = tlb_v;
 assign inst_tlb_d = tlb_d;
 assign inst_tlb_found = tlb_found;
+assign inst_tlb_index = index; 
 
 
 assign inst_tlb_req_en = ((tlb_hit | !inst_use_tlb) & (state == 2'b00)) | (state == 2'b10);
