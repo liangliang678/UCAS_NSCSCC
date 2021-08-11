@@ -26,14 +26,14 @@ module cache2axi(
     input   [  2:0] data_rd_size,
     output          data_rd_rdy,
     output          data_ret_valid,
-    output  [127:0] data_ret_data,
+    output  [255:0] data_ret_data,
 
     input           data_wr_req,
     input           data_wr_type,
     input   [ 31:0] data_wr_addr,
     input   [  2:0] data_wr_size,
     input   [  3:0] data_wr_wstrb,
-    input   [127:0] data_wr_data,
+    input   [255:0] data_wr_data,
     output          data_wr_rdy,
     output          data_wr_ok,
     // axi interface - master
@@ -164,7 +164,7 @@ always @(posedge clk) begin
         arlen <= 4'b0;
     end 
     else if (data_rd_req && data_rd_rdy) begin
-        arlen <= data_rd_type ? 4'd3 : 4'd0;
+        arlen <= data_rd_type ? 4'd7 : 4'd0;
     end 
     else if (inst_rd_req && inst_rd_rdy) begin
         arlen <= {4{inst_rd_type == 2'b00}} & 4'd0 |
@@ -189,8 +189,8 @@ assign inst_rd_rdy = ar_state[0] && !data_rd_req;
 assign data_rd_rdy = ar_state[0];
 
 // R
-reg [127:0] data_rdata;
-reg [  1:0] data_rcount;
+reg [255:0] data_rdata;
+reg [  2:0] data_rcount;
 reg [511:0] inst_rdata;
 reg [  3:0] inst_rcount;
 
@@ -198,21 +198,21 @@ assign axi_rready = 1'b1;
 
 always @(posedge clk) begin
     if (!resetn) begin
-        data_rcount <= 2'b0;
+        data_rcount <= 3'b0;
     end 
     else if (axi_rready && axi_rvalid && axi_rid[0]) begin
         if (axi_rlast) begin
-            data_rcount <= 2'b0;
+            data_rcount <= 3'b0;
         end
         else begin
-            data_rcount <= data_rcount + 2'b1;
+            data_rcount <= data_rcount + 3'b1;
         end
     end
 end
 
 always @(posedge clk) begin
     if (!resetn) begin
-        data_rdata <= 128'b0;
+        data_rdata <= 256'b0;
     end 
     else if (axi_rready && axi_rvalid && axi_rid[0]) begin
         data_rdata[data_rcount*32 +: 32] <= axi_rdata;
@@ -292,8 +292,8 @@ reg  [  7:0] awlen;
 reg  [  2:0] awsize;
 reg  [  3:0] wstrb;
 
-reg  [  1:0] wcount;
-reg  [127:0] cache_data;
+reg  [  2:0] wcount;
+reg  [255:0] cache_data;
 
 assign axi_awid    = 4'b1;
 assign axi_awaddr  = awaddr;
@@ -361,7 +361,7 @@ always @(posedge clk) begin
         awlen <= 8'b0;
     end
     else if (data_wr_req && data_wr_rdy) begin
-        awlen <= data_wr_type ? 8'd3 : 8'd0;
+        awlen <= data_wr_type ? 8'd7 : 8'd0;
     end
 end
 
@@ -391,14 +391,14 @@ end
 
 always @(posedge clk) begin
     if (!resetn) begin
-        wcount <= 2'b0;
+        wcount <= 3'b0;
     end
     else if (axi_wvalid && axi_wready) begin
         if (axi_wlast) begin
-            wcount <= 2'b0;
+            wcount <= 3'b0;
         end
         else begin
-            wcount <= wcount + 2'b1;
+            wcount <= wcount + 3'b1;
         end
     end
 end

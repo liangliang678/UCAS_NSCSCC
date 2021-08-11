@@ -21,8 +21,8 @@ module exe_stage(
     output           inst1_data_cache_op,
     output           inst1_data_cache_uncache,
     output  [ 19:0]  inst1_data_cache_tag,
-    output  [  7:0]  inst1_data_cache_index,
-    output  [  3:0]  inst1_data_cache_offset,
+    output  [  6:0]  inst1_data_cache_index,
+    output  [  4:0]  inst1_data_cache_offset,
     output  [  1:0]  inst1_data_cache_size, 
     output  [  3:0]  inst1_data_cache_wstrb,
     output  [ 31:0]  inst1_data_cache_wdata,
@@ -32,8 +32,8 @@ module exe_stage(
     output           inst2_data_cache_op,
     output           inst2_data_cache_uncache,
     output  [ 19:0]  inst2_data_cache_tag,
-    output  [  7:0]  inst2_data_cache_index,
-    output  [  3:0]  inst2_data_cache_offset,
+    output  [  6:0]  inst2_data_cache_index,
+    output  [  4:0]  inst2_data_cache_offset,
     output  [  1:0]  inst2_data_cache_size, 
     output  [  3:0]  inst2_data_cache_wstrb,
     output  [ 31:0]  inst2_data_cache_wdata,
@@ -687,8 +687,8 @@ assign inst1_data_cache_valid = (inst1_load_op | inst1_mem_we) & es_valid & ~ins
 assign inst1_data_cache_op = inst1_mem_we;
 assign inst1_data_cache_uncache = inst1_VA[31] && ~inst1_VA[30] && inst1_VA[29];
 assign inst1_data_cache_tag = inst1_data_addr[31:12];
-assign inst1_data_cache_index = inst1_data_addr[11:4];
-assign inst1_data_cache_offset = inst1_data_addr[3:0];
+assign inst1_data_cache_index = inst1_data_addr[11:5];
+assign inst1_data_cache_offset = inst1_data_addr[4:0];
 assign inst1_data_cache_wstrb = (inst1_mem_we & es_valid & ~inst1_es_except) ? inst1_write_strb : 4'h0;
 
 // wire mem_RAW;
@@ -698,8 +698,8 @@ assign inst2_data_cache_valid = (inst2_load_op | inst2_mem_we) & es_valid & ~(in
 assign inst2_data_cache_op = inst2_mem_we;
 assign inst2_data_cache_uncache = inst2_VA[31] && ~inst2_VA[30] && inst2_VA[29];
 assign inst2_data_cache_tag = inst2_data_addr[31:12];
-assign inst2_data_cache_index = inst2_data_addr[11:4];
-assign inst2_data_cache_offset = inst2_data_addr[3:0];
+assign inst2_data_cache_index = inst2_data_addr[11:5];
+assign inst2_data_cache_offset = inst2_data_addr[4:0];
 assign inst2_data_cache_wstrb = (inst2_mem_we & es_valid & ~inst1_es_except & ~inst2_es_except) ? inst2_write_strb : 4'h0;
 
 // exception
