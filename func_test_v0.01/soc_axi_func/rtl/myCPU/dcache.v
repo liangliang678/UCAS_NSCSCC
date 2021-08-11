@@ -868,12 +868,8 @@ always @(posedge clk) begin
 end
 
 // Output
-//assign addr_ok1 = (state == `IDLE || (state[2] && cache_hit)) && valid1 && (wstate != `WRITE) && !wait_write1 && !wait_write2;
-//assign addr_ok2 = (state == `IDLE || (state[2] && cache_hit)) && valid2 && (wstate != `WRITE) && !wait_write1 && !wait_write2;
-assign addr_ok1 = (state == `IDLE || (state[2] && cache_hit && !dual_req)) && !_1_req_raw && !wait_write1 &&
-                  !(valid2 && _2_req_raw) && !(valid2 && wait_write2);
-assign addr_ok2 = (state == `IDLE || (state[2] && cache_hit && !dual_req)) && !_2_req_raw && !wait_write2 &&
-                  !(valid1 && _1_req_raw) && !(valid1 && wait_write1);
+assign addr_ok1 = (state[0] || (state[2] && cache_hit && !dual_req)) && wstate[0] && !wait_write1 && !wait_write2;
+assign addr_ok2 = (state[0] || (state[2] && cache_hit && !dual_req)) && wstate[0] && !wait_write1 && !wait_write2;
 assign data_ok1 = data_ok1_r;
 assign data_ok2 = data_ok2_r;
 assign rdata1 = rdata1_r;
@@ -1119,7 +1115,7 @@ wire wait_write1;
 wire wait_write2;
 assign wait_write1 = (state[2]) && rb_valid[0] && rb_op1 && (rb_index1 == index1) ||
                      (state[2]) && rb_valid[1] && rb_op2 && (rb_index2 == index1);
-assign wait_write2 = (state[2]) && rb_valid[0] && rb_op1 && (rb_index1 == index2)||
+assign wait_write2 = (state[2]) && rb_valid[0] && rb_op1 && (rb_index1 == index2) ||
                      (state[2]) && rb_valid[1] && rb_op2 && (rb_index2 == index2);
 
 // Write FSM

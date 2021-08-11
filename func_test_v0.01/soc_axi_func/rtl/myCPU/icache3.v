@@ -223,13 +223,32 @@ always @(posedge clk) begin
 end
 
 // Output
+wire [255:0] load_res_final;
+wire [255:0] ret_data_final;
+assign load_res_final = {256{rb_offset[4:2] == 3'b000}} & load_res |
+                        {256{rb_offset[4:2] == 3'b001}} & {32'b0, load_res[255:32]} |
+                        {256{rb_offset[4:2] == 3'b010}} & {64'b0, load_res[255:64]} |
+                        {256{rb_offset[4:2] == 3'b011}} & {96'b0, load_res[255:96]} |
+                        {256{rb_offset[4:2] == 3'b100}} & {128'b0, load_res[255:128]} |
+                        {256{rb_offset[4:2] == 3'b101}} & {160'b0, load_res[255:160]} |
+                        {256{rb_offset[4:2] == 3'b110}} & {192'b0, load_res[255:192]} |
+                        {256{rb_offset[4:2] == 3'b111}} & {224'b0, load_res[255:224]};
+assign ret_data_final = {256{rb_offset[4:2] == 3'b000}} & ret_data |
+                        {256{rb_offset[4:2] == 3'b001}} & {32'b0, ret_data[255:32]} |
+                        {256{rb_offset[4:2] == 3'b010}} & {64'b0, ret_data[255:64]} |
+                        {256{rb_offset[4:2] == 3'b011}} & {96'b0, ret_data[255:96]} |
+                        {256{rb_offset[4:2] == 3'b100}} & {128'b0, ret_data[255:128]} |
+                        {256{rb_offset[4:2] == 3'b101}} & {160'b0, ret_data[255:160]} |
+                        {256{rb_offset[4:2] == 3'b110}} & {192'b0, ret_data[255:192]} |
+                        {256{rb_offset[4:2] == 3'b111}} & {224'b0, ret_data[255:224]};
+
 assign addr_ok = (state[0] || (state[1] && cache_hit)) && valid;
 assign data_ok = (state[1]) && cache_hit || 
                  (state[3]) && ret_valid ||
                  (state[5])  && ret_valid;
-assign rdata = ({256{state[1]}} & load_res) | 
-               ({256{state[3]}} & ret_data) | 
-               ({256{state[5]}} & {ret_data[31:0], 224'b0}); 
+assign rdata = ({256{state[1]}} & load_res_final) | 
+               ({256{state[3]}} & ret_data_final) | 
+               ({256{state[5]}} & {224'b0, ret_data[31:0]}); 
 assign rnum = (state[5]) ? 4'b1 : {1'b0, ~(rb_offset[4:2])} + 4'b1;
 
 assign rd_req  = (state[4]) || (state[2]);
