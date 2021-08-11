@@ -679,8 +679,8 @@ wire [31:0] inst2_VA;
 
 assign inst1_VA = inst1_swl_mem_res ? {es_inst1_mem_addr[31:2], 2'b0} : es_inst1_mem_addr;
 assign inst2_VA = inst2_swl_mem_res ? {es_inst2_mem_addr[31:2], 2'b0} : es_inst2_mem_addr;
-assign inst1_data_addr = {3'b0, inst1_VA[28:0]};
-assign inst2_data_addr = {3'b0, inst2_VA[28:0]};
+assign inst1_data_addr = {3'b0, inst1_VA[28:0]} & {32{(inst1_load_op | inst1_mem_we)}};
+assign inst2_data_addr = {3'b0, inst2_VA[28:0]} & {32{(inst2_load_op | inst2_mem_we)}};
 
 
 assign inst1_data_cache_valid = (inst1_load_op | inst1_mem_we) & es_valid & ~inst1_es_except & (inst2_load_op | inst2_mem_we | inst2_div_readygo);
