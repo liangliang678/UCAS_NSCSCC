@@ -192,12 +192,14 @@ reg V_Way0 [255:0];
 reg V_Way1 [255:0];
 
 // RAM Port
-assign tag_way0_en = (_1_cache_req && addr_ok1) ||
-                     (_2_cache_req && addr_ok2) ||
+assign tag_way0_en = (valid1 && !uncache1 && addr_ok1) ||
+                     (valid2 && !uncache2 && addr_ok2) ||
+                     (data_ok1_raw && dual_req && !rb_uncache2) ||
                      (state == `PRELOOK) ||
                      (state[5] && ret_valid && !rp_way);
-assign tag_way1_en = (_1_cache_req && addr_ok1) ||
-                     (_2_cache_req && addr_ok2) ||
+assign tag_way1_en = (valid1 && !uncache1 && addr_ok1) ||
+                     (valid2 && !uncache2 && addr_ok2) ||
+                     (data_ok1_raw && dual_req && !rb_uncache2) ||
                      (state == `PRELOOK) ||
                      (state[5] && ret_valid &&  rp_way);
 assign tag_way0_we = (state[5] && ret_valid && !rp_way);
@@ -206,56 +208,65 @@ assign tag_way0_din = rb_valid[0] ? rb_tag1 :
                       rb_valid[1] ? rb_tag2 : 20'b0;
 assign tag_way1_din = rb_valid[0] ? rb_tag1 :
                       rb_valid[1] ? rb_tag2 : 20'b0;
-assign tag_addr = (_1_cache_req && addr_ok1)  ? index1 : 
-                  (_2_cache_req && addr_ok2)  ? index2 : 
+assign tag_addr = (valid1 && !uncache1 && addr_ok1)  ? index1 : 
+                  (valid2 && !uncache2 && addr_ok2)  ? index2 : 
                   (state == `PRELOOK)         ? rb_index2 :
                   (state[5] && ret_valid && rb_valid[0]) ? rb_index1 :
-                  (state[5] && ret_valid && rb_valid[1]) ? rb_index2 : 8'b0;
+                  (state[5] && ret_valid && rb_valid[1]) ? rb_index2 :
+                  (data_ok1_raw && dual_req && !rb_uncache2) ? rb_index2 : 8'b0;
 
-assign data_way0_bank0_en = (_1_cache_req && addr_ok1) || 
-                            (_2_cache_req && addr_ok2) || 
+assign data_way0_bank0_en = (valid1 && !uncache1 && addr_ok1) || 
+                            (valid2 && !uncache2 && addr_ok2) || 
+                            (data_ok1_raw && dual_req && !rb_uncache2) ||
                             (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b00 && !wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b00 && !wb_hit_way) || 
                             (state[5] && ret_valid && !rp_way);
-assign data_way0_bank1_en = (_1_cache_req && addr_ok1) || 
-                            (_2_cache_req && addr_ok2) || 
+assign data_way0_bank1_en = (valid1 && !uncache1 && addr_ok1) || 
+                            (valid2 && !uncache2 && addr_ok2) || 
+                            (data_ok1_raw && dual_req && !rb_uncache2) ||
                             (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b01 && !wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b01 && !wb_hit_way) || 
                             (state[5] && ret_valid && !rp_way);
-assign data_way0_bank2_en = (_1_cache_req && addr_ok1) || 
-                            (_2_cache_req && addr_ok2) || 
+assign data_way0_bank2_en = (valid1 && !uncache1 && addr_ok1) || 
+                            (valid2 && !uncache2 && addr_ok2) || 
+                            (data_ok1_raw && dual_req && !rb_uncache2) ||
                             (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b10 && !wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b10 && !wb_hit_way) || 
                             (state[5] && ret_valid && !rp_way);
-assign data_way0_bank3_en = (_1_cache_req && addr_ok1) || 
-                            (_2_cache_req && addr_ok2) || 
+assign data_way0_bank3_en = (valid1 && !uncache1 && addr_ok1) || 
+                            (valid2 && !uncache2 && addr_ok2) || 
+                            (data_ok1_raw && dual_req && !rb_uncache2) ||
                             (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b11 && !wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b11 && !wb_hit_way) || 
                             (state[5] && ret_valid && !rp_way);
-assign data_way1_bank0_en = (_1_cache_req && addr_ok1) || 
-                            (_2_cache_req && addr_ok2) || 
+assign data_way1_bank0_en = (valid1 && !uncache1 && addr_ok1) || 
+                            (valid2 && !uncache2 && addr_ok2) || 
+                            (data_ok1_raw && dual_req && !rb_uncache2) ||
                             (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b00 &&  wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b00 &&  wb_hit_way) || 
                             (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank1_en = (_1_cache_req && addr_ok1) || 
-                            (_2_cache_req && addr_ok2) || 
+assign data_way1_bank1_en = (valid1 && !uncache1 && addr_ok1) || 
+                            (valid2 && !uncache2 && addr_ok2) || 
+                            (data_ok1_raw && dual_req && !rb_uncache2) ||
                             (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b01 &&  wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b01 &&  wb_hit_way) || 
                             (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank2_en = (_1_cache_req && addr_ok1) || 
-                            (_2_cache_req && addr_ok2) || 
+assign data_way1_bank2_en = (valid1 && !uncache1 && addr_ok1) || 
+                            (valid2 && !uncache2 && addr_ok2) || 
+                            (data_ok1_raw && dual_req && !rb_uncache2) ||
                             (state == `PRELOOK && wstate != `WRITE) ||
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b10 &&  wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b10 &&  wb_hit_way) || 
                             (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank3_en = (_1_cache_req && addr_ok1) || 
-                            (_2_cache_req && addr_ok2) ||
+assign data_way1_bank3_en = (valid1 && !uncache1 && addr_ok1) || 
+                            (valid2 && !uncache2 && addr_ok2) ||
+                            (data_ok1_raw && dual_req && !rb_uncache2) ||
                             (state == `PRELOOK && wstate != `WRITE) || 
                             (wstate == `WRITE && wb_valid[0] && wb_offset1[3:2] == 2'b11 &&  wb_hit_way) || 
                             (wstate == `WRITE && wb_valid[1] && wb_offset2[3:2] == 2'b11 &&  wb_hit_way) || 
@@ -376,11 +387,12 @@ assign data_way1_bank3_din = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
                              (state[5]) ? rd_way_wdata_bank3 : 32'b0;
 
 assign data_addr = (wstate == `WRITE)          ? wb_index : 
-                   (_1_cache_req && addr_ok1)  ? index1 : 
-                   (_2_cache_req && addr_ok2)  ? index2 :
+                   (valid1 && !uncache1 && addr_ok1)  ? index1 : 
+                   (valid2 && !uncache2 && addr_ok2)  ? index2 :
                    (state == `PRELOOK)         ? rb_index2 :
                    (state[5] && ret_valid && rb_valid[0]) ? rb_index1 :
-                   (state[5] && ret_valid && rb_valid[1]) ? rb_index2 : 8'b0;
+                   (state[5] && ret_valid && rb_valid[1]) ? rb_index2 :
+                   (data_ok1_raw && dual_req && !rb_uncache2) ? rb_index2 : 8'b0;
 
 genvar i0;
 generate for (i0=0; i0<256; i0=i0+1) begin :gen_for_D_Way0
@@ -447,23 +459,7 @@ generate for (iv1=0; iv1<256; iv1=iv1+1) begin :gen_for_V_Way1
 end endgenerate
 
 // Request Buffer
-wire _1_cache_req;
-wire _2_cache_req;
-wire req_same_line;
-wire req_read_write;
-wire _1_req_raw;
-wire _2_req_raw;
-
-assign _1_cache_req = valid1 && !uncache1;
-assign _2_cache_req = valid2 && !uncache2;
-assign req_same_line = (rb_index1 == rb_index2) && (rb_tag1 == rb_tag2) && !rb_uncache1 && !rb_uncache2;
-assign req_read_write = (rb_op1 != rb_op2);
-assign _1_req_raw = (wstate == `WRITE) && (index1 != wb_index);
-assign _2_req_raw = (wstate == `WRITE) && (index2 != wb_index);
-
 reg [1:0] rb_recv;
-wire [1:0] rb_valid;
-wire dual_req;
 always @(posedge clk) begin
     if(!resetn) begin
         rb_recv[0] <= 1'b0;
@@ -486,10 +482,18 @@ always @(posedge clk) begin
         rb_recv[1] <= 1'b0;
     end
 end
-assign dual_req = rb_recv[0] && rb_recv[1] && (req_read_write || !req_same_line);
 
+wire req_same_line;
+wire req_read_write;
+assign req_same_line = (rb_index1 == rb_index2) && (rb_tag1 == rb_tag2) && !rb_uncache1 && !rb_uncache2;
+assign req_read_write = (rb_op1 != rb_op2);
+
+wire [1:0] rb_valid;
 assign rb_valid[0] = rb_recv[0];
-assign rb_valid[1] = rb_recv[1] && (rb_uncache2 && !rb_recv[0] || !rb_uncache2 && (!rb_recv[0] || req_same_line && !req_read_write));
+assign rb_valid[1] = rb_recv[1] && (!rb_recv[0] || !rb_uncache2 && req_same_line && !req_read_write);
+
+wire dual_req;
+assign dual_req = rb_recv[0] && rb_recv[1] && !(!rb_uncache2 && req_same_line && !req_read_write);
 
 reg          rb_op1;
 reg          rb_uncache1;
@@ -499,6 +503,7 @@ reg  [  3:0] rb_offset1;
 reg  [  1:0] rb_size1;
 reg  [  3:0] rb_wstrb1;
 reg  [ 31:0] rb_wdata1;
+
 reg          rb_op2;
 reg          rb_uncache2;
 reg  [ 19:0] rb_tag2;
@@ -543,10 +548,10 @@ wire [ 19:0] way1_tag;
 wire [127:0] way0_data;
 wire [127:0] way1_data;
 
-assign way0_d = rb_valid[0] ? D_Way0[rb_index1] : D_Way0[rb_index2];
-assign way1_d = rb_valid[0] ? D_Way1[rb_index1] : D_Way1[rb_index2];
 assign way0_v = rb_valid[0] ? V_Way0[rb_index1] : V_Way0[rb_index2];
 assign way1_v = rb_valid[0] ? V_Way1[rb_index1] : V_Way1[rb_index2];
+assign way0_d = rb_valid[0] ? D_Way0[rb_index1] : D_Way0[rb_index2];
+assign way1_d = rb_valid[0] ? D_Way1[rb_index1] : D_Way1[rb_index2];
 assign way0_tag = tag_way0_dout;
 assign way1_tag = tag_way1_dout;
 assign way0_data = {data_way0_bank3_dout, data_way0_bank2_dout, data_way0_bank1_dout, data_way0_bank0_dout};
@@ -868,8 +873,10 @@ always @(posedge clk) begin
 end
 
 // Output
-assign addr_ok1 = (state[0] || (state[2] && cache_hit && !dual_req)) && wstate[0] && !wait_write1 && !wait_write2;
-assign addr_ok2 = (state[0] || (state[2] && cache_hit && !dual_req)) && wstate[0] && !wait_write1 && !wait_write2;
+assign addr_ok1 = (state[0] || (state[2] && cache_hit && !dual_req) || (state[7] && ret_valid && !dual_req) || (state[9] && uncache_write_go && !dual_req)) &&
+                  !writing1 && !writing2 && !wait_write1 && !wait_write2;
+assign addr_ok2 = (state[0] || (state[2] && cache_hit && !dual_req) || (state[7] && ret_valid && !dual_req) || (state[9] && uncache_write_go && !dual_req)) &&
+                  !writing1 && !writing2 && !wait_write1 && !wait_write2;
 assign data_ok1 = data_ok1_r;
 assign data_ok2 = data_ok2_r;
 assign rdata1 = rdata1_r;
@@ -928,7 +935,7 @@ always@(*) begin
                 next_state = `UWREQ;
             end
 		end
-        else if (_1_cache_req && addr_ok1 || _2_cache_req && addr_ok2) begin
+        else if (valid1 && !uncache1 && addr_ok1 || valid2 && !uncache2 && addr_ok2) begin
 			next_state = `LOOKUP;
 		end
 		else begin
@@ -949,11 +956,14 @@ always@(*) begin
             else if(rb_uncache2 && rb_op2 == 1'b1) begin
                 next_state = `UWREQ;
             end
-            else begin
+            else if (!rb_uncache2 && wstate[1]) begin
                 next_state = `PRELOOK;
             end
+            else begin
+                next_state = `LOOKUP;
+            end
         end
-        else if (cache_hit && (_1_cache_req && addr_ok1 || _2_cache_req && addr_ok2)) begin
+        else if (cache_hit && (valid1 && !uncache1 && addr_ok1 || valid2 && !uncache2 && addr_ok2)) begin
 			next_state = `LOOKUP;
 		end
         else if (cache_hit && (valid1 && uncache1 && addr_ok1)) begin
@@ -1028,13 +1038,35 @@ always@(*) begin
             else if(rb_uncache2 && rb_op2 == 1'b1) begin
                 next_state = `UWREQ;
             end
-            else begin
+            else if (!rb_uncache2 && wstate[1]) begin
                 next_state = `PRELOOK;
             end
+            else begin
+                next_state = `LOOKUP;
+            end
         end
-        else if (ret_valid && !dual_req) begin
-            next_state = `IDLE;
-        end
+        else if (ret_valid && (valid1 && !uncache1 && addr_ok1 || valid2 && !uncache2 && addr_ok2)) begin
+			next_state = `LOOKUP;
+		end
+        else if (ret_valid && (valid1 && uncache1 && addr_ok1)) begin
+			if (op1 == 1'b0) begin
+                next_state = `URREQ;
+            end
+            else begin
+                next_state = `UWREQ;
+            end
+		end
+        else if (ret_valid && (valid2 && uncache2 && addr_ok2)) begin
+			if (op2 == 1'b0) begin
+                next_state = `URREQ;
+            end
+            else begin
+                next_state = `UWREQ;
+            end
+		end
+        else if (ret_valid) begin
+			next_state = `IDLE;
+		end
         else begin
             next_state = `URRESP;
         end
@@ -1053,13 +1085,35 @@ always@(*) begin
             else if(rb_uncache2 && rb_op2 == 1'b1) begin
                 next_state = `UWREQ;
             end
-            else begin
+            else if (!rb_uncache2 && wstate[1]) begin
                 next_state = `PRELOOK;
             end
+            else begin
+                next_state = `LOOKUP;
+            end
         end
-        else if (uncache_write_go && !dual_req) begin
-            next_state = `IDLE;
-        end
+        else if (uncache_write_go && (valid1 && !uncache1 && addr_ok1 || valid2 && !uncache2 && addr_ok2)) begin
+			next_state = `LOOKUP;
+		end
+        else if (uncache_write_go && (valid1 && uncache1 && addr_ok1)) begin
+			if (op1 == 1'b0) begin
+                next_state = `URREQ;
+            end
+            else begin
+                next_state = `UWREQ;
+            end
+		end
+        else if (uncache_write_go && (valid2 && uncache2 && addr_ok2)) begin
+			if (op2 == 1'b0) begin
+                next_state = `URREQ;
+            end
+            else begin
+                next_state = `UWREQ;
+            end
+		end
+        else if (uncache_write_go) begin
+			next_state = `IDLE;
+		end
         else begin
             next_state = `UWRESP;
         end
@@ -1113,10 +1167,15 @@ end
 
 wire wait_write1;
 wire wait_write2;
-assign wait_write1 = (state[2]) && rb_valid[0] && rb_op1 && (rb_index1 == index1) ||
-                     (state[2]) && rb_valid[1] && rb_op2 && (rb_index2 == index1);
-assign wait_write2 = (state[2]) && rb_valid[0] && rb_op1 && (rb_index1 == index2) ||
-                     (state[2]) && rb_valid[1] && rb_op2 && (rb_index2 == index2);
+assign wait_write1 = state[2] && rb_valid[0] && rb_op1 && ({rb_tag1, rb_index1, rb_offset1} == {tag1, index1, offset1}) ||
+                     state[2] && rb_valid[1] && rb_op2 && ({rb_tag2, rb_index2, rb_offset2} == {tag1, index1, offset1});
+assign wait_write2 = state[2] && rb_valid[0] && rb_op1 && ({rb_tag1, rb_index1, rb_offset1} == {tag2, index2, offset2}) ||
+                     state[2] && rb_valid[1] && rb_op2 && ({rb_tag2, rb_index2, rb_offset2} == {tag2, index2, offset2});
+
+wire writing1;
+wire writing2;
+assign writing1 = wstate[1];
+assign writing2 = wstate[1];
 
 // Write FSM
 reg  [1:0] wstate;
