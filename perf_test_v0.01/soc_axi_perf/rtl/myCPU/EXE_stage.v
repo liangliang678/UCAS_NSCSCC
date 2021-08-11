@@ -414,7 +414,7 @@ wire inst2_div_readygo;
 wire inst1_mem_readygo;
 wire inst2_mem_readygo;
 
-assign inst1_mem_readygo = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok) | inst1_es_except; //不访�?? 访存请求接受 有例�??
+assign inst1_mem_readygo = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok) | inst1_es_except; //不访�??? 访存请求接受 有例�???
 assign inst2_mem_readygo = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok) | (inst1_es_except | inst1_es_eret | inst2_es_except);
 
 assign inst1_div_readygo = ~(inst1_alu_op[14] | inst1_alu_op[15]) | (div_complete);
@@ -679,8 +679,8 @@ wire [31:0] inst2_VA;
 
 assign inst1_VA = inst1_swl_mem_res ? {es_inst1_mem_addr[31:2], 2'b0} : es_inst1_mem_addr;
 assign inst2_VA = inst2_swl_mem_res ? {es_inst2_mem_addr[31:2], 2'b0} : es_inst2_mem_addr;
-assign inst1_data_addr = {3'b0, inst1_VA[28:0]} & {32{(inst1_load_op | inst1_mem_we)}};
-assign inst2_data_addr = {3'b0, inst2_VA[28:0]} & {32{(inst2_load_op | inst2_mem_we)}};
+assign inst1_data_addr = (inst1_load_op | inst1_mem_we) ? {3'b0, inst1_VA[28:0]} : 32'b0;
+assign inst2_data_addr = (inst2_load_op | inst2_mem_we) ? {3'b0, inst2_VA[28:0]} : 32'b0;
 
 
 assign inst1_data_cache_valid = (inst1_load_op | inst1_mem_we) & es_valid & ~inst1_es_except & (inst2_load_op | inst2_mem_we | inst2_div_readygo);
