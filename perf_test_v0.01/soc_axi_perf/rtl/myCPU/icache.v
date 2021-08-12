@@ -225,7 +225,7 @@ assign ret_data_final = {256{rb_offset[4:2] == 3'b000}} & ret_data |
                         {256{rb_offset[4:2] == 3'b110}} & {192'b0, ret_data[255:192]} |
                         {256{rb_offset[4:2] == 3'b111}} & {224'b0, ret_data[255:224]};
 
-assign addr_ok = (state[0] || (state[1] && cache_hit));
+assign addr_ok = (state[0] || (state[1] && cache_hit) || (state[5] && ret_valid));
 assign data_ok = (state[1]) && cache_hit || 
                  (state[3]) && ret_valid ||
                  (state[5]) && ret_valid;
@@ -297,9 +297,15 @@ always @(*) begin
             next_state = `UREQ;
         end
     `URESP:
-        if (ret_valid) begin
-            next_state = `IDLE;
-        end
+        if (ret_valid && (valid && !uncache && addr_ok)) begin
+			next_state = `LOOKUP;
+		end
+        else if (ret_valid && (valid && uncache && addr_ok)) begin
+			next_state = `UREQ;
+		end
+        else if (ret_valid && !(valid && addr_ok)) begin
+			next_state = `IDLE;
+		end
         else begin
             next_state = `URESP;
         end
