@@ -696,14 +696,12 @@ assign rd_way_rdata2 = {32{rb_offset2[4:2] == 3'b000}} & rd_way_data_bank0 |
                        {32{rb_offset2[4:2] == 3'b111}} & rd_way_data_bank7;
 
 // AXI Write Buffer
-reg [31:0] pending_addr [7:0];
-reg        pending_type [7:0];
-reg        pending_valid[7:0];
-reg [2:0] pending_start;
-reg [2:0] pending_end;
+reg        pending_valid[31:0];
+reg [4:0] pending_start;
+reg [4:0] pending_end;
 
 genvar ip;
-generate for (ip=0; ip<8; ip=ip+1) begin :gen_for_valid
+generate for (ip=0; ip<32; ip=ip+1) begin :gen_for_valid
     always @(posedge clk) begin
         if (!resetn) begin
             pending_valid[ip] <= 0;
@@ -719,28 +717,26 @@ end endgenerate
 
 always @(posedge clk) begin
     if (!resetn) begin
-        pending_end <= 3'b0;
+        pending_end <= 5'b0;
     end
     else if (wr_req && wr_rdy) begin
-        pending_addr[pending_end] <= wr_addr;
-        pending_type[pending_end] <= wr_type; 
-        pending_end <= pending_end + 3'b1;
+        pending_end <= pending_end + 5'b1;
     end
 end
 
 always @(posedge clk) begin
     if (!resetn) begin
-        pending_start <= 3'b0;
+        pending_start <= 5'b0;
     end
     else if (wr_ok) begin
-        pending_start <= pending_start + 3'b1;
+        pending_start <= pending_start + 5'b1;
     end
 end
 
 wire uncache_read_stall;
 wire uncache_write_go;
 assign uncache_read_stall = (pending_end != pending_start);
-assign uncache_write_go = ((pending_end + 3'b1) != pending_start);
+assign uncache_write_go = ((pending_end + 5'b1) != pending_start);
 
 // Result Buffer
 wire data_ok1_raw;
