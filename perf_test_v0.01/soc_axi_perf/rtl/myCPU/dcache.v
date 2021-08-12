@@ -71,22 +71,6 @@ wire [19:0] tag_way1_din;
 wire [19:0] tag_way0_dout;
 wire [19:0] tag_way1_dout;
 
-wire        data_way0_bank0_en;
-wire        data_way0_bank1_en;
-wire        data_way0_bank2_en;
-wire        data_way0_bank3_en;
-wire        data_way0_bank4_en;
-wire        data_way0_bank5_en;
-wire        data_way0_bank6_en;
-wire        data_way0_bank7_en;
-wire        data_way1_bank0_en;
-wire        data_way1_bank1_en;
-wire        data_way1_bank2_en;
-wire        data_way1_bank3_en;
-wire        data_way1_bank4_en;
-wire        data_way1_bank5_en;
-wire        data_way1_bank6_en;
-wire        data_way1_bank7_en;
 wire [ 3:0] data_way0_bank0_we;
 wire [ 3:0] data_way0_bank1_we;
 wire [ 3:0] data_way0_bank2_we;
@@ -103,7 +87,7 @@ wire [ 3:0] data_way1_bank4_we;
 wire [ 3:0] data_way1_bank5_we;
 wire [ 3:0] data_way1_bank6_we;
 wire [ 3:0] data_way1_bank7_we;
-wire [ 6:0] data_addr;
+
 wire [31:0] data_way0_bank0_din;
 wire [31:0] data_way0_bank1_din;
 wire [31:0] data_way0_bank2_din;
@@ -120,22 +104,16 @@ wire [31:0] data_way1_bank4_din;
 wire [31:0] data_way1_bank5_din;
 wire [31:0] data_way1_bank6_din;
 wire [31:0] data_way1_bank7_din;
-wire [31:0] data_way0_bank0_dout;
-wire [31:0] data_way0_bank1_dout;
-wire [31:0] data_way0_bank2_dout;
-wire [31:0] data_way0_bank3_dout;
-wire [31:0] data_way0_bank4_dout;
-wire [31:0] data_way0_bank5_dout;
-wire [31:0] data_way0_bank6_dout;
-wire [31:0] data_way0_bank7_dout;
-wire [31:0] data_way1_bank0_dout;
-wire [31:0] data_way1_bank1_dout;
-wire [31:0] data_way1_bank2_dout;
-wire [31:0] data_way1_bank3_dout;
-wire [31:0] data_way1_bank4_dout;
-wire [31:0] data_way1_bank5_dout;
-wire [31:0] data_way1_bank6_dout;
-wire [31:0] data_way1_bank7_dout;
+
+wire         data_way0_en;
+wire         data_way1_en;
+wire [ 31:0] data_way0_we;
+wire [ 31:0] data_way1_we;
+wire [  6:0] data_addr;
+wire [255:0] data_way0_din;
+wire [255:0] data_way1_din;
+wire [255:0] data_way0_dout;
+wire [255:0] data_way1_dout;
 
 Tag_RAM_8 Tag_RAM_Way0(
     .clka   (clk          ),
@@ -153,133 +131,21 @@ Tag_RAM_8 Tag_RAM_Way1(
     .dina   (tag_way1_din ),
     .douta  (tag_way1_dout)
 );
-Data_RAM_8 Data_RAM_Way0_Bank0(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank0_en  ),
-    .wea    (data_way0_bank0_we  ),
-    .dina   (data_way0_bank0_din ),
-    .douta  (data_way0_bank0_dout)
+Data_RAM_8 Data_RAM_Way0(
+    .clka   (clk           ),
+    .addra  (data_addr     ),
+    .ena    (data_way0_en  ),
+    .wea    (data_way0_we  ),
+    .dina   (data_way0_din ),
+    .douta  (data_way0_dout)
 );
-Data_RAM_8 Data_RAM_Way0_Bank1(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank1_en  ),
-    .wea    (data_way0_bank1_we  ),
-    .dina   (data_way0_bank1_din ),
-    .douta  (data_way0_bank1_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank2(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank2_en  ),
-    .wea    (data_way0_bank2_we  ),
-    .dina   (data_way0_bank2_din ),
-    .douta  (data_way0_bank2_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank3(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank3_en  ),
-    .wea    (data_way0_bank3_we  ),
-    .dina   (data_way0_bank3_din ),
-    .douta  (data_way0_bank3_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank4(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank4_en  ),
-    .wea    (data_way0_bank4_we  ),
-    .dina   (data_way0_bank4_din ),
-    .douta  (data_way0_bank4_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank5(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank5_en  ),
-    .wea    (data_way0_bank5_we  ),
-    .dina   (data_way0_bank5_din ),
-    .douta  (data_way0_bank5_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank6(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank6_en  ),
-    .wea    (data_way0_bank6_we  ),
-    .dina   (data_way0_bank6_din ),
-    .douta  (data_way0_bank6_dout)
-);
-Data_RAM_8 Data_RAM_Way0_Bank7(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way0_bank7_en  ),
-    .wea    (data_way0_bank7_we  ),
-    .dina   (data_way0_bank7_din ),
-    .douta  (data_way0_bank7_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank0(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank0_en  ),
-    .wea    (data_way1_bank0_we  ),
-    .dina   (data_way1_bank0_din ),
-    .douta  (data_way1_bank0_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank1(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank1_en  ),
-    .wea    (data_way1_bank1_we  ),
-    .dina   (data_way1_bank1_din ),
-    .douta  (data_way1_bank1_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank2(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank2_en  ),
-    .wea    (data_way1_bank2_we  ),
-    .dina   (data_way1_bank2_din ),
-    .douta  (data_way1_bank2_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank3(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank3_en  ),
-    .wea    (data_way1_bank3_we  ),
-    .dina   (data_way1_bank3_din ),
-    .douta  (data_way1_bank3_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank4(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank4_en  ),
-    .wea    (data_way1_bank4_we  ),
-    .dina   (data_way1_bank4_din ),
-    .douta  (data_way1_bank4_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank5(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank5_en  ),
-    .wea    (data_way1_bank5_we  ),
-    .dina   (data_way1_bank5_din ),
-    .douta  (data_way1_bank5_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank6(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank6_en  ),
-    .wea    (data_way1_bank6_we  ),
-    .dina   (data_way1_bank6_din ),
-    .douta  (data_way1_bank6_dout)
-);
-Data_RAM_8 Data_RAM_Way1_Bank7(
-    .clka   (clk                 ),
-    .addra  (data_addr           ),
-    .ena    (data_way1_bank7_en  ),
-    .wea    (data_way1_bank7_we  ),
-    .dina   (data_way1_bank7_din ),
-    .douta  (data_way1_bank7_dout)
+Data_RAM_8 Data_RAM_Way1(
+    .clka   (clk           ),
+    .addra  (data_addr     ),
+    .ena    (data_way1_en  ),
+    .wea    (data_way1_we  ),
+    .dina   (data_way1_din ),
+    .douta  (data_way1_dout)
 );
 
 reg D_Way0 [127:0];
@@ -311,118 +177,21 @@ assign tag_addr = (valid1 && !uncache1 && addr_ok1)  ? index1 :
                   (state[5] && ret_valid && rb_valid[1]) ? rb_index2 :
                   (data_ok1_raw && dual_req && !rb_uncache2) ? rb_index2 : 7'b0;
 
-assign data_way0_bank0_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b000 && !wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b000 && !wb_hit_way) || 
-                            (state[5] && ret_valid && !rp_way);
-assign data_way0_bank1_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b001 && !wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b001 && !wb_hit_way) || 
-                            (state[5] && ret_valid && !rp_way);
-assign data_way0_bank2_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b010 && !wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b010 && !wb_hit_way) || 
-                            (state[5] && ret_valid && !rp_way);
-assign data_way0_bank3_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b011 && !wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b011 && !wb_hit_way) || 
-                            (state[5] && ret_valid && !rp_way);
-assign data_way0_bank4_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b100 && !wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b100 && !wb_hit_way) || 
-                            (state[5] && ret_valid && !rp_way);
-assign data_way0_bank5_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b101 && !wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b101 && !wb_hit_way) || 
-                            (state[5] && ret_valid && !rp_way);
-assign data_way0_bank6_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b110 && !wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b110 && !wb_hit_way) || 
-                            (state[5] && ret_valid && !rp_way);
-assign data_way0_bank7_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b111 && !wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b111 && !wb_hit_way) || 
-                            (state[5] && ret_valid && !rp_way);
-assign data_way1_bank0_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b000 &&  wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b000 &&  wb_hit_way) || 
-                            (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank1_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b001 &&  wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b001 &&  wb_hit_way) || 
-                            (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank2_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b010 &&  wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b010 &&  wb_hit_way) || 
-                            (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank3_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) ||
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) || 
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b011 &&  wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b011 &&  wb_hit_way) || 
-                            (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank4_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b100 &&  wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b100 &&  wb_hit_way) || 
-                            (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank5_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b101 &&  wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b101 &&  wb_hit_way) || 
-                            (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank6_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) || 
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) ||
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b110 &&  wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b110 &&  wb_hit_way) || 
-                            (state[5] && ret_valid &&  rp_way);
-assign data_way1_bank7_en = (valid1 && !uncache1 && addr_ok1) || 
-                            (valid2 && !uncache2 && addr_ok2) ||
-                            (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
-                            (state == `PRELOOK && wstate != `WRITE) || 
-                            (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b111 &&  wb_hit_way) || 
-                            (wstate == `WRITE && wb_valid[1] && wb_offset2[4:2] == 3'b111 &&  wb_hit_way) || 
-                            (state[5] && ret_valid &&  rp_way);
+assign data_way0_en = (valid1 && !uncache1 && addr_ok1) || 
+                      (valid2 && !uncache2 && addr_ok2) || 
+                      (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
+                      (state == `PRELOOK && wstate != `WRITE) ||
+                      (wstate == `WRITE && wb_valid[0] && !wb_hit_way) || 
+                      (wstate == `WRITE && wb_valid[1] && !wb_hit_way) || 
+                      (state[5] && ret_valid && !rp_way);
+assign data_way1_en = (valid1 && !uncache1 && addr_ok1) || 
+                      (valid2 && !uncache2 && addr_ok2) || 
+                      (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
+                      (state == `PRELOOK && wstate != `WRITE) ||
+                      (wstate == `WRITE && wb_valid[0] &&  wb_hit_way) || 
+                      (wstate == `WRITE && wb_valid[1] &&  wb_hit_way) || 
+                      (state[5] && ret_valid &&  rp_way);
+
 
 assign data_way0_bank0_we = (wstate == `WRITE && wb_valid[0] && wb_valid[1] && !wb_hit_way &&
                             wb_offset1[4:2] == 3'b000 && wb_offset2[4:2] == 3'b000) ? (wb_wstrb2 | wb_wstrb1) :
@@ -650,6 +419,16 @@ assign data_way1_bank7_din = (wstate == `WRITE && wb_valid[0] && wb_valid[1] &&
                              (wstate == `WRITE && wb_valid[0] && wb_offset1[4:2] == 3'b111) ? wb_wdata1 :
                              (state[5]) ? rd_way_wdata_bank7 : 32'b0;
 
+assign data_way0_din = {data_way0_bank7_din, data_way0_bank6_din, data_way0_bank5_din, data_way0_bank4_din,
+                        data_way0_bank3_din, data_way0_bank2_din, data_way0_bank1_din, data_way0_bank0_din};
+assign data_way1_din = {data_way1_bank7_din, data_way1_bank6_din, data_way1_bank5_din, data_way1_bank4_din,
+                        data_way1_bank3_din, data_way1_bank2_din, data_way1_bank1_din, data_way1_bank0_din};
+
+assign data_way0_we = {data_way0_bank7_we, data_way0_bank6_we, data_way0_bank5_we, data_way0_bank4_we, 
+                       data_way0_bank3_we, data_way0_bank2_we, data_way0_bank1_we, data_way0_bank0_we};
+assign data_way1_we = {data_way1_bank7_we, data_way1_bank6_we, data_way1_bank5_we, data_way1_bank4_we, 
+                       data_way1_bank3_we, data_way1_bank2_we, data_way1_bank1_we, data_way1_bank0_we};
+
 assign data_addr = (wstate == `WRITE)          ? wb_index : 
                    (valid1 && !uncache1 && addr_ok1)  ? index1 : 
                    (valid2 && !uncache2 && addr_ok2)  ? index2 :
@@ -818,10 +597,8 @@ assign way0_d = rb_valid[0] ? D_Way0[rb_index1] : D_Way0[rb_index2];
 assign way1_d = rb_valid[0] ? D_Way1[rb_index1] : D_Way1[rb_index2];
 assign way0_tag = tag_way0_dout;
 assign way1_tag = tag_way1_dout;
-assign way0_data = {data_way0_bank7_dout, data_way0_bank6_dout, data_way0_bank5_dout, data_way0_bank4_dout,
-                    data_way0_bank3_dout, data_way0_bank2_dout, data_way0_bank1_dout, data_way0_bank0_dout};
-assign way1_data = {data_way1_bank7_dout, data_way1_bank6_dout, data_way1_bank5_dout, data_way1_bank4_dout,
-                    data_way1_bank3_dout, data_way1_bank2_dout, data_way1_bank1_dout, data_way1_bank0_dout};
+assign way0_data = data_way0_dout;
+assign way1_data = data_way1_dout;
 
 // Tag Compare
 wire         _1_way0_hit;
