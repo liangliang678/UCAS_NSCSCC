@@ -25,8 +25,19 @@ module tlb #
     output [               2:0] s1_c,
     output                      s1_d,
     output                      s1_v, 
+    // search port 2
+    input  [              18:0] s2_vpn2,
+    input                       s2_odd_page,
+    input  [               7:0] s2_asid,
+    output                      s2_found,
+    output [$clog2(TLBNUM)-1:0] s2_index,
+    output [              19:0] s2_pfn,
+    output [               2:0] s2_c,
+    output                      s2_d,
+    output                      s2_v, 
     // write port
     input                       we,
+    input  [              11:0] w_mask,
     input  [$clog2(TLBNUM)-1:0] w_index,
     input  [              18:0] w_vpn2,
     input  [               7:0] w_asid,
@@ -41,6 +52,7 @@ module tlb #
     input                       w_v1, 
     // read port
     input  [$clog2(TLBNUM)-1:0] r_index,
+    output [              11:0] r_mask,
     output [              18:0] r_vpn2,
     output [               7:0] r_asid,
     output                      r_g,
@@ -53,7 +65,7 @@ module tlb #
     output                      r_d1,
     output                      r_v1
 );
-
+    reg  [11:0] tlb_mask     [TLBNUM-1:0];
     reg  [18:0] tlb_vpn2     [TLBNUM-1:0];
     reg  [ 7:0] tlb_asid     [TLBNUM-1:0];
     reg         tlb_g        [TLBNUM-1:0];
@@ -68,13 +80,14 @@ module tlb #
 
     wire [TLBNUM-1:0] match0;
     wire [TLBNUM-1:0] match1;
+    wire [TLBNUM-1:0] match2;
 
     // search
     genvar i;
     generate
         for (i = 0; i < TLBNUM; i = i + 1)
         begin : match_0
-            assign match0[i] = (s0_vpn2==tlb_vpn2[i]) && ((s0_asid==tlb_asid[i]) || tlb_g[i]);
+            assign match0[i] = ((s0_vpn2 & ~tlb_mask[i]) ==(tlb_vpn2[i] & ~tlb_mask[i])) && ((s0_asid==tlb_asid[i]) || tlb_g[i]);
         end
     endgenerate
 
@@ -96,8 +109,8 @@ module tlb #
                       ({4{match0[14]}} & 4'he) |
                       ({4{match0[15]}} & 4'hf);
     assign s0_pfn   = s0_odd_page ?
-                      tlb_pfn1 [s0_index] :
-                      tlb_pfn0 [s0_index];
+                      tlb_pfn1 [s0_index] & ~tlb_mask[s0_index]:
+                      tlb_pfn0 [s0_index] & ~tlb_mask[s0_index];
     assign s0_c     = s0_odd_page ?
                       tlb_c1   [s0_index] :
                       tlb_c0   [s0_index];
@@ -111,7 +124,7 @@ module tlb #
     generate
         for (i = 0; i < TLBNUM; i = i + 1)
         begin : match_1
-            assign match1[i] = (s1_vpn2==tlb_vpn2[i]) && ((s1_asid==tlb_asid[i]) || tlb_g[i]);
+            assign match1[i] = ((s1_vpn2 & ~tlb_mask[i]) ==(tlb_vpn2[i] & ~tlb_mask[i])) && ((s1_asid==tlb_asid[i]) || tlb_g[i]);
         end
     endgenerate
 
@@ -133,8 +146,8 @@ module tlb #
                       ({4{match1[14]}} & 4'he) |
                       ({4{match1[15]}} & 4'hf);
     assign s1_pfn   = s1_odd_page ?
-                      tlb_pfn1 [s1_index] :
-                      tlb_pfn0 [s1_index];
+                      tlb_pfn1 [s1_index] & ~tlb_mask[s1_index]:
+                      tlb_pfn0 [s1_index] & ~tlb_mask[s1_index];
     assign s1_c     = s1_odd_page ?
                       tlb_c1   [s1_index] :
                       tlb_c0   [s1_index];
@@ -145,13 +158,49 @@ module tlb #
                       tlb_v1   [s1_index] :
                       tlb_v0   [s1_index];
 
+    generate
+        for (i = 0; i < TLBNUM; i = i + 1)
+        begin : match_2
+            assign match2[i] = ((s2_vpn2 & ~tlb_mask[i]) ==(tlb_vpn2[i] & ~tlb_mask[i]) ) && ((s2_asid==tlb_asid[i]) || tlb_g[i]);
+        end
+    endgenerate
 
+    assign s2_found = |match2;
+    assign s2_index = ({4{match2[ 0]}} & 4'h0) |
+                      ({4{match2[ 1]}} & 4'h1) |
+                      ({4{match2[ 2]}} & 4'h2) |
+                      ({4{match2[ 3]}} & 4'h3) |
+                      ({4{match2[ 4]}} & 4'h4) |
+                      ({4{match2[ 5]}} & 4'h5) |
+                      ({4{match2[ 6]}} & 4'h6) |
+                      ({4{match2[ 7]}} & 4'h7) |
+                      ({4{match2[ 8]}} & 4'h8) |
+                      ({4{match2[ 9]}} & 4'h9) |
+                      ({4{match2[10]}} & 4'ha) |
+                      ({4{match2[11]}} & 4'hb) |
+                      ({4{match2[12]}} & 4'hc) |
+                      ({4{match2[13]}} & 4'hd) |
+                      ({4{match2[14]}} & 4'he) |
+                      ({4{match2[15]}} & 4'hf);
+    assign s2_pfn   = s2_odd_page ?
+                      tlb_pfn1 [s2_index] & ~tlb_mask[s2_index]:
+                      tlb_pfn0 [s2_index] & ~tlb_mask[s2_index];
+    assign s2_c     = s2_odd_page ?
+                      tlb_c1   [s2_index] :
+                      tlb_c0   [s2_index];
+    assign s2_d     = s2_odd_page ?
+                      tlb_d1   [s2_index] :
+                      tlb_d0   [s2_index];
+    assign s2_v     = s2_odd_page ?
+                      tlb_v1   [s2_index] :
+                      tlb_v0   [s2_index];
     // write
     generate
         for (i = 0; i < TLBNUM; i = i + 1)
         begin : reset_tlb
             always @(posedge clk) begin
                 if (reset) begin
+                    tlb_mask[i]  <= 12'd0;
                     tlb_vpn2 [i] <= 0;
                     tlb_asid [i] <= 0;
                     tlb_g    [i] <= 0;
@@ -164,14 +213,15 @@ module tlb #
                     tlb_d1   [i] <= 0;
                     tlb_v1   [i] <= 0;
                 end else if (we && w_index == i) begin
-                    tlb_vpn2 [i] <= w_vpn2;
+                    tlb_mask [i] <= w_mask;
+                    tlb_vpn2 [i] <= w_vpn2 & ~w_mask;
                     tlb_asid [i] <= w_asid;
                     tlb_g    [i] <= w_g;
-                    tlb_pfn0 [i] <= w_pfn0;
+                    tlb_pfn0 [i] <= w_pfn0 & ~w_mask;
                     tlb_c0   [i] <= w_c0;
                     tlb_d0   [i] <= w_d0;
                     tlb_v0   [i] <= w_v0;
-                    tlb_pfn1 [i] <= w_pfn1;
+                    tlb_pfn1 [i] <= w_pfn1 & ~w_mask;
                     tlb_c1   [i] <= w_c1;
                     tlb_d1   [i] <= w_d1;
                     tlb_v1   [i] <= w_v1;
@@ -197,6 +247,7 @@ module tlb #
     end*/
 
     // read
+    assign r_mask   = tlb_mask [r_index];
     assign r_vpn2   = tlb_vpn2 [r_index];
     assign r_asid   = tlb_asid [r_index];
     assign r_g      = tlb_g    [r_index];

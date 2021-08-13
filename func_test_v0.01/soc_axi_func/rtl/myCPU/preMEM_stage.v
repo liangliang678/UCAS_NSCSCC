@@ -10,8 +10,7 @@ module premem_stage(
     input                          es_to_pms_valid,
     input [`ES_TO_PMS_BUS_WD -1:0] es_to_pms_bus  ,
     input [63:0]                   pms_mul_res,
-    // input [63:0]                   pms_inst1_mul_res,
-    // input [63:0]                   pms_inst2_mul_res,
+    
     //to ms
     output                           pms_to_ms_valid,
     output  [`PMS_TO_MS_BUS_WD -1:0] pms_to_ms_bus  ,
@@ -22,6 +21,35 @@ module premem_stage(
     output         clear_all                      ,
     output [31:0]  reflush_pc                     ,
 
+    //TLB
+    // write port
+    output         we,
+    output  [ 3:0] w_index,
+    output  [11:0] w_mask,
+    output  [18:0] w_vpn2,
+    output  [ 7:0] w_asid,
+    output         w_g,
+    output  [19:0] w_pfn0, 
+    output  [ 2:0] w_c0,
+    output         w_d0,
+    output         w_v0,
+    output  [19:0] w_pfn1,
+    output  [ 2:0] w_c1,
+    output         w_d1,
+    output         w_v1, 
+    // read port
+    output  [ 3:0] r_index,
+    input   [18:0] r_vpn2,
+    input   [ 7:0] r_asid,
+    input          r_g,
+    input   [19:0] r_pfn0,
+    input   [ 2:0] r_c0,
+    input          r_d0,
+    input          r_v0,
+    input   [19:0] r_pfn1,
+    input   [ 2:0] r_c1,
+    input          r_d1,
+    input          r_v1,
 
     //cp0
     //signals of mtc0, from pms
@@ -43,7 +71,23 @@ module premem_stage(
     input [31:0] inst1_c0_rdata    ,
     input [31:0] inst2_c0_rdata    ,
     input        has_int           ,
-    input [31:0] pms_epc          
+    input [31:0] pms_epc           ,
+
+    //for TLB
+    input [31:0] cp0_index   ,
+    input [31:0] cp0_entryhi ,
+    input [31:0] cp0_entrylo0,
+    input [31:0] cp0_entrylo1,
+    input [11:0] c0_mask,
+
+    //TLBR\TLBP to CP0
+    output        is_TLBR      ,
+    output [77:0] TLB_rdata    ,
+    output        is_TLBP      ,
+    output        index_write_p,
+    output [ 3:0] index_write_index,
+
+    output       pms_mtc0_index   
 
 );
 
@@ -76,8 +120,6 @@ always @(posedge clk) begin
     end
 end
 
-// assign inst1_ready_go = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_addr_ok | inst1_addr_ok_reg) | inst1_pms_except; //不访�? 访存请求接受 有例�?
-// assign inst2_ready_go = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_addr_ok | inst2_addr_ok_reg) | inst2_pms_except;
 assign inst1_ready_go = 1'b1;
 assign inst2_ready_go = 1'b1;
 
@@ -151,6 +193,11 @@ wire [31:0] br_target;
 wire [1:0] inst2_load_store_offset;
 wire [1:0] inst1_load_store_offset;
 
+wire        inst1_s1_found;
+wire [ 3:0] inst1_s1_index;
+wire        inst2_s1_found;
+wire [ 3:0] inst2_s1_index;
+
 wire        inst1_es_except;
 wire [4:0]  inst1_es_exccode;
 wire [31:0] inst1_es_BadVAddr;
@@ -162,6 +209,8 @@ wire [63:0] pms_alu_div_res;
 
 assign {
         inst2_valid,
+        inst2_s1_found,
+        inst2_s1_index,
         inst2_mul,
         inst2_refill,
         inst2_es_except,
@@ -184,7 +233,6 @@ assign {
         inst2_hl_src_from_mul,
         inst2_hl_src_from_div,
         pms_alu_inst2_result,
-        //pms_alu_inst2_div_res,
         inst2_gr_we,
         inst2_mem_we,
         inst2_dest,
@@ -197,6 +245,8 @@ assign {
         br_target,
         pms_alu_div_res,
 
+        inst1_s1_found,
+        inst1_s1_index,
         inst1_mul,
         inst1_refill,
         inst1_es_except,
@@ -219,7 +269,6 @@ assign {
         inst1_hl_src_from_mul,
         inst1_hl_src_from_div,
         pms_alu_inst1_result,
-        //pms_alu_inst1_div_res,
         inst1_gr_we,
         inst1_mem_we,
         inst1_dest,
@@ -367,7 +416,32 @@ assign pms_badvaddr = inst1_pms_except ? inst1_pms_BadVAddr :
 assign pms_eret = (inst1_pms_eret | inst2_pms_eret); //is eret
 
 
+//TLB
 
+assign is_TLBR              = inst1_pms_tlbr;
+assign TLB_rdata            = {r_vpn2, r_asid, r_g, r_pfn0, r_c0,r_d0,r_v0, r_pfn1, r_c1, r_d1, r_v1};
+assign is_TLBP              = inst1_pms_tlbp;
+assign index_write_p        = ~inst1_s1_found;
+assign index_write_index    = inst1_s1_index;
+
+assign we = inst1_pms_tlbwi;
+assign w_mask = c0_mask;
+assign w_index = cp0_index[3:0];
+assign w_vpn2 = cp0_entryhi[31:13];
+assign w_asid = cp0_entryhi[7:0];
+assign w_g = cp0_entrylo0[0] & cp0_entrylo1[0];
+assign w_pfn0 = cp0_entrylo0[25:6];
+assign w_c0 = cp0_entrylo0[5:3];
+assign w_d0 = cp0_entrylo0[2];
+assign w_v0 = cp0_entrylo0[1];
+assign w_pfn1 = cp0_entrylo1[25:6];
+assign w_c1 = cp0_entrylo1[5:3];
+assign w_d1 = cp0_entrylo1[2];
+assign w_v1 = cp0_entrylo1[1];
+assign r_index = cp0_index[3:0];
+
+assign pms_mtc0_index = inst1_mtc0_we & (inst1_cp0_addr == 8'h0) |
+                        inst2_mtc0_we & (inst2_cp0_addr == 8'h0) ; 
 
 // data bus
 assign pms_to_ms_bus = {
