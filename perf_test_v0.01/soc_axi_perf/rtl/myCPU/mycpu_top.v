@@ -118,8 +118,8 @@ wire           inst1_data_cache_valid;
 wire           inst1_data_cache_op;
 wire           inst1_data_cache_uncache;
 wire  [ 19:0]  inst1_data_cache_tag;
-wire  [  7:0]  inst1_data_cache_index;
-wire  [  3:0]  inst1_data_cache_offset;
+wire  [  6:0]  inst1_data_cache_index;
+wire  [  4:0]  inst1_data_cache_offset;
 wire  [  1:0]  inst1_data_cache_size;
 wire  [  3:0]  inst1_data_cache_wstrb;
 wire  [ 31:0]  inst1_data_cache_wdata;
@@ -131,8 +131,8 @@ wire           inst2_data_cache_valid;
 wire           inst2_data_cache_op;
 wire           inst2_data_cache_uncache;
 wire  [ 19:0]  inst2_data_cache_tag;
-wire  [  7:0]  inst2_data_cache_index;
-wire  [  3:0]  inst2_data_cache_offset;
+wire  [  6:0]  inst2_data_cache_index;
+wire  [  4:0]  inst2_data_cache_offset;
 wire  [  1:0]  inst2_data_cache_size;
 wire  [  3:0]  inst2_data_cache_wstrb;
 wire  [ 31:0]  inst2_data_cache_wdata;
@@ -146,13 +146,13 @@ wire [ 31:0]  data_cache_rd_addr;
 wire [  2:0]  data_cache_rd_size;
 wire          data_cache_rd_rdy;
 wire          data_cache_ret_valid;
-wire  [127:0] data_cache_ret_data;
+wire  [255:0] data_cache_ret_data;
 wire          data_cache_wr_req;
 wire          data_cache_wr_type;
 wire [ 31:0]  data_cache_wr_addr;
 wire [  2:0]  data_cache_wr_size;
 wire [  3:0]  data_cache_wr_wstrb;
-wire [127:0]  data_cache_wr_data;
+wire [255:0]  data_cache_wr_data;
 wire          data_cache_wr_rdy;
 wire          data_cache_wr_ok;
 
@@ -483,7 +483,7 @@ wb_stage wb_stage(
 );
 */
 
-icache3 icache3(
+icache icache(
     .clk        (aclk   ),
     .resetn     (aresetn),
 

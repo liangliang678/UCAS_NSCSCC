@@ -40,6 +40,7 @@
 | 2021-08-1 |dual issue: larger cache line| 90  | 50ed0    | 297476      | 6221a5   | 4e3bdc| d84e9    | 3207b4     | 353179      | 2a8b96 | 3e422       | 1fad2c       | 40.752 |\|
 | 2021-08-3 |dual issue: higher frequency| 100  | 4ace2    | 264784      | 5dad1c   | 468ed5| c43a0    | 2ced66     | 2fe20d      | 266ddb | 3ab03       | 1c4681       | 44.557 |\|
 | 2021-08-3 |dual issue: exe visit mem   | 100  | 4548c    | 223521      | 54aa20   | 3fa038| b7909    | 293269     | 2cc5ad      | 22a5a1 | 3275e       | 1acf86       | 48.861 | 24.400 |
+| 2021-08-12|dual issue: larger dcache line| 100  | 44619    | 211d2b      | 539d4d   | 3f311e| b57b1    | 270981     | 2cadlf      | 22167e | 2c8b4       | 19e486       | 50.390 | 25.163 |
 ## 参考资料
 
 1. [AXI总线概述](https://blog.csdn.net/bleauchat/article/details/96891619)
