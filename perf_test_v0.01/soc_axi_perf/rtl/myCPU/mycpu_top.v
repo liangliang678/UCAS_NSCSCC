@@ -146,7 +146,7 @@ wire [ 31:0]  data_cache_rd_addr;
 wire [  2:0]  data_cache_rd_size;
 wire          data_cache_rd_rdy;
 wire          data_cache_ret_valid;
-wire  [255:0] data_cache_ret_data;
+wire [255:0]  data_cache_ret_data;
 wire          data_cache_wr_req;
 wire          data_cache_wr_type;
 wire [ 31:0]  data_cache_wr_addr;
