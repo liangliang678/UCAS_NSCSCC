@@ -31,7 +31,7 @@ module if_stage(
     input  [`ES_FORWARD_BUS_WD -1:0] es_forward_bus,
     input  [`PMS_FORWARD_BUS_WD -1:0] pms_forward_bus,
     input  [`MS_FORWARD_BUS_WD -1:0] ms_forward_bus,
-    input  [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus,
+    //nput  [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus,
 
     //icache output
     input                          inst_cache_data_ok,
@@ -531,14 +531,6 @@ wire        ms_inst2_gr_we;
 wire [ 4:0] ms_inst2_dest;
 wire [31:0] ms_inst2_result;
 
-wire        ws_valid;
-wire        ws_inst1_gr_we;
-wire [ 4:0] ws_inst1_dest;
-wire [31:0] ws_inst1_result;
-wire        ws_inst2_gr_we;
-wire [ 4:0] ws_inst2_dest;
-wire [31:0] ws_inst2_result;
-
 wire        r1_need;
 wire        r2_need;
 wire        ds_inst1_r1_relevant;
@@ -557,10 +549,6 @@ wire        ms_inst1_r1_relevant;
 wire        ms_inst1_r2_relevant;
 wire        ms_inst2_r1_relevant;
 wire        ms_inst2_r2_relevant;
-wire        ws_inst1_r1_relevant;
-wire        ws_inst1_r2_relevant;
-wire        ws_inst2_r1_relevant;
-wire        ws_inst2_r2_relevant;
 
 wire        ds_block;
 wire        es_block;
@@ -583,10 +571,6 @@ assign {ms_valid, //ms_res_valid,
         ms_inst1_res_valid, ms_inst1_load, ms_inst1_gr_we, ms_inst1_dest, ms_inst1_result, 
         ms_inst2_res_valid, ms_inst2_load, ms_inst2_gr_we, ms_inst2_dest, ms_inst2_result } = ms_forward_bus;
 
-assign {ws_valid, 
-        ws_inst1_gr_we, ws_inst1_dest, ws_inst1_result, 
-        ws_inst2_gr_we, ws_inst2_dest, ws_inst2_result } = ws_forward_bus;
-
 assign r1_need = inst1_beq    | inst1_bne    | inst1_bgez | inst1_bgtz  | inst1_blez | inst1_bltz | 
                  inst1_bltzal | inst1_bgezal | inst1_jr   | inst1_jalr;
 assign r2_need = inst1_beq  | inst1_bne;
@@ -599,8 +583,6 @@ assign pms_inst1_r1_relevant = ~fifo_empty & r1_need & pms_valid & pms_inst1_gr_
 assign pms_inst2_r1_relevant = ~fifo_empty & r1_need & pms_valid & pms_inst2_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == pms_inst2_dest);
 assign ms_inst1_r1_relevant = ~fifo_empty & r1_need & ms_valid & ms_inst1_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == ms_inst1_dest);
 assign ms_inst2_r1_relevant = ~fifo_empty & r1_need & ms_valid & ms_inst2_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == ms_inst2_dest);
-assign ws_inst1_r1_relevant = ~fifo_empty & r1_need & ws_valid & ws_inst1_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == ws_inst1_dest);
-assign ws_inst2_r1_relevant = ~fifo_empty & r1_need & ws_valid & ws_inst2_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == ws_inst2_dest);
 
 assign ds_inst1_r2_relevant = ~fifo_empty & r2_need & ds_valid & ds_inst1_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ds_inst1_dest);
 assign ds_inst2_r2_relevant = ~fifo_empty & r2_need & ds_valid & ds_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ds_inst2_dest);
@@ -610,8 +592,6 @@ assign pms_inst1_r2_relevant = ~fifo_empty & r2_need & pms_valid & pms_inst1_gr_
 assign pms_inst2_r2_relevant = ~fifo_empty & r2_need & pms_valid & pms_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == pms_inst2_dest);
 assign ms_inst1_r2_relevant = ~fifo_empty & r2_need & ms_valid & ms_inst1_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ms_inst1_dest);
 assign ms_inst2_r2_relevant = ~fifo_empty & r2_need & ms_valid & ms_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ms_inst2_dest);
-assign ws_inst1_r2_relevant = ~fifo_empty & r2_need & ws_valid & ws_inst1_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ws_inst1_dest);
-assign ws_inst2_r2_relevant = ~fifo_empty & r2_need & ws_valid & ws_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ws_inst2_dest);
 
 assign ds_block = ds_inst1_r1_relevant | ds_inst2_r1_relevant | ds_inst1_r2_relevant | ds_inst2_r2_relevant;
 
@@ -635,8 +615,6 @@ assign inst1_br_rs_value = (es_inst2_r1_relevant) ? es_inst2_result:
                            (pms_inst1_r1_relevant) ? pms_inst1_result:
                            (ms_inst2_r1_relevant) ? ms_inst2_result:
                            (ms_inst1_r1_relevant) ? ms_inst1_result:
-                           (ws_inst2_r1_relevant) ? ws_inst2_result:
-                           (ws_inst1_r1_relevant) ? ws_inst1_result:
                                                     ds_rf_rdata1;
 assign inst1_br_rt_value = (es_inst2_r2_relevant) ? es_inst2_result:
                            (es_inst1_r2_relevant) ? es_inst1_result:
@@ -644,8 +622,6 @@ assign inst1_br_rt_value = (es_inst2_r2_relevant) ? es_inst2_result:
                            (pms_inst1_r2_relevant) ? pms_inst1_result:
                            (ms_inst2_r2_relevant) ? ms_inst2_result:
                            (ms_inst1_r2_relevant) ? ms_inst1_result:
-                           (ws_inst2_r2_relevant) ? ws_inst2_result:
-                           (ws_inst1_r2_relevant) ? ws_inst1_result:
                                                     ds_rf_rdata2;
 
 
