@@ -758,6 +758,17 @@ tlb_cache data_tlb_cache2(
     .inst_tlb_index (inst2_s1_index)
 );
 
+reg [31:0] inst1_VA_r;
+reg [31:0] inst2_VA_r;
+
+always @(posedge clk) begin
+    inst1_VA_r <= inst1_VA;
+end
+
+always @(posedge clk) begin
+    inst2_VA_r <= inst2_VA;
+end
+
 wire inst1_kseg0;
 wire inst1_kseg01;
 wire inst2_kseg0;
@@ -775,8 +786,8 @@ assign inst2_cache = inst2_kseg01 ? (inst2_kseg0 & c0_config_k0[0]) : inst2_s1_c
 assign inst1_use_tlb =es_valid & ~(inst1_VA[31] & ~inst1_VA[30]) & (inst1_load_op | inst1_mem_we);
 assign inst2_use_tlb =es_valid & ~(inst2_VA[31] & ~inst2_VA[30]) & (inst2_load_op | inst2_mem_we);
 
-assign s1_vpn2 = inst1_es_tlbp ? cp0_entryhi[31:13] : inst1_VA[31:13];
-assign s2_vpn2 = inst2_es_tlbp ? cp0_entryhi[31:13] : inst2_VA[31:13];
+assign s1_vpn2 = inst1_es_tlbp ? cp0_entryhi[31:13] : inst1_VA_r[31:13];
+assign s2_vpn2 = inst2_es_tlbp ? cp0_entryhi[31:13] : inst2_VA_r[31:13];
 assign s1_odd_page = inst1_es_tlbp ? 1'b0 : inst1_VA[12];
 assign s2_odd_page = inst2_es_tlbp ? 1'b0 : inst2_VA[12];
 assign s1_asid = cp0_entryhi[7:0];
