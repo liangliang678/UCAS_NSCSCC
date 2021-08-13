@@ -75,6 +75,7 @@ wire [31:0]  ds_rf_rdata2;
 wire         ds_branch;
 
 wire  [`BR_BUS_WD       -1:0] br_bus;
+wire  [`BR_BUS_WD       -1:0] bp_bus;
 wire  [`PF_TO_FS_BUS_WD -1:0] preif_to_fs_bus;
 wire  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus;
 wire  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus;
@@ -90,6 +91,18 @@ wire  [`MS_FORWARD_BUS_WD -1:0] ms_forward_bus;
 
 wire         fs_no_inst_wait;
 wire [ 5:0]  inst_offset;
+
+// branch predictor
+wire         branch;
+wire         branch_res;
+wire         branch_fail;
+wire  [7: 0] branch_addr;
+wire  [7: 0] branch_target;
+
+wire  [7: 0] bp_addr;
+wire         bp_res;
+wire         bp_valid;
+wire  [7: 0] bp_target;
 
 // cache
 wire           inst_cache_valid;
@@ -191,6 +204,7 @@ preif_stage preif_stage(
     .fs_allowin          (fs_allowin),   
     //brbus
     .br_bus              (br_bus),
+    .if_bus              (bp_bus),
 
     //fs
     .to_fs_valid         (to_fs_valid),
@@ -253,13 +267,39 @@ if_stage if_stage(
     //.ws_forward_bus        (ws_forward_bus),
 
     //icache output
-    .inst_cache_data_ok       (inst_cache_data_ok),
-    .inst_cache_data_num      (inst_cache_data_num),
-    .inst_cache_rdata         (inst_cache_rdata),
+    .inst_cache_data_ok    (inst_cache_data_ok),
+    .inst_cache_data_num   (inst_cache_data_num),
+    .inst_cache_rdata      (inst_cache_rdata),
+
+    //to prefs
+    .bp_bus                (bp_bus),
+
+    //branch predictor
+    .bp_addr               (bp_addr),
+	.bp_res                (bp_res),
+    .bp_valid              (bp_valid),
+    .bp_target             (bp_target),
 
     //clear stage
     .clear_all             (clear_all)
 );
+
+branch_predictor branch_predictor(
+	.clk                    (aclk),
+    .rst                    (reset),
+
+	.branch                 (branch),
+	.branch_res             (branch_res),
+    .branch_fail            (branch_fail),
+	.branch_addr            (branch_addr),
+    .branch_target          (branch_target),
+
+    .bp_addr                (bp_addr),
+	.bp_res                 (bp_res),
+    .bp_valid               (bp_valid),
+    .bp_target              (bp_target)
+);
+
 id_stage id_stage(
     .clk                    (aclk),
     .reset                  (reset),
@@ -292,6 +332,13 @@ id_stage id_stage(
     .ms_forward_bus         (ms_forward_bus),
     //.ws_forward_bus         (ws_forward_bus),
     .ds_forward_bus         (ds_forward_bus),
+
+    //branch predictor
+    .branch                 (branch),
+	.branch_res             (branch_res),
+    .branch_fail            (branch_fail),
+	.branch_addr            (branch_addr),
+    .branch_target          (branch_target),
 
     //handle interrupt
     .has_int                (has_int       ),

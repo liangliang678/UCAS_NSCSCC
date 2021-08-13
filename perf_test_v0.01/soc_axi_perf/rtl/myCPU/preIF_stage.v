@@ -7,7 +7,7 @@ module preif_stage(
     input                          fs_allowin     ,   
     //brbus
     input  [`BR_BUS_WD       -1:0] br_bus         ,
-
+    input  [`BR_BUS_WD       -1:0] if_bus         ,
     //fs
     output                         to_fs_valid    ,
     output [`PF_TO_FS_BUS_WD -1:0] preif_to_fs_bus,
@@ -60,7 +60,6 @@ wire        exception_is_tlb_refill;
 
 (* max_fanout = 10 *)reg  [`BR_BUS_WD-1:0] br_bus_r;
 
-
 wire         br_take_branch, br_taken_r;
 wire [ 31:0] br_target, br_target_r;
 wire         br_stall;
@@ -68,9 +67,28 @@ wire         br_stall;
 reg pfs_go_reflush_pc;
 reg [31:0] reflush_pc_r;
 
+(* max_fanout = 10 *)reg  [`BR_BUS_WD-1:0] if_bus_r; 
+wire [31:0] if_target, if_target_r;
+wire        if_taken, if_taken_r;
+
+assign {
+        if_taken,
+        if_target
+       } = if_bus;
+
+always @(posedge clk) begin
+    if(reset)
+        if_bus_r <= 33'b0;
+    else if(pfs_reflush | preif_ready_go)
+        if_bus_r[32] <= 1'b0;                                 
+    else if(if_taken)
+        if_bus_r[32:0] <= if_bus[32:0];    
+end
+
+assign if_taken_r = if_bus_r[32];
+assign if_target_r = if_bus_r[31:0];
 
 // handle branch/jump
-
 assign {
         br_take_branch,       //32:32
         br_target           //31:0
@@ -79,7 +97,7 @@ assign {
 always @(posedge clk) begin
     if(reset)
         br_bus_r[32:0] <= 33'b0;
-    else if(pfs_reflush | preif_ready_go)   //例外 或�?? 跳转地址访问已经接受了，标记为无�?
+    else if(pfs_reflush | preif_ready_go)   //例外 或�?? 跳转地址访问已经接受了，标记为无�?
         br_bus_r[32] <= 1'b0;                                 
     else if(br_take_branch)
         br_bus_r[32:0] <= br_bus[32:0];
@@ -113,13 +131,15 @@ always @(posedge clk) begin                              //we need a register to
 end
 
 // pre-IF stage
-assign preif_ready_go = (inst_cache_valid & inst_cache_addr_ok) | fs_no_inst_wait & fs_allowin;  //请求接受 或�?? 不发请求（有例外�?
+assign preif_ready_go = (inst_cache_valid & inst_cache_addr_ok) | fs_no_inst_wait & fs_allowin;  //请求接受 或�?? 不发请求（有例外�?
 assign to_fs_valid    = ~reset & preif_ready_go;
 assign seq_pc         = fs_pc + inst_offset;
 assign nextpc         = (pfs_reflush ) ? reflush_pc : 
                         (pfs_go_reflush_pc) ? reflush_pc_r :
                         (br_take_branch) ? br_target :                         
                         (br_taken_r) ? br_target_r : 
+                        if_taken ? if_target :
+                        if_taken_r ? if_target_r :
                         seq_pc;                                         //if delay slot in preif, go pc+4
 
 always @(posedge clk) begin

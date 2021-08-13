@@ -33,6 +33,13 @@ module id_stage(
     //input  [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus,
     output [`DS_FORWARD_BUS_WD -1:0] ds_forward_bus,
 
+    //branch predictor
+    output                         branch,
+	output                         branch_res,
+    output                         branch_fail,
+	output  [7: 0]                 branch_addr,
+    output  [7: 0]                 branch_target,
+
     //handle interrupt
     input                          has_int       ,
     
@@ -43,7 +50,7 @@ module id_stage(
 reg         ds_valid;
 wire        ds_ready_go;
 
-reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
+(* max_fanout = 20 *)reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 
 wire [31:0] inst1_pc;
 wire [31:0] inst1_inst;
@@ -69,6 +76,8 @@ wire [63:0] inst1_func_d;
 
 wire [31:0] inst1_br_rs_value;
 wire [31:0] inst1_br_rt_value;
+wire        inst1_bp;
+wire [31:0] inst1_bp_target_pc;
 
 wire [31:0] inst2_pc;
 wire [31:0] inst2_inst;
@@ -114,6 +123,9 @@ assign {inst2_valid,
         inst2_fs_exccode,
         inst2_inst,
         inst2_pc,
+
+        inst1_bp,
+        inst1_bp_target_pc,
 
         inst1_br_rs_value,
         inst1_br_rt_value,
@@ -437,6 +449,7 @@ wire        inst1_tlbp;
 wire        inst1_tlbr;
 wire        inst1_tlbwi;
 wire        inst1_mul;
+wire        inst1_br;
 
 assign inst1_add    = inst1_op_d[6'h00] & inst1_func_d[6'h20] & inst1_sa_d[5'h00];
 assign inst1_addu   = inst1_op_d[6'h00] & inst1_func_d[6'h21] & inst1_sa_d[5'h00];
@@ -542,6 +555,7 @@ assign inst1_lo_op     = inst1_mflo;
 assign inst1_cp0_op    = inst1_mfc0;
 assign inst1_branch_op = inst1_beq | inst1_bne | inst1_bgez | inst1_bgezal | inst1_bgtz | inst1_blez | inst1_bltz | inst1_bltzal;
 assign inst1_jump_op   = inst1_j | inst1_jal | inst1_jalr | inst1_jr;
+assign inst1_br        = inst1_branch_op | inst1_jump_op;
 
 assign inst1_src1_is_sa   = inst1_sll | inst1_srl | inst1_sra;
 assign inst1_src1_is_pc   = inst1_jal | inst1_bgezal | inst1_bltzal | inst1_jalr;
@@ -607,6 +621,9 @@ assign inst1_ds_exccode = (has_int         ) ? 5'h0:
 wire        rs_eq_rt;
 wire        rs_ge_z;
 wire        rs_gt_z;
+wire        br_fail;
+wire        br_target_fail;
+wire [31:0] br_target_final;
 
 assign rs_eq_rt = (inst1_br_rs_value == inst1_br_rt_value);
 assign rs_ge_z  = (inst1_br_rs_value[31] == 1'b0);
@@ -630,12 +647,21 @@ assign br_target = (inst1_beq || inst1_bne || inst1_bgez || inst1_bgtz ||
                    (inst1_jr || inst1_jalr)                                   ? inst1_br_rs_value :
                     /*inst_jal || inst_j*/                                      {inst2_pc[31:28], inst1_jidx[25:0], 2'b0};
 
-assign br_leave = br_taken; //& ds_to_es_valid & es_allowin;
 
-assign br_bus = {br_leave, br_target};
+assign br_target_fail = ~(br_target == inst1_bp_target_pc);
+assign br_fail = br_taken ^ inst1_bp;
+
+assign br_leave = br_fail & inst1_br & ds_valid;
+assign br_target_final = {32{br_taken & ~inst1_bp}} & br_target | {32{~br_taken & inst1_bp}} & (inst1_pc + 4'd8);
+
+assign br_bus = {br_leave, br_target_final};
 assign ds_branch = br_leave;
 
-
+assign branch        = inst1_br & ds_valid;
+assign branch_res    = br_taken;
+assign branch_fail   = br_taken & ~inst1_bp;
+assign branch_addr   = inst1_pc[9:2];
+assign branch_target = br_target[9:2];
 
 // inst 2
 wire        inst2_add;

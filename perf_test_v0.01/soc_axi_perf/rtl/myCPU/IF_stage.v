@@ -38,6 +38,15 @@ module if_stage(
     input [   3:0]                 inst_cache_data_num,
     input [ 255:0]                 inst_cache_rdata,
 
+    //to prefs
+    output [`BR_BUS_WD       -1:0] bp_bus        ,
+
+    //branch predictor
+    output  [7: 0]                 bp_addr,
+	input                          bp_res,
+    input                          bp_valid,
+    input   [7: 0]                 bp_target,
+
     //clear stage
     input                          clear_all
 );
@@ -103,6 +112,8 @@ wire [63:0] inst1_func_d;
 
 wire [31:0] inst1_br_rs_value;
 wire [31:0] inst1_br_rt_value;
+wire        bp;
+wire [31:0] bp_target_pc;
 
 wire        inst1_br;
 wire        inst2_br;
@@ -156,6 +167,9 @@ assign fs_to_ds_bus = { inst2_valid,
                         inst2_inst,
                         inst2_pc,
 
+                        bp,
+                        bp_target_pc,
+
                         inst1_br_rs_value,
                         inst1_br_rt_value,
 
@@ -194,7 +208,7 @@ always @(posedge clk) begin
     else begin
         case(fs_state)
         `WAIT_PREIF: begin
-            if (to_fs_valid && fs_allowin && (clear_all || ds_branch)) begin
+            if (to_fs_valid && fs_allowin && (clear_all || ds_branch || bp)) begin
                 //fs_state <= `CLEAR_ALL;
                 fs_state <= `RECV_INST;
             end
@@ -212,7 +226,7 @@ always @(posedge clk) begin
             if (inst_cache_data_ok) begin
                 fs_state <= `WAIT_PREIF;
             end
-            else if (clear_all || ds_branch) begin
+            else if (clear_all || ds_branch || bp) begin
                 fs_state <= `CLEAR_ALL;
             end
             else begin
@@ -274,7 +288,7 @@ always @(posedge clk) begin
         tail <= 4'b0;
     end
     else begin
-        if (clear_all || ds_branch) begin
+        if (clear_all || ds_branch || bp) begin
             tail <= 4'b0;
         end
         else if (fs_state == `RECV_INST && inst_cache_data_ok) begin
@@ -291,7 +305,7 @@ always @(posedge clk) begin
         head <= 4'b0;
     end
     else begin
-        if (clear_all || ds_branch) begin
+        if (clear_all || ds_branch || bp) begin
             head <= 4'b0;
         end
         else if (fs_to_ds_valid && ds_allowin) begin
@@ -318,7 +332,7 @@ always @(posedge clk) begin
         pc_offset <= 6'd4;
     end
     else begin
-        if (clear_all || ds_branch) begin
+        if (clear_all || ds_branch || bp) begin
             pc_offset <= 6'd4;
         end
         else if (fs_state == `RECV_INST && inst_cache_data_ok) begin
@@ -330,7 +344,7 @@ end
 assign fs_to_preif_offset = pc_offset;
 
 always @(posedge clk) begin
-    if (fs_state == `RECV_INST && inst_cache_data_ok && !(clear_all || ds_branch)) begin
+    if (fs_state == `RECV_INST && inst_cache_data_ok && !(clear_all || ds_branch || bp)) begin
             fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
             fifo_inst[tail_1]    <= inst_cache_rdata[ 63: 32];
             fifo_inst[tail_2]    <= inst_cache_rdata[ 95: 64];
@@ -376,7 +390,7 @@ always @(posedge clk) begin
             fifo_refill[tail_6]  <= fs_refill;
             fifo_refill[tail_7]  <= fs_refill;
     end
-    else if (fs_state == `RECV_NO_INST && !(clear_all || ds_branch)) begin
+    else if (fs_state == `RECV_NO_INST && !(clear_all || ds_branch || bp)) begin
         fifo_inst[tail]       <= 32'b0;
         fifo_pc[tail]         <= fs_pc;
         fifo_except[tail]     <= fs_except;
@@ -624,6 +638,24 @@ assign inst1_br_rt_value = (es_inst2_r2_relevant) ? es_inst2_result:
                            (ms_inst1_r2_relevant) ? ms_inst1_result:
                                                     ds_rf_rdata2;
 
+// branch
+reg    bp_go;
+assign bp_addr = inst1_pc[9:2];
+assign bp = inst1_br & bp_res & bp_valid & fifo_readygo & ~bp_go;
+assign bp_target_pc = {inst1_pc[31:9], bp_target, 2'b00};
+assign bp_bus = {bp, bp_target_pc};
+
+always @(posedge clk) begin
+    if (reset) begin
+        bp_go <= 1'b0;
+    end
+    else if (fs_to_ds_valid && ds_allowin || clear_all || ds_branch) begin
+        bp_go <= 1'b0;
+    end
+    else if (bp) begin
+        bp_go <= 1'b1;
+    end
+end
 
 // inst 2
 wire [ 5:0] inst2_op;
