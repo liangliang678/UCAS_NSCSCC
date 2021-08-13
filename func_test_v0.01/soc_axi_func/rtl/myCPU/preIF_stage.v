@@ -191,6 +191,12 @@ assign fs_no_inst_wait = pfs_has_exception;
 
 assign fs_use_tlb = ~(nextpc[31] & ~nextpc[30]);
 
+reg [31:0] nextpc_r;
+
+always @(posedge clk) begin
+    nextpc_r <= nextpc;
+end
+
 wire          tlb_req_en;
 wire          tlb_found;
 wire   [19:0] tlb_pfn;
@@ -225,8 +231,8 @@ tlb_cache inst_tlb_cache(
     .inst_tlb_found (tlb_found)
 
 );
-assign s0_vpn2 = nextpc[31:13];
-assign s0_odd_page = nextpc[12];
+assign s0_vpn2 = nextpc_r[31:13];
+assign s0_odd_page = nextpc_r[12];
 assign s0_asid = cp0_entryhi[7:0];
 
 //cache valid

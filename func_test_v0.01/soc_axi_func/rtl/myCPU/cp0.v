@@ -520,9 +520,9 @@ end
 reg [11:0] c0_mask;
 
 always @(posedge cp0_clk) begin
-    //if(reset)//DEBUG
-        //c0_mask <= 12'd0;
-    //else if(is_TLBR)
+    /*if(reset)//DEBUG
+        c0_mask <= 12'd0;
+    else if(is_TLBR)*/
     if (is_TLBR)
         c0_mask <= TLBR_mask;
     else if(inst2_mtc0_we && inst2_c0_addr == CR_PAGEMASK) 
