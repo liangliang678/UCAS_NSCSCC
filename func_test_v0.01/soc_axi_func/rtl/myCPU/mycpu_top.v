@@ -62,11 +62,13 @@ wire         ds_allowin;
 wire         es_allowin;
 wire         pms_allowin;
 wire         ms_allowin;
+wire         ws_allowin;
 wire         to_fs_valid;
 wire         fs_to_ds_valid;
 wire         ds_to_es_valid;
 wire         es_to_pms_valid;
 wire         pms_to_ms_valid;
+wire         ms_to_ws_valid;
  
 wire [ 4:0]  fs_rf_raddr1;
 wire [ 4:0]  fs_rf_raddr2;
@@ -81,12 +83,13 @@ wire  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus;
 wire  [`ES_TO_PMS_BUS_WD -1:0] es_to_pms_bus;
 wire  [`PMS_TO_MS_BUS_WD -1:0] pms_to_ms_bus;
 wire  [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus;
-wire  [`WS_TO_RF_BUS_WD -1:0] ms_to_rf_bus;
+wire  [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus;
 
 wire  [`DS_FORWARD_BUS_WD -1:0] ds_forward_bus;
 wire  [`ES_FORWARD_BUS_WD -1:0] es_forward_bus;
 wire  [`PMS_FORWARD_BUS_WD -1:0] pms_forward_bus;
 wire  [`MS_FORWARD_BUS_WD -1:0] ms_forward_bus;
+wire  [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus;
 
 wire         fs_no_inst_wait;
 wire [ 5:0]  inst_offset;
@@ -146,7 +149,7 @@ wire [ 31:0]  data_cache_rd_addr;
 wire [  2:0]  data_cache_rd_size;
 wire          data_cache_rd_rdy;
 wire          data_cache_ret_valid;
-wire [255:0]  data_cache_ret_data;
+wire  [255:0] data_cache_ret_data;
 wire          data_cache_wr_req;
 wire          data_cache_wr_type;
 wire [ 31:0]  data_cache_wr_addr;
@@ -184,6 +187,84 @@ wire          axi_rd_rdy;
 wire          axi_ret_valid;
 wire [511:0]  axi_ret_data;
 wire          axi_ret_half;
+
+
+wire [31:0] cp0_index;
+wire [31:0] cp0_entryhi;
+wire [31:0] cp0_entrylo0;
+wire [31:0] cp0_entrylo1;
+wire [2 :0] c0_config_k0;
+wire [11:0] c0_mask;
+wire        is_TLBR;
+wire [77:0] TLB_rdata;
+wire        is_TLBP;
+wire        index_write_p;
+wire [ 3:0] index_write_index;
+
+
+//TLB
+wire [18:0] s0_vpn2;
+wire        s0_odd_age;
+wire [ 7:0] s0_asid;
+wire        s0_found;
+wire [ 3:0] s0_index;
+wire [19:0] s0_pfn;
+wire [ 2:0] s0_c;
+wire        s0_d;
+wire        s0_v;
+
+wire [18:0] s1_vpn2;
+wire        s1_odd_page;
+wire [ 7:0] s1_asid;
+wire        s1_found;
+wire [ 3:0] s1_index;
+wire [19:0] s1_pfn;
+wire [ 2:0] s1_c;
+wire        s1_d;
+wire        s1_v; 
+
+wire [18:0] s2_vpn2;
+wire        s2_odd_page;
+wire [ 7:0] s2_asid;
+wire        s2_found;
+wire [ 3:0] s2_index;
+wire [19:0] s2_pfn;
+wire [ 2:0] s2_c;
+wire        s2_d;
+wire        s2_v; 
+
+//TLB write port
+wire [11:0] w_mask;
+wire        we;
+wire [ 3:0] w_index;
+wire [18:0] w_vpn2;
+wire [ 7:0] w_asid;
+wire        w_g;
+wire [19:0] w_pfn0;
+wire [ 2:0] w_c0;
+wire        w_d0;
+wire        w_v0;
+wire [19:0] w_pfn1;
+wire [ 2:0] w_c1;
+wire        w_d1;
+wire        w_v1; 
+//TLB read port
+wire [11:0] r_mask;
+wire [ 3:0] r_index;
+wire [18:0] r_vpn2;
+wire [ 7:0] r_asid;
+wire        r_g;
+wire [19:0] r_pfn0;
+wire [ 2:0] r_c0;
+wire        r_d0;
+wire        r_v0;
+wire [19:0] r_pfn1;
+wire [ 2:0] r_c1;
+wire        r_d1;
+wire        r_v1;
+
+wire        pms_mtc0_index;
+
 preif_stage preif_stage(
     .clk                 (aclk),
     .reset               (reset),
@@ -206,23 +287,22 @@ preif_stage preif_stage(
     .inst_cache_offset    (inst_cache_offset),
     .inst_cache_addr_ok   (inst_cache_addr_ok),
 
-    // //TLB search port 0
-    // output [18:0] s0_vpn2,
-    // output        s0_odd_page,
-    // output [ 7:0] s0_asid,
-    // input         s0_found,
-    // input  [ 3:0] s0_index,
-    // input  [19:0] s0_pfn,
-    // input  [ 2:0] s0_c,
-    // input         s0_d,
-    // input         s0_v,
-    // input         tlb_write,
-    // input  [31:0] cp0_entryhi,
+    //TLB search port 0
+    .s0_vpn2              (s0_vpn2),
+    .s0_c                 (s0_c),
+    .s0_odd_page          (s0_odd_page),
+    .s0_asid              (s0_asid),
+    .s0_found             (s0_found),
+    .s0_pfn               (s0_pfn),
+    .s0_d                 (s0_d),
+    .s0_v                 (s0_v),
+    .tlb_write            (we),
+    .cp0_entryhi          (cp0_entryhi),
 
     //reflush
-    .pfs_reflush     (clear_all),
-    .reflush_pc      (reflush_pc)
-);
+    .pfs_reflush        (clear_all),
+    .reflush_pc         (reflush_pc)
+);  
 
 if_stage if_stage(
     .clk                   (aclk),
@@ -250,7 +330,7 @@ if_stage if_stage(
     .es_forward_bus        (es_forward_bus),
     .pms_forward_bus       (pms_forward_bus),
     .ms_forward_bus        (ms_forward_bus),
-    //.ws_forward_bus        (ws_forward_bus),
+    .ws_forward_bus        (ws_forward_bus),
 
     //icache output
     .inst_cache_data_ok       (inst_cache_data_ok),
@@ -284,13 +364,13 @@ id_stage id_stage(
     .ds_to_fs_rf_rdata2     (ds_rf_rdata2),
 
     //to rf: for write back
-    .ms_to_rf_bus           (ms_to_rf_bus ),
+    .ws_to_rf_bus           (ws_to_rf_bus ),
 
     //relevant bus
     .es_forward_bus         (es_forward_bus),
     .pms_forward_bus        (pms_forward_bus),
     .ms_forward_bus         (ms_forward_bus),
-    //.ws_forward_bus         (ws_forward_bus),
+    .ws_forward_bus         (ws_forward_bus),
     .ds_forward_bus         (ds_forward_bus),
 
     //handle interrupt
@@ -313,50 +393,72 @@ exe_stage exe_stage(
     .es_to_pms_valid        (es_to_pms_valid),
     .es_to_pms_bus          (es_to_pms_bus  ),
     .es_mul_res             (es_mul_res     ),
-    // .es_inst1_mul_res       (es_inst1_mul_res),
-    // .es_inst2_mul_res       (es_inst2_mul_res),
+
 
     // data cache interface
     .inst1_data_cache_valid     (inst1_data_cache_valid),
     .inst1_data_cache_op        (inst1_data_cache_op),
-    .inst1_data_cache_uncache       (inst1_data_cache_uncache),
+    .inst1_data_cache_uncache   (inst1_data_cache_uncache),
     .inst1_data_cache_tag       (inst1_data_cache_tag),
     .inst1_data_cache_index     (inst1_data_cache_index),
-    .inst1_data_cache_offset        (inst1_data_cache_offset),
+    .inst1_data_cache_offset    (inst1_data_cache_offset),
     .inst1_data_cache_size      (inst1_data_cache_size), 
     .inst1_data_cache_wstrb     (inst1_data_cache_wstrb),
     .inst1_data_cache_wdata     (inst1_data_cache_wdata),
-    .inst1_data_cache_addr_ok       (inst1_data_cache_addr_ok),
+    .inst1_data_cache_addr_ok   (inst1_data_cache_addr_ok),
 
     .inst2_data_cache_valid     (inst2_data_cache_valid),
     .inst2_data_cache_op        (inst2_data_cache_op),
-    .inst2_data_cache_uncache       (inst2_data_cache_uncache),
+    .inst2_data_cache_uncache   (inst2_data_cache_uncache),
     .inst2_data_cache_tag       (inst2_data_cache_tag),
     .inst2_data_cache_index     (inst2_data_cache_index),
-    .inst2_data_cache_offset        (inst2_data_cache_offset),
+    .inst2_data_cache_offset    (inst2_data_cache_offset),
     .inst2_data_cache_size      (inst2_data_cache_size), 
     .inst2_data_cache_wstrb     (inst2_data_cache_wstrb),
     .inst2_data_cache_wdata     (inst2_data_cache_wdata),
-    .inst2_data_cache_addr_ok       (inst2_data_cache_addr_ok),
+    .inst2_data_cache_addr_ok   (inst2_data_cache_addr_ok),
 
+    //TLB
+    .s1_vpn2                    (s1_vpn2),
+    .s1_odd_page                (s1_odd_page),
+    .s1_asid                    (s1_asid),
+    .s1_found                   (s1_found),
+    .s1_pfn                     (s1_pfn),
+    .s1_index                   (s1_index),
+    .s1_c                       (s1_c),
+    .s1_d                       (s1_d),
+    .s1_v                       (s1_v),
+
+    .s2_vpn2                    (s2_vpn2),
+    .s2_odd_page                (s2_odd_page),
+    .s2_asid                    (s2_asid),
+    .s2_found                   (s2_found),
+    .s2_pfn                     (s2_pfn),
+    .s2_index                   (s2_index),
+    .s2_c                       (s2_c),
+    .s2_d                       (s2_d),
+    .s2_v                       (s2_v),
+
+    .tlb_write                  (we),
+    .cp0_entryhi                (cp0_entryhi),
+    .pms_mtc0_index             (pms_mtc0_index),
+    .c0_config_k0               (c0_config_k0),
     //relevant bus
-    .es_forward_bus         (es_forward_bus),
+    .es_forward_bus             (es_forward_bus),
   
     //clear stage
-    .clear_all              (clear_all)
+    .clear_all                  (clear_all)
 );
 
 premem_stage premem_stage(
-    .clk                    (aclk),
-    .reset                  (reset),
+    .clk                        (aclk),
+    .reset                      (reset),
     //allowin
-    .ms_allowin             (ms_allowin),
-    .pms_allowin            (pms_allowin),
+    .ms_allowin                 (ms_allowin),
+    .pms_allowin                (pms_allowin),
     //from es
     .es_to_pms_valid            (es_to_pms_valid),
     .es_to_pms_bus              (es_to_pms_bus),
-    // .pms_inst1_mul_res          (es_inst1_mul_res),
-    // .pms_inst2_mul_res          (es_inst2_mul_res),
     .pms_mul_res                (es_mul_res),
     //to ms
     .pms_to_ms_valid            (pms_to_ms_valid),
@@ -368,7 +470,35 @@ premem_stage premem_stage(
     .clear_all                  (clear_all),
     .reflush_pc                 (reflush_pc),
 
-
+    //TLB
+    // write port
+    .we                         (we),
+    .w_mask (w_mask),
+    .w_index                    (w_index),
+    .w_vpn2                     (w_vpn2),
+    .w_asid                     (w_asid),
+    .w_g                        (w_g),
+    .w_pfn0                     (w_pfn0),
+    .w_c0                       (w_c0),
+    .w_d0                       (w_d0),
+    .w_v0                       (w_v0),
+    .w_pfn1                     (w_pfn1),
+    .w_c1                       (w_c1),
+    .w_d1                       (w_d1),
+    .w_v1                       (w_v1), 
+    // read port
+    .r_index                    (r_index),
+    .r_vpn2                     (r_vpn2),
+    .r_asid                     (r_asid),
+    .r_g                        (r_g),
+    .r_pfn0                     (r_pfn0),
+    .r_c0                       (r_c0),
+    .r_d0                       (r_d0),
+    .r_v0                       (r_v0),
+    .r_pfn1                     (r_pfn1),
+    .r_c1                       (r_c1),
+    .r_d1                       (r_d1),
+    .r_v1                       (r_v1),
 
     //cp0
     //signals of mtc0, from pms
@@ -390,7 +520,23 @@ premem_stage premem_stage(
     .inst1_c0_rdata             (inst1_c0_rdata),
     .inst2_c0_rdata             (inst2_c0_rdata),
     .has_int                    (has_int),
-    .pms_epc                    (pms_epc)
+    .pms_epc                    (pms_epc),
+
+    //for TLB
+    .cp0_index                  (cp0_index),
+    .cp0_entryhi                (cp0_entryhi),
+    .cp0_entrylo0               (cp0_entrylo0),
+    .cp0_entrylo1               (cp0_entrylo1),
+    .c0_mask                  (c0_mask),
+
+    //TLBR\TLBP to CP0
+    .is_TLBR                    (is_TLBR),
+    .TLB_rdata                  (TLB_rdata),
+    .is_TLBP                    (is_TLBP),
+    .index_write_p              (index_write_p),
+    .index_write_index          (index_write_index),
+
+    .pms_mtc0_index             (pms_mtc0_index)
 
 );
 
@@ -417,32 +563,37 @@ cp0 cp0(
     .inst2_c0_rdata             (inst2_c0_rdata),
     .has_int                    (has_int),
     .epc_res                    (pms_epc),
-    .ext_int_in                 (ext_int)
+    .ext_int_in                 (ext_int),
 
-    // //for TLB
-    // output [31:0] cp0_index   ,
-    // output [31:0] cp0_entryhi ,
-    // output [31:0] cp0_entrylo0,
-    // output [31:0] cp0_entrylo1,
+    //for TLB
+    .cp0_index                  (cp0_index),
+    .cp0_entryhi                (cp0_entryhi),
+    .cp0_entrylo0               (cp0_entrylo0),
+    .cp0_entrylo1               (cp0_entrylo1),
+    .c0_config_k0               (c0_config_k0),
+    .c0_mask             (c0_mask),
 
-    // //TLBR\TLBP to CP0
-    // input        is_TLBR      ,
-    // input [77:0] TLB_rdata    ,
-    // input        is_TLBP      ,
-    // input        index_write_p,
-    // input [ 3:0] index_write_index    
+    //TLBR\TLBP to CP0
+    .TLBR_mask                  (r_mask),
+    .is_TLBR                    (is_TLBR),
+    .TLB_rdata                  (TLB_rdata),
+    .is_TLBP                    (is_TLBP),
+    .index_write_p              (index_write_p),
+    .index_write_index          (index_write_index)
 );
 
 mem_stage mem_stage(
-    .clk            (aclk            ),
+    .clk            (aclk           ),
     .reset          (reset          ),
     //allowin
+    .ws_allowin     (ws_allowin     ),
     .ms_allowin     (ms_allowin     ),
     //from es
     .pms_to_ms_valid (pms_to_ms_valid ),
     .pms_to_ms_bus   (pms_to_ms_bus   ),
-    //to rf: for write back
-    .ms_to_rf_bus   (ms_to_rf_bus)  ,
+    //to ws
+    .ms_to_ws_valid (ms_to_ws_valid ),
+    .ms_to_ws_bus   (ms_to_ws_bus   ),
     
     //data relevant
     .ms_forward_bus (ms_forward_bus),
@@ -451,15 +602,9 @@ mem_stage mem_stage(
     .data_cache_data_ok_01(data_cache_data_ok_01),
     .data_cache_rdata_01(data_cache_rdata_01),
     .data_cache_data_ok_02(data_cache_data_ok_02),
-    .data_cache_rdata_02(data_cache_rdata_02),
-
-    //trace debug interface
-    .debug_wb_pc     (debug_wb_pc),
-    .debug_wb_rf_wen (debug_wb_rf_wen),
-    .debug_wb_rf_wnum(debug_wb_rf_wnum),
-    .debug_wb_rf_wdata(debug_wb_rf_wdata)
+    .data_cache_rdata_02(data_cache_rdata_02)
 );
-/*
+
 wb_stage wb_stage(
     .clk           (aclk)  ,
     .reset         (reset) ,
@@ -481,7 +626,7 @@ wb_stage wb_stage(
     .debug_wb_rf_wnum(debug_wb_rf_wnum),
     .debug_wb_rf_wdata(debug_wb_rf_wdata)
 );
-*/
+
 
 icache icache(
     .clk        (aclk   ),
@@ -640,6 +785,71 @@ cache2axi cache2axi(
     .axi_bresp        (bresp     ),
     .axi_bvalid       (bvalid    ),
     .axi_bready       (bready    )
+);
+
+tlb tlb(
+    .clk              (aclk), 
+    .reset            (reset),
+    // search port 0
+    .s0_vpn2          (s0_vpn2),
+    .s0_odd_page      (s0_odd_page),
+    .s0_asid          (s0_asid),
+    .s0_found         (s0_found),
+    .s0_index         (s0_index),
+    .s0_pfn           (s0_pfn),
+    .s0_c             (s0_c),
+    .s0_d             (s0_d),
+    .s0_v             (s0_v), 
+    // search port 1
+    .s1_vpn2          (s1_vpn2),
+    .s1_odd_page      (s1_odd_page),
+    .s1_asid          (s1_asid),
+    .s1_found         (s1_found),
+    .s1_index         (s1_index),
+    .s1_pfn           (s1_pfn),
+    .s1_c             (s1_c),
+    .s1_d             (s1_d),
+    .s1_v             (s1_v), 
+    // search port 2
+    .s2_vpn2          (s2_vpn2),
+    .s2_odd_page      (s2_odd_page),
+    .s2_asid          (s2_asid),
+    .s2_found         (s2_found),
+    .s2_index         (s2_index),
+    .s2_pfn           (s2_pfn),
+    .s2_c             (s2_c),
+    .s2_d             (s2_d),
+    .s2_v             (s2_v), 
+    // write port
+    .we               (we),
+    .w_mask           (w_mask),
+    .w_index          (w_index),
+    .w_vpn2           (w_vpn2),
+    .w_asid           (w_asid),
+    .w_g              (w_g),
+    .w_pfn0           (w_pfn0),         
+    .w_c0             (w_c0),
+    .w_d0             (w_d0),
+    .w_v0             (w_v0),
+    .w_pfn1           (w_pfn1),
+    .w_c1             (w_c1),
+    .w_d1             (w_d1),
+    .w_v1             (w_v1), 
+    // read port
+    .r_mask           (r_mask),
+    .r_index          (r_index),
+    .r_vpn2           (r_vpn2),
+    .r_asid           (r_asid),
+    .r_g              (r_g),
+    .r_pfn0           (r_pfn0),
+    .r_c0             (r_c0),
+    .r_d0             (r_d0),
+    .r_v0             (r_v0),
+    .r_pfn1           (r_pfn1),
+    .r_c1             (r_c1),
+    .r_d1             (r_d1),
+    .r_v1             (r_v1)
+
 );
 
 endmodule
