@@ -294,15 +294,15 @@ end
 always @(*) begin
 	case(state)
 	`IDLE:
-        if (valid && uncache && addr_ok) begin
+        if (cache_inst_valid) begin
+            next_state = `ILOOK;
+        end
+        else if (valid && uncache && addr_ok) begin
             next_state = `UREQ;
         end
 		else if (valid && !uncache && addr_ok) begin
 			next_state = `LOOKUP;
 		end
-        else if (cache_inst_valid) begin
-            next_state = `ILOOK;
-        end
 		else begin
 			next_state = `IDLE;
 		end

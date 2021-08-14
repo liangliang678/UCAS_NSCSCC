@@ -921,7 +921,10 @@ end
 always@(*) begin
 	case(state)
 	`IDLE:
-		if (valid1 && uncache1 && addr_ok1) begin
+        if (cache_inst_valid && wstate[0]) begin
+            next_state = `ILOOK;
+        end
+		else if (valid1 && uncache1 && addr_ok1) begin
 			if (op1 == 1'b0) begin
                 next_state = `URREQ;
             end
@@ -940,9 +943,7 @@ always@(*) begin
         else if (valid1 && !uncache1 && addr_ok1 || valid2 && !uncache2 && addr_ok2) begin
 			next_state = `LOOKUP;
 		end
-        else if (cache_inst_valid && wstate[0]) begin
-            next_state = `ILOOK;
-        end
+        
 		else begin
 			next_state = `IDLE;
 		end

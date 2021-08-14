@@ -660,7 +660,7 @@ wb_stage wb_stage(
 );
 
 
-icache icache(
+icache2 icache2(
     .clk        (aclk   ),
     .resetn     (aresetn),
 
@@ -706,7 +706,7 @@ prefetcher1 prefetcher1(
     .axi_ret_data      (axi_ret_data  ),
     .axi_ret_half      (axi_ret_half  )
 );
-dcache dcache(
+dcache2 dcache2(
     .clk        (aclk   ),
     .resetn     (aresetn),
 
