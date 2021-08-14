@@ -47,7 +47,7 @@ module dcache2(
     output [ 31:0]  rdata2,
     // Cache and CPU Inst
     input           cache_inst_valid,
-    input  [  3:0]  cache_inst_op,
+    input  [  2:0]  cache_inst_op,
     input  [ 31:0]  cache_inst_addr,
     output          cache_inst_ok,
     // Cache and AXI
@@ -154,12 +154,14 @@ reg V_Way0 [127:0];
 reg V_Way1 [127:0];
 
 // RAM Port
-assign tag_way0_en = (valid1 && !uncache1 && addr_ok1) ||
+assign tag_way0_en = cache_inst_valid ||
+                     (valid1 && !uncache1 && addr_ok1) ||
                      (valid2 && !uncache2 && addr_ok2) ||
                      (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
                      (state[1] && wstate[0]) ||
                      (state[5] && ret_valid && !rp_way);
-assign tag_way1_en = (valid1 && !uncache1 && addr_ok1) ||
+assign tag_way1_en = cache_inst_valid ||
+                     (valid1 && !uncache1 && addr_ok1) ||
                      (valid2 && !uncache2 && addr_ok2) ||
                      (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
                      (state[1] && wstate[0]) ||
@@ -173,13 +175,15 @@ assign tag_addr = cache_inst_valid                   ? cache_inst_addr[11:5] :
                   (valid2 && !uncache2 && addr_ok2)  ? index2 : 
                   (state[5] && ret_valid && rb_valid[0]) ? rb_index1 : rb_index2;
 
-assign data_way0_en = (valid1 && !uncache1 && addr_ok1) || 
+assign data_way0_en = cache_inst_valid ||
+                      (valid1 && !uncache1 && addr_ok1) || 
                       (valid2 && !uncache2 && addr_ok2) || 
                       (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
                       (state[1] && wstate[0]) ||
                       (state[5] && ret_valid && !rp_way) ||
                       (wstate[1] && !wb_hit_way);
-assign data_way1_en = (valid1 && !uncache1 && addr_ok1) || 
+assign data_way1_en = cache_inst_valid ||
+                      (valid1 && !uncache1 && addr_ok1) || 
                       (valid2 && !uncache2 && addr_ok2) || 
                       (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
                       (state[1] && wstate[0]) ||
@@ -862,7 +866,7 @@ always @(posedge clk) begin
         clear_way <= 2'b01;
     end
     else if (way1_hit_for_inst) begin
-        clear_way <= 2'b11;
+        clear_way <= 2'b10;
     end
 end
 
@@ -889,8 +893,8 @@ assign wr_size  = (state[8] && rb_valid[0]) ? {1'b0, rb_size1} :
                   (state[8] && rb_valid[1]) ? {1'b0, rb_size2} : 3'd2;
 assign wr_wstrb = (state[8] && rb_valid[0]) ? rb_wstrb1 :
                   (state[8] && rb_valid[1]) ? rb_wstrb2 : 4'b1111;
-assign wr_data  = state ==  `IWB0 ? way0_data_for_inst :
-                  state ==  `IWB1 ? way1_data_for_inst :
+assign wr_data  = state[11] ? way0_data_for_inst :
+                  state[12] ? way1_data_for_inst :
                   (state[8] && rb_valid[0]) ? {224'b0, rb_wdata1} :
                   (state[8] && rb_valid[1]) ? {224'b0, rb_wdata2} : rp_way_data;
 
@@ -1142,7 +1146,7 @@ always@(*) begin
     `IWB0:
         if (!D_Way0[cache_inst_addr[11:5]] || !V_Way0[cache_inst_addr[11:5]]) begin
             if (cache_inst_op == 3'b101) begin
-                next_state = `ICLEAR
+                next_state = `ICLEAR;
             end
             else begin
                 next_state = `IWB1;
@@ -1150,7 +1154,7 @@ always@(*) begin
         end
         else if (wr_req && wr_rdy) begin
             if (cache_inst_op == 3'b101) begin
-                next_state = `ICLEAR
+                next_state = `ICLEAR;
             end
             else begin
                 next_state = `IWB1;
@@ -1169,7 +1173,7 @@ always@(*) begin
         else begin
             next_state = `IWB1;
         end
-    `ICLEAR
+    `ICLEAR:
         next_state = `IDLE;
 	default:
 		next_state = `IDLE;

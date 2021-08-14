@@ -22,7 +22,7 @@ module icache2(
     output [   3:0] rnum,
     // Cache and CPU Inst
     input           cache_inst_valid,
-    input  [  3:0]  cache_inst_op,
+    input  [  2:0]  cache_inst_op,
     input  [ 31:0]  cache_inst_addr,
     output          cache_inst_ok,
     // Cache and AXI
@@ -91,9 +91,11 @@ reg V_Way0 [127:0];
 reg V_Way1 [127:0];
 
 // RAM Port
-assign tag_way0_en = (valid && !uncache && addr_ok) || 
+assign tag_way0_en = cache_inst_valid ||
+                     (valid && !uncache && addr_ok) || 
                      (state[3] && ret_valid && !rp_way);
-assign tag_way1_en = (valid && !uncache && addr_ok) || 
+assign tag_way1_en = cache_inst_valid ||
+                     (valid && !uncache && addr_ok) || 
                      (state[3] && ret_valid &&  rp_way);
 assign tag_way0_we = (state[3] && ret_valid && !rp_way);
 assign tag_way1_we = (state[3] && ret_valid &&  rp_way);
@@ -101,9 +103,11 @@ assign tag_din = rb_tag;
 assign tag_addr = cache_inst_valid ? cache_inst_addr[11:5] :
                   state[3]         ? rb_index : index;
 
-assign data_way0_en = (valid && !uncache && addr_ok) ||
+assign data_way0_en = cache_inst_valid ||
+                      (valid && !uncache && addr_ok) ||
                       (state[3] && ret_valid && !rp_way);
-assign data_way1_en = (valid && !uncache && addr_ok) ||
+assign data_way1_en = cache_inst_valid ||
+                      (valid && !uncache && addr_ok) ||
                       (state[3] && ret_valid &&  rp_way);                             
 assign data_way0_we = (state[3] && ret_valid && !rp_way);
 assign data_way1_we = (state[3] && ret_valid &&  rp_way);
@@ -238,7 +242,7 @@ always @(posedge clk) begin
         clear_way <= 2'b01;
     end
     else if (way1_hit_for_inst) begin
-        clear_way <= 2'b11;
+        clear_way <= 2'b10;
     end
 end
 
@@ -354,10 +358,7 @@ always @(*) begin
             next_state = `ICLEAR;
         end
         else if (cache_inst_op == 3'b100) begin // Hit Invalidate
-            if (way0_hit_for_inst) begin
-                next_state = `ICLEAR;
-            end
-            else if (way1_hit_for_inst) begin
+            if (way0_hit_for_inst || way1_hit_for_inst) begin
                 next_state = `ICLEAR;
             end
             else begin
