@@ -66,6 +66,7 @@ module premem_stage(
     output  [31:0] pms_pc       , //pc
     output  [31:0] pms_badvaddr , //bad vaddr
     output         pms_eret        , //is eret
+    output  [ 1:0] pms_except_ce    ,
 
     //output to pms
     input [31:0] inst1_c0_rdata    ,
@@ -79,11 +80,14 @@ module premem_stage(
     input [31:0] cp0_entrylo0,
     input [31:0] cp0_entrylo1,
     input [11:0] c0_mask,
+    input [31:0] c0_status,
+    input [31:0] c0_cause,
 
     //TLBR\TLBP to CP0
     output        is_TLBR      ,
     output [77:0] TLB_rdata    ,
     output        is_TLBP      ,
+    output        is_TLBWR     ,
     output        index_write_p,
     output [ 3:0] index_write_index,
     input  [ 3:0] c0_random_random,
@@ -297,6 +301,25 @@ assign inst2_pms_BadVAddr = inst2_es_BadVAddr;
 
 wire [31:0] exception_1_refush_pc;
 wire [31:0] exception_2_refush_pc;
+
+// wire [31:0] reflush_pc_miss;
+// wire [31:0] reflush_pc_intr;
+// wire [31:0] reflush_pc_other;
+
+// assign reflush_pc_miss = {32{!c0_status[22] && !c0_status[1]}} & 32'h80000000 |
+//                          {32{!c0_status[22] &&  c0_status[1]}} & 32'h80000180 |
+//                          {32{ c0_status[22] && !c0_status[1]}} & 32'hbfc00200 |
+//                          {32{ c0_status[22] &&  c0_status[1]}} & 32'hbfc00380 ;
+
+// assign reflush_pc_intr = {32{!c0_status[22] && !c0_cause[23]}} & 32'h8000_0180 |
+//                          {32{!c0_status[22] &&  c0_cause[23]}} & 32'h8000_0200 |
+//                          {32{ c0_status[22] && !c0_cause[23]}} & 32'hbfc0_0380 |
+//                          {32{ c0_status[22] &&  c0_cause[23]}} & 32'hbfc0_0400 ;
+
+// assign reflush_pc_other = {32{!c0_status[22]}} & 32'h8000_0180 |
+//                           {32{ c0_status[22]}} & 32'hbfc0_0380 ;
+
+
 assign exception_1_refush_pc = inst1_refill ? 32'hbfc00200 :
                                inst1_pms_except ? 32'hbfc00380 :
                                inst1_pms_eret ? pms_epc :
@@ -418,13 +441,14 @@ assign pms_pc = inst1_pms_except ? inst1_pc :
 assign pms_badvaddr = inst1_pms_except ? inst1_pms_BadVAddr :
                       inst2_pms_except ? inst2_pms_BadVAddr : 32'b0;//bad vaddr
 assign pms_eret = (inst1_pms_eret | inst2_pms_eret); //is eret
-
+assign pms_except_ce = 2'b1 & {2{(pms_ex & ((inst1_pms_exccode == 5'hb)||(inst2_pms_exccode == 5'hb)))}};
 
 //TLB
 
 assign is_TLBR              = inst1_pms_tlbr;
 assign TLB_rdata            = {r_vpn2, r_asid, r_g, r_pfn0, r_c0,r_d0,r_v0, r_pfn1, r_c1, r_d1, r_v1};
 assign is_TLBP              = inst1_pms_tlbp;
+assign is_TLBWR             = inst1_pms_tlbwr;
 assign index_write_p        = ~inst1_s1_found;
 assign index_write_index    = inst1_s1_index;
 

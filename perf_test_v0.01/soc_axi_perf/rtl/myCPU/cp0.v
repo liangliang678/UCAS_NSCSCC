@@ -15,7 +15,7 @@ module cp0(
     input  [31:0] pms_pc       , //pc
     input  [31:0] pms_badvaddr , //bad vaddr
     input         pms_eret        , //is eret
-    input  [ 1:0] except_ce       ,     //TODO indicate coprocessor number when exception CPU occur
+    input  [ 1:0] except_ce       ,     
 
     //output to pms
     output [31:0] inst1_c0_rdata    ,
@@ -33,12 +33,14 @@ module cp0(
     output [2: 0] c0_config_k0,
     output [11:0] c0_mask,
     output [3: 0] c0_random_random,
+    output [31:0] c0_status,
+    output [31:0] c0_cause,
     //TLBR\TLBP to CP0
     input        is_TLBR      ,
     input [77:0] TLB_rdata    ,
     input [11:0] TLBR_mask    ,     //TODO
     input        is_TLBP      ,
-    input        is_TLBWR     ,     //TODO
+    input        is_TLBWR     ,     
     input        index_write_p,
     input [ 3:0] index_write_index    
 );
@@ -172,6 +174,8 @@ always @(posedge cp0_clk) begin
         c0_status_ie <= inst1_c0_wdata[0];
 end
 
+assign c0_status = {3'b0, c0_status_cu0, 5'b0, c0_status_bev, 6'b0, c0_status_im, 3'b0, c0_status_um, 2'b0, c0_status_exl, c0_status_ie};
+
 //CAUSE
 reg        c0_cause_bd;
 reg        c0_cause_ti;
@@ -238,6 +242,8 @@ always @(posedge cp0_clk) begin
     else if (pms_ex)
         c0_cause_excode <= wb_excode;
 end
+
+assign c0_cause = {c0_cause_bd, c0_cause_ti, 2'b0/*c0_cause_ce*/, 4'b0, c0_cause_iv, 7'b0, c0_cause_ip[7:0], 1'b0, c0_cause_excode, 2'b0};
 
 //EPC
 reg [31:0] c0_epc;
