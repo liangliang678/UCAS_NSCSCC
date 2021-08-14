@@ -75,6 +75,7 @@ wire        es_ready_go;
 reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
 
 wire [15:0] inst1_imm;
+wire        inst1_mov;
 wire        inst1_mul;
 wire        inst1_refill;
 wire [31:0] inst1_pc;
@@ -112,6 +113,7 @@ wire [31:0] inst1_rs_value;
 wire [31:0] inst1_rt_value;
 
 wire [15:0] inst2_imm;
+wire        inst2_mov;
 wire        inst2_mul;
 wire        inst2_refill;
 wire        inst2_valid;
@@ -160,6 +162,7 @@ wire [31:0] inst2_rt_update_value;
 assign {inst1_es_tlbwr,
         inst2_es_tlbwr,
         inst2_valid,        //390
+        inst2_mov,
         inst2_mul,          //389
         inst2_refill,       //388
         inst2_ds_except,    //387
@@ -199,6 +202,7 @@ assign {inst1_es_tlbwr,
         self_r1_relevant,   //179
         self_r2_relevant,   //178
 
+        inst1_mov,
         inst1_mul,          //177
         inst1_refill,       //176
         inst1_ds_except,    //175
