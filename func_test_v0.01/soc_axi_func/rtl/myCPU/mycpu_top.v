@@ -196,11 +196,15 @@ wire [31:0] cp0_entrylo1;
 wire [2 :0] c0_config_k0;
 wire [11:0] c0_mask;
 wire [3:0]  c0_random_random;
+wire [31:0] c0_status;
+wire [31:0] c0_cause;
 wire        is_TLBR;
 wire [77:0] TLB_rdata;
 wire        is_TLBP;
+wire        is_TLBWR;
 wire        index_write_p;
 wire [ 3:0] index_write_index;
+wire [ 1:0] except_ce;
 
 
 //TLB
@@ -263,6 +267,16 @@ wire [19:0] r_pfn1;
 wire [ 2:0] r_c1;
 wire        r_d1;
 wire        r_v1;
+
+wire        icache_inst_valid;
+wire [ 2:0] icache_inst_op;
+wire [31:0] icache_inst_addr;
+wire        icache_inst_ok;
+
+wire        dcache_inst_valid;
+wire [ 2:0] dcache_inst_op;
+wire [31:0] dcache_inst_addr;
+wire        dcache_inst_ok;
 
 wire        pms_mtc0_index;
 
@@ -419,6 +433,15 @@ exe_stage exe_stage(
     .inst2_data_cache_wdata     (inst2_data_cache_wdata),
     .inst2_data_cache_addr_ok   (inst2_data_cache_addr_ok),
 
+    .icache_inst_valid   (icache_inst_valid),
+    .icache_inst_op      (icache_inst_op),
+    .icache_inst_addr    (icache_inst_addr),
+    .icache_inst_ok      (icache_inst_ok),
+    .dcache_inst_valid   (dcache_inst_valid),
+    .dcache_inst_op      (dcache_inst_op),
+    .dcache_inst_addr    (dcache_inst_addr),
+    .dcache_inst_ok      (dcache_inst_ok),
+
     //TLB
     .s1_vpn2                    (s1_vpn2),
     .s1_odd_page                (s1_odd_page),
@@ -516,6 +539,7 @@ premem_stage premem_stage(
     .pms_pc                     (pms_pc), //pc
     .pms_badvaddr               (pms_badvaddr), //bad vaddr
     .pms_eret                   (pms_eret), //is eret
+    .pms_except_ce              (except_ce),//exception:cpu
 
     //output to pms
     .inst1_c0_rdata             (inst1_c0_rdata),
@@ -528,12 +552,14 @@ premem_stage premem_stage(
     .cp0_entryhi                (cp0_entryhi),
     .cp0_entrylo0               (cp0_entrylo0),
     .cp0_entrylo1               (cp0_entrylo1),
-    .c0_mask                  (c0_mask),
-
+    .c0_mask                    (c0_mask),
+    .c0_status                  (c0_status),
+    .c0_cause                   (c0_cause),
     //TLBR\TLBP to CP0
     .is_TLBR                    (is_TLBR),
     .TLB_rdata                  (TLB_rdata),
     .is_TLBP                    (is_TLBP),
+    .is_TLBWR                   (is_TLBWR),
     .index_write_p              (index_write_p),
     .index_write_index          (index_write_index),
     .c0_random_random            (c0_random_random),
@@ -559,6 +585,7 @@ cp0 cp0(
     .pms_pc                     (pms_pc), //pc
     .pms_badvaddr               (pms_badvaddr), //bad vaddr
     .pms_eret                   (pms_eret), //is eret
+    .except_ce                  (except_ce),//exception:cpu
 
     //output to pms
     .inst1_c0_rdata             (inst1_c0_rdata),
@@ -573,14 +600,16 @@ cp0 cp0(
     .cp0_entrylo0               (cp0_entrylo0),
     .cp0_entrylo1               (cp0_entrylo1),
     .c0_config_k0               (c0_config_k0),
-    .c0_mask             (c0_mask),
-    .c0_random_random             (c0_random_random),
-
+    .c0_mask                    (c0_mask),
+    .c0_random_random           (c0_random_random),
+    .c0_status                  (c0_status),
+    .c0_cause                   (c0_cause),
     //TLBR\TLBP to CP0
     .TLBR_mask                  (r_mask),
     .is_TLBR                    (is_TLBR),
     .TLB_rdata                  (TLB_rdata),
     .is_TLBP                    (is_TLBP),
+    .is_TLBWR                   (is_TLBWR),
     .index_write_p              (index_write_p),
     .index_write_index          (index_write_index)
 );
@@ -631,7 +660,7 @@ wb_stage wb_stage(
 );
 
 
-icache icache(
+icache2 icache2(
     .clk        (aclk   ),
     .resetn     (aresetn),
 
@@ -644,6 +673,11 @@ icache icache(
     .data_ok    (inst_cache_data_ok  ),
     .rdata      (inst_cache_rdata    ),
     .rnum       (inst_cache_data_num),
+
+    .cache_inst_valid   (icache_inst_valid),
+    .cache_inst_op      (icache_inst_op),
+    .cache_inst_addr    (icache_inst_addr),
+    .cache_inst_ok      (icache_inst_ok),
 
     .rd_req     (inst_cache_rd_req   ),
     .rd_type    (inst_cache_rd_type  ),
@@ -672,7 +706,7 @@ prefetcher1 prefetcher1(
     .axi_ret_data      (axi_ret_data  ),
     .axi_ret_half      (axi_ret_half  )
 );
-dcache dcache(
+dcache2 dcache2(
     .clk        (aclk   ),
     .resetn     (aresetn),
 
@@ -700,6 +734,11 @@ dcache dcache(
     .addr_ok2    (inst2_data_cache_addr_ok  ),
     .data_ok2    (data_cache_data_ok_02  ),
     .rdata2      (data_cache_rdata_02    ),
+
+    .cache_inst_valid   (dcache_inst_valid),
+    .cache_inst_op      (dcache_inst_op),
+    .cache_inst_addr    (dcache_inst_addr),
+    .cache_inst_ok      (dcache_inst_ok),
 
     .rd_req     (data_cache_rd_req   ),
     .rd_type    (data_cache_rd_type  ),
