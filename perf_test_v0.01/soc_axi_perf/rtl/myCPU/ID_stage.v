@@ -24,21 +24,14 @@ module id_stage(
     output [31:0]                  ds_to_fs_rf_rdata2,
 
     //to rf: for write back
-    input  [`WS_TO_RF_BUS_WD -1:0] ms_to_rf_bus  ,
+    input  [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus  ,
 
     //relevant bus
     input  [`ES_FORWARD_BUS_WD -1:0] es_forward_bus,
     input  [`PMS_FORWARD_BUS_WD -1:0] pms_forward_bus,
     input  [`MS_FORWARD_BUS_WD -1:0] ms_forward_bus,
-    //input  [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus,
+    input  [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus,
     output [`DS_FORWARD_BUS_WD -1:0] ds_forward_bus,
-
-    //branch predictor
-    output                         branch,
-	output                         branch_res,
-    output                         branch_fail,
-	output  [7: 0]                 branch_addr,
-    output  [7: 0]                 branch_target,
 
     //handle interrupt
     input                          has_int       ,
@@ -50,7 +43,7 @@ module id_stage(
 reg         ds_valid;
 wire        ds_ready_go;
 
-(* max_fanout = 20 *)reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
+reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 
 wire [31:0] inst1_pc;
 wire [31:0] inst1_inst;
@@ -76,8 +69,6 @@ wire [63:0] inst1_func_d;
 
 wire [31:0] inst1_br_rs_value;
 wire [31:0] inst1_br_rt_value;
-wire        inst1_bp;
-wire [31:0] inst1_bp_target_pc;
 
 wire [31:0] inst2_pc;
 wire [31:0] inst2_inst;
@@ -123,9 +114,6 @@ assign {inst2_valid,
         inst2_fs_exccode,
         inst2_inst,
         inst2_pc,
-
-        inst1_bp,
-        inst1_bp_target_pc,
 
         inst1_br_rs_value,
         inst1_br_rt_value,
@@ -355,7 +343,7 @@ assign {rf_we_02,
         rf_we_01,
         rf_waddr_01,
         rf_wdata_01
-       } = ms_to_rf_bus;
+       } = ws_to_rf_bus;
 
 regfile u_regfile(
     .clk       (clk      ),
@@ -449,7 +437,6 @@ wire        inst1_tlbp;
 wire        inst1_tlbr;
 wire        inst1_tlbwi;
 wire        inst1_mul;
-wire        inst1_br;
 
 assign inst1_add    = inst1_op_d[6'h00] & inst1_func_d[6'h20] & inst1_sa_d[5'h00];
 assign inst1_addu   = inst1_op_d[6'h00] & inst1_func_d[6'h21] & inst1_sa_d[5'h00];
@@ -555,7 +542,6 @@ assign inst1_lo_op     = inst1_mflo;
 assign inst1_cp0_op    = inst1_mfc0;
 assign inst1_branch_op = inst1_beq | inst1_bne | inst1_bgez | inst1_bgezal | inst1_bgtz | inst1_blez | inst1_bltz | inst1_bltzal;
 assign inst1_jump_op   = inst1_j | inst1_jal | inst1_jalr | inst1_jr;
-assign inst1_br        = inst1_branch_op | inst1_jump_op;
 
 assign inst1_src1_is_sa   = inst1_sll | inst1_srl | inst1_sra;
 assign inst1_src1_is_pc   = inst1_jal | inst1_bgezal | inst1_bltzal | inst1_jalr;
@@ -621,9 +607,6 @@ assign inst1_ds_exccode = (has_int         ) ? 5'h0:
 wire        rs_eq_rt;
 wire        rs_ge_z;
 wire        rs_gt_z;
-wire        br_fail;
-wire        br_target_fail;
-wire [31:0] br_target_final;
 
 assign rs_eq_rt = (inst1_br_rs_value == inst1_br_rt_value);
 assign rs_ge_z  = (inst1_br_rs_value[31] == 1'b0);
@@ -647,21 +630,12 @@ assign br_target = (inst1_beq || inst1_bne || inst1_bgez || inst1_bgtz ||
                    (inst1_jr || inst1_jalr)                                   ? inst1_br_rs_value :
                     /*inst_jal || inst_j*/                                      {inst2_pc[31:28], inst1_jidx[25:0], 2'b0};
 
+assign br_leave = br_taken; //& ds_to_es_valid & es_allowin;
 
-assign br_target_fail = ~(br_target == inst1_bp_target_pc);
-assign br_fail = br_taken ^ inst1_bp;
-
-assign br_leave = br_fail & inst1_br & ds_valid;
-assign br_target_final = {32{br_taken & ~inst1_bp}} & br_target | {32{~br_taken & inst1_bp}} & (inst1_pc + 4'd8);
-
-assign br_bus = {br_leave, br_target_final};
+assign br_bus = {br_leave, br_target};
 assign ds_branch = br_leave;
 
-assign branch        = inst1_br & ds_valid;
-assign branch_res    = br_taken;
-assign branch_fail   = br_taken & ~inst1_bp;
-assign branch_addr   = inst1_pc[9:2];
-assign branch_target = br_target[9:2];
+
 
 // inst 2
 wire        inst2_add;
@@ -928,6 +902,14 @@ wire        ms_inst2_gr_we;
 wire [ 4:0] ms_inst2_dest;
 wire [31:0] ms_inst2_result;
 
+wire        ws_valid;
+wire        ws_inst1_gr_we;
+wire [ 4:0] ws_inst1_dest;
+wire [31:0] ws_inst1_result;
+wire        ws_inst2_gr_we;
+wire [ 4:0] ws_inst2_dest;
+wire [31:0] ws_inst2_result;
+
 wire        inst1_r1_need;
 wire        inst1_r2_need;
 wire        inst1_es_inst1_r1_relevant;
@@ -942,6 +924,10 @@ wire        inst1_ms_inst1_r1_relevant;
 wire        inst1_ms_inst1_r2_relevant;
 wire        inst1_ms_inst2_r1_relevant;
 wire        inst1_ms_inst2_r2_relevant;
+wire        inst1_ws_inst1_r1_relevant;
+wire        inst1_ws_inst1_r2_relevant;
+wire        inst1_ws_inst2_r1_relevant;
+wire        inst1_ws_inst2_r2_relevant;
 
 wire        inst2_r1_need;
 wire        inst2_r2_need;
@@ -957,6 +943,10 @@ wire        inst2_ms_inst1_r1_relevant;
 wire        inst2_ms_inst1_r2_relevant;
 wire        inst2_ms_inst2_r1_relevant;
 wire        inst2_ms_inst2_r2_relevant;
+wire        inst2_ws_inst1_r1_relevant;
+wire        inst2_ws_inst1_r2_relevant;
+wire        inst2_ws_inst2_r1_relevant;
+wire        inst2_ws_inst2_r2_relevant;
 
 wire        inst1_es_block;
 wire        inst1_pms_block;
@@ -977,6 +967,10 @@ assign {pms_valid,
 assign {ms_valid, //ms_res_valid, 
         ms_inst1_res_valid, ms_inst1_load, ms_inst1_gr_we, ms_inst1_dest, ms_inst1_result, 
         ms_inst2_res_valid, ms_inst2_load, ms_inst2_gr_we, ms_inst2_dest, ms_inst2_result } = ms_forward_bus;
+
+assign {ws_valid, 
+        ws_inst1_gr_we, ws_inst1_dest, ws_inst1_result, 
+        ws_inst2_gr_we, ws_inst2_dest, ws_inst2_result } = ws_forward_bus;
 
 assign inst1_r1_need = inst1_addiu  || inst1_addi  || inst1_addu || inst1_add   || inst1_subu || inst1_sub  || 
                        inst1_and    || inst1_andi  || inst1_nor  || inst1_or    || inst1_ori  || inst1_xor  || inst1_xori || 
@@ -1014,6 +1008,8 @@ assign inst1_pms_inst1_r1_relevant = ds_valid & inst1_r1_need & pms_valid & pms_
 assign inst1_pms_inst2_r1_relevant = ds_valid & inst1_r1_need & pms_valid & pms_inst2_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == pms_inst2_dest);
 assign inst1_ms_inst1_r1_relevant  = ds_valid & inst1_r1_need & ms_valid  & ms_inst1_gr_we  & ~inst1_rs_d[5'h00] & (inst1_rs == ms_inst1_dest);
 assign inst1_ms_inst2_r1_relevant  = ds_valid & inst1_r1_need & ms_valid  & ms_inst2_gr_we  & ~inst1_rs_d[5'h00] & (inst1_rs == ms_inst2_dest);
+assign inst1_ws_inst1_r1_relevant  = ds_valid & inst1_r1_need & ws_valid  & ws_inst1_gr_we  & ~inst1_rs_d[5'h00] & (inst1_rs == ws_inst1_dest);
+assign inst1_ws_inst2_r1_relevant  = ds_valid & inst1_r1_need & ws_valid  & ws_inst2_gr_we  & ~inst1_rs_d[5'h00] & (inst1_rs == ws_inst2_dest);
 
 assign inst1_es_inst1_r2_relevant  = ds_valid & inst1_r2_need & es_valid  & es_inst1_gr_we  & ~inst1_rt_d[5'h00] & (inst1_rt == es_inst1_dest);
 assign inst1_es_inst2_r2_relevant  = ds_valid & inst1_r2_need & es_valid  & es_inst2_gr_we  & ~inst1_rt_d[5'h00] & (inst1_rt == es_inst2_dest);
@@ -1021,6 +1017,8 @@ assign inst1_pms_inst1_r2_relevant = ds_valid & inst1_r2_need & pms_valid & pms_
 assign inst1_pms_inst2_r2_relevant = ds_valid & inst1_r2_need & pms_valid & pms_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == pms_inst2_dest);
 assign inst1_ms_inst1_r2_relevant  = ds_valid & inst1_r2_need & ms_valid  & ms_inst1_gr_we  & ~inst1_rt_d[5'h00] & (inst1_rt == ms_inst1_dest);
 assign inst1_ms_inst2_r2_relevant  = ds_valid & inst1_r2_need & ms_valid  & ms_inst2_gr_we  & ~inst1_rt_d[5'h00] & (inst1_rt == ms_inst2_dest);
+assign inst1_ws_inst1_r2_relevant  = ds_valid & inst1_r2_need & ws_valid  & ws_inst1_gr_we  & ~inst1_rt_d[5'h00] & (inst1_rt == ws_inst1_dest);
+assign inst1_ws_inst2_r2_relevant  = ds_valid & inst1_r2_need & ws_valid  & ws_inst2_gr_we  & ~inst1_rt_d[5'h00] & (inst1_rt == ws_inst2_dest);
 
 assign inst2_es_inst1_r1_relevant  = ds_valid & inst2_r1_need & es_valid  & es_inst1_gr_we  & ~inst2_rs_d[5'h00] & (inst2_rs == es_inst1_dest);
 assign inst2_es_inst2_r1_relevant  = ds_valid & inst2_r1_need & es_valid  & es_inst2_gr_we  & ~inst2_rs_d[5'h00] & (inst2_rs == es_inst2_dest);
@@ -1028,6 +1026,8 @@ assign inst2_pms_inst1_r1_relevant = ds_valid & inst2_r1_need & pms_valid & pms_
 assign inst2_pms_inst2_r1_relevant = ds_valid & inst2_r1_need & pms_valid & pms_inst2_gr_we & ~inst2_rs_d[5'h00] & (inst2_rs == pms_inst2_dest);
 assign inst2_ms_inst1_r1_relevant  = ds_valid & inst2_r1_need & ms_valid  & ms_inst1_gr_we  & ~inst2_rs_d[5'h00] & (inst2_rs == ms_inst1_dest);
 assign inst2_ms_inst2_r1_relevant  = ds_valid & inst2_r1_need & ms_valid  & ms_inst2_gr_we  & ~inst2_rs_d[5'h00] & (inst2_rs == ms_inst2_dest);
+assign inst2_ws_inst1_r1_relevant  = ds_valid & inst2_r1_need & ws_valid  & ws_inst1_gr_we  & ~inst2_rs_d[5'h00] & (inst2_rs == ws_inst1_dest);
+assign inst2_ws_inst2_r1_relevant  = ds_valid & inst2_r1_need & ws_valid  & ws_inst2_gr_we  & ~inst2_rs_d[5'h00] & (inst2_rs == ws_inst2_dest);
 
 assign inst2_es_inst1_r2_relevant  = ds_valid & inst2_r2_need & es_valid  & es_inst1_gr_we  & ~inst2_rt_d[5'h00] & (inst2_rt == es_inst1_dest);
 assign inst2_es_inst2_r2_relevant  = ds_valid & inst2_r2_need & es_valid  & es_inst2_gr_we  & ~inst2_rt_d[5'h00] & (inst2_rt == es_inst2_dest);
@@ -1035,6 +1035,8 @@ assign inst2_pms_inst1_r2_relevant = ds_valid & inst2_r2_need & pms_valid & pms_
 assign inst2_pms_inst2_r2_relevant = ds_valid & inst2_r2_need & pms_valid & pms_inst2_gr_we & ~inst2_rt_d[5'h00] & (inst2_rt == pms_inst2_dest);
 assign inst2_ms_inst1_r2_relevant  = ds_valid & inst2_r2_need & ms_valid  & ms_inst1_gr_we  & ~inst2_rt_d[5'h00] & (inst2_rt == ms_inst1_dest);
 assign inst2_ms_inst2_r2_relevant  = ds_valid & inst2_r2_need & ms_valid  & ms_inst2_gr_we  & ~inst2_rt_d[5'h00] & (inst2_rt == ms_inst2_dest);
+assign inst2_ws_inst1_r2_relevant  = ds_valid & inst2_r2_need & ws_valid  & ws_inst1_gr_we  & ~inst2_rt_d[5'h00] & (inst2_rt == ws_inst1_dest);
+assign inst2_ws_inst2_r2_relevant  = ds_valid & inst2_r2_need & ws_valid  & ws_inst2_gr_we  & ~inst2_rt_d[5'h00] & (inst2_rt == ws_inst2_dest);
 
 
 assign inst1_es_block = inst1_es_inst1_r1_relevant & (es_inst1_mfhiloc0_load | ~es_inst1_res_valid) | inst1_es_inst2_r1_relevant & (es_inst2_mfhiloc0_load | ~es_inst2_res_valid) | 
@@ -1065,6 +1067,8 @@ assign inst1_rs_value = (inst1_es_inst2_r1_relevant ) ? es_inst2_result:
                         (inst1_pms_inst1_r1_relevant) ? pms_inst1_result:
                         (inst1_ms_inst2_r1_relevant ) ? ms_inst2_result:
                         (inst1_ms_inst1_r1_relevant ) ? ms_inst1_result:
+                        (inst1_ws_inst2_r1_relevant ) ? ws_inst2_result:
+                        (inst1_ws_inst1_r1_relevant ) ? ws_inst1_result:
                                                         rf_rdata_01;
 assign inst1_rt_value = (inst1_es_inst2_r2_relevant ) ? es_inst2_result:
                         (inst1_es_inst1_r2_relevant ) ? es_inst1_result:
@@ -1072,6 +1076,8 @@ assign inst1_rt_value = (inst1_es_inst2_r2_relevant ) ? es_inst2_result:
                         (inst1_pms_inst1_r2_relevant) ? pms_inst1_result:
                         (inst1_ms_inst2_r2_relevant ) ? ms_inst2_result:
                         (inst1_ms_inst1_r2_relevant ) ? ms_inst1_result:
+                        (inst1_ws_inst2_r2_relevant ) ? ws_inst2_result:
+                        (inst1_ws_inst1_r2_relevant ) ? ws_inst1_result:
                                                         rf_rdata_02;
 
 assign inst2_rs_value = (inst2_es_inst2_r1_relevant ) ? es_inst2_result:
@@ -1080,6 +1086,8 @@ assign inst2_rs_value = (inst2_es_inst2_r1_relevant ) ? es_inst2_result:
                         (inst2_pms_inst1_r1_relevant) ? pms_inst1_result:
                         (inst2_ms_inst2_r1_relevant ) ? ms_inst2_result:
                         (inst2_ms_inst1_r1_relevant ) ? ms_inst1_result:
+                        (inst2_ws_inst2_r1_relevant ) ? ws_inst2_result:
+                        (inst2_ws_inst1_r1_relevant ) ? ws_inst1_result:
                                                         rf_rdata_03;
 assign inst2_rt_value = (inst2_es_inst2_r2_relevant ) ? es_inst2_result:
                         (inst2_es_inst1_r2_relevant ) ? es_inst1_result:
@@ -1087,6 +1095,8 @@ assign inst2_rt_value = (inst2_es_inst2_r2_relevant ) ? es_inst2_result:
                         (inst2_pms_inst1_r2_relevant) ? pms_inst1_result:
                         (inst2_ms_inst2_r2_relevant ) ? ms_inst2_result:
                         (inst2_ms_inst1_r2_relevant ) ? ms_inst1_result:
+                        (inst2_ws_inst2_r2_relevant ) ? ws_inst2_result:
+                        (inst2_ws_inst1_r2_relevant ) ? ws_inst1_result:
                                                         rf_rdata_04;
 
 // self relevant

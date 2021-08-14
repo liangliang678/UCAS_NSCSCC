@@ -31,21 +31,12 @@ module if_stage(
     input  [`ES_FORWARD_BUS_WD -1:0] es_forward_bus,
     input  [`PMS_FORWARD_BUS_WD -1:0] pms_forward_bus,
     input  [`MS_FORWARD_BUS_WD -1:0] ms_forward_bus,
-    //nput  [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus,
+    input  [`WS_FORWARD_BUS_WD -1:0] ws_forward_bus,
 
     //icache output
     input                          inst_cache_data_ok,
     input [   3:0]                 inst_cache_data_num,
     input [ 255:0]                 inst_cache_rdata,
-
-    //to prefs
-    output [`BR_BUS_WD       -1:0] bp_bus        ,
-
-    //branch predictor
-    output  [7: 0]                 bp_addr,
-	input                          bp_res,
-    input                          bp_valid,
-    input   [7: 0]                 bp_target,
 
     //clear stage
     input                          clear_all
@@ -112,8 +103,6 @@ wire [63:0] inst1_func_d;
 
 wire [31:0] inst1_br_rs_value;
 wire [31:0] inst1_br_rt_value;
-wire        bp;
-wire [31:0] bp_target_pc;
 
 wire        inst1_br;
 wire        inst2_br;
@@ -167,9 +156,6 @@ assign fs_to_ds_bus = { inst2_valid,
                         inst2_inst,
                         inst2_pc,
 
-                        bp,
-                        bp_target_pc,
-
                         inst1_br_rs_value,
                         inst1_br_rt_value,
 
@@ -208,7 +194,7 @@ always @(posedge clk) begin
     else begin
         case(fs_state)
         `WAIT_PREIF: begin
-            if (to_fs_valid && fs_allowin && (clear_all || ds_branch || bp)) begin
+            if (to_fs_valid && fs_allowin && (clear_all || ds_branch)) begin
                 //fs_state <= `CLEAR_ALL;
                 fs_state <= `RECV_INST;
             end
@@ -226,7 +212,7 @@ always @(posedge clk) begin
             if (inst_cache_data_ok) begin
                 fs_state <= `WAIT_PREIF;
             end
-            else if (clear_all || ds_branch || bp) begin
+            else if (clear_all || ds_branch) begin
                 fs_state <= `CLEAR_ALL;
             end
             else begin
@@ -288,7 +274,7 @@ always @(posedge clk) begin
         tail <= 4'b0;
     end
     else begin
-        if (clear_all || ds_branch || bp) begin
+        if (clear_all || ds_branch) begin
             tail <= 4'b0;
         end
         else if (fs_state == `RECV_INST && inst_cache_data_ok) begin
@@ -305,7 +291,7 @@ always @(posedge clk) begin
         head <= 4'b0;
     end
     else begin
-        if (clear_all || ds_branch || bp) begin
+        if (clear_all || ds_branch) begin
             head <= 4'b0;
         end
         else if (fs_to_ds_valid && ds_allowin) begin
@@ -332,7 +318,7 @@ always @(posedge clk) begin
         pc_offset <= 6'd4;
     end
     else begin
-        if (clear_all || ds_branch || bp) begin
+        if (clear_all || ds_branch) begin
             pc_offset <= 6'd4;
         end
         else if (fs_state == `RECV_INST && inst_cache_data_ok) begin
@@ -344,7 +330,7 @@ end
 assign fs_to_preif_offset = pc_offset;
 
 always @(posedge clk) begin
-    if (fs_state == `RECV_INST && inst_cache_data_ok && !(clear_all || ds_branch || bp)) begin
+    if (fs_state == `RECV_INST && inst_cache_data_ok && !(clear_all || ds_branch)) begin
             fifo_inst[tail]      <= inst_cache_rdata[ 31:  0];
             fifo_inst[tail_1]    <= inst_cache_rdata[ 63: 32];
             fifo_inst[tail_2]    <= inst_cache_rdata[ 95: 64];
@@ -390,7 +376,7 @@ always @(posedge clk) begin
             fifo_refill[tail_6]  <= fs_refill;
             fifo_refill[tail_7]  <= fs_refill;
     end
-    else if (fs_state == `RECV_NO_INST && !(clear_all || ds_branch || bp)) begin
+    else if (fs_state == `RECV_NO_INST && !(clear_all || ds_branch)) begin
         fifo_inst[tail]       <= 32'b0;
         fifo_pc[tail]         <= fs_pc;
         fifo_except[tail]     <= fs_except;
@@ -441,8 +427,12 @@ wire        inst1_multu;
 wire        inst1_div;
 wire        inst1_divu;
 wire        inst1_mul;
+wire        inst1_tlbp;
+wire        inst1_tlbr;
+wire        inst1_tlbwi;
 
 wire        inst1_muldiv;
+wire        inst1_tlb;
 wire        inst1_load_mfc0hilo;
 wire [ 4:0] inst1_dest;
 
@@ -492,9 +482,14 @@ assign inst1_multu  = inst1_op_d[6'h00] & inst1_func_d[6'h19] & inst1_rd_d[5'h00
 assign inst1_div    = inst1_op_d[6'h00] & inst1_func_d[6'h1a] & inst1_rd_d[5'h00] & inst1_sa_d[5'h00];
 assign inst1_divu   = inst1_op_d[6'h00] & inst1_func_d[6'h1b] & inst1_rd_d[5'h00] & inst1_sa_d[5'h00];
 
+assign inst1_tlbp   = inst1_op_d[6'h10] & inst1_func_d[6'h08] & inst1_rs_d[5'h10] & inst1_rt_d[5'h00] & inst1_rd_d[5'h00] & inst1_sa_d[5'h00];
+assign inst1_tlbr   = inst1_op_d[6'h10] & inst1_func_d[6'h01] & inst1_rs_d[5'h10] & inst1_rt_d[5'h00] & inst1_rd_d[5'h00] & inst1_sa_d[5'h00];
+assign inst1_tlbwi  = inst1_op_d[6'h10] & inst1_func_d[6'h02] & inst1_rs_d[5'h10] & inst1_rt_d[5'h00] & inst1_rd_d[5'h00] & inst1_sa_d[5'h00];
+
 assign inst1_load_mfc0hilo = inst1_lb | inst1_lbu | inst1_lh | inst1_lhu | inst1_lw | inst1_lwl | inst1_lwr | inst1_mfc0 | inst1_mfhi | inst1_mflo;
 assign inst1_br = inst1_beq | inst1_bne | inst1_bgez | inst1_bgezal | inst1_bgtz | inst1_blez | inst1_bltz | inst1_bltzal | inst1_j | inst1_jal | inst1_jalr | inst1_jr;
 assign inst1_muldiv = inst1_mul | inst1_mult | inst1_multu | inst1_div | inst1_divu;
+assign inst1_tlb = inst1_tlbp | inst1_tlbr | inst1_tlbwi;
 
 assign inst1_dest = {5{inst1_mfhi | inst1_mflo}} & inst1_rd | {5{~(inst1_mfhi | inst1_mflo)}} & inst1_rt;
 
@@ -545,6 +540,14 @@ wire        ms_inst2_gr_we;
 wire [ 4:0] ms_inst2_dest;
 wire [31:0] ms_inst2_result;
 
+wire        ws_valid;
+wire        ws_inst1_gr_we;
+wire [ 4:0] ws_inst1_dest;
+wire [31:0] ws_inst1_result;
+wire        ws_inst2_gr_we;
+wire [ 4:0] ws_inst2_dest;
+wire [31:0] ws_inst2_result;
+
 wire        r1_need;
 wire        r2_need;
 wire        ds_inst1_r1_relevant;
@@ -563,6 +566,10 @@ wire        ms_inst1_r1_relevant;
 wire        ms_inst1_r2_relevant;
 wire        ms_inst2_r1_relevant;
 wire        ms_inst2_r2_relevant;
+wire        ws_inst1_r1_relevant;
+wire        ws_inst1_r2_relevant;
+wire        ws_inst2_r1_relevant;
+wire        ws_inst2_r2_relevant;
 
 wire        ds_block;
 wire        es_block;
@@ -585,6 +592,10 @@ assign {ms_valid, //ms_res_valid,
         ms_inst1_res_valid, ms_inst1_load, ms_inst1_gr_we, ms_inst1_dest, ms_inst1_result, 
         ms_inst2_res_valid, ms_inst2_load, ms_inst2_gr_we, ms_inst2_dest, ms_inst2_result } = ms_forward_bus;
 
+assign {ws_valid, 
+        ws_inst1_gr_we, ws_inst1_dest, ws_inst1_result, 
+        ws_inst2_gr_we, ws_inst2_dest, ws_inst2_result } = ws_forward_bus;
+
 assign r1_need = inst1_beq    | inst1_bne    | inst1_bgez | inst1_bgtz  | inst1_blez | inst1_bltz | 
                  inst1_bltzal | inst1_bgezal | inst1_jr   | inst1_jalr;
 assign r2_need = inst1_beq  | inst1_bne;
@@ -597,6 +608,8 @@ assign pms_inst1_r1_relevant = ~fifo_empty & r1_need & pms_valid & pms_inst1_gr_
 assign pms_inst2_r1_relevant = ~fifo_empty & r1_need & pms_valid & pms_inst2_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == pms_inst2_dest);
 assign ms_inst1_r1_relevant = ~fifo_empty & r1_need & ms_valid & ms_inst1_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == ms_inst1_dest);
 assign ms_inst2_r1_relevant = ~fifo_empty & r1_need & ms_valid & ms_inst2_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == ms_inst2_dest);
+assign ws_inst1_r1_relevant = ~fifo_empty & r1_need & ws_valid & ws_inst1_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == ws_inst1_dest);
+assign ws_inst2_r1_relevant = ~fifo_empty & r1_need & ws_valid & ws_inst2_gr_we & ~inst1_rs_d[5'h00] & (inst1_rs == ws_inst2_dest);
 
 assign ds_inst1_r2_relevant = ~fifo_empty & r2_need & ds_valid & ds_inst1_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ds_inst1_dest);
 assign ds_inst2_r2_relevant = ~fifo_empty & r2_need & ds_valid & ds_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ds_inst2_dest);
@@ -606,6 +619,8 @@ assign pms_inst1_r2_relevant = ~fifo_empty & r2_need & pms_valid & pms_inst1_gr_
 assign pms_inst2_r2_relevant = ~fifo_empty & r2_need & pms_valid & pms_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == pms_inst2_dest);
 assign ms_inst1_r2_relevant = ~fifo_empty & r2_need & ms_valid & ms_inst1_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ms_inst1_dest);
 assign ms_inst2_r2_relevant = ~fifo_empty & r2_need & ms_valid & ms_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ms_inst2_dest);
+assign ws_inst1_r2_relevant = ~fifo_empty & r2_need & ws_valid & ws_inst1_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ws_inst1_dest);
+assign ws_inst2_r2_relevant = ~fifo_empty & r2_need & ws_valid & ws_inst2_gr_we & ~inst1_rt_d[5'h00] & (inst1_rt == ws_inst2_dest);
 
 assign ds_block = ds_inst1_r1_relevant | ds_inst2_r1_relevant | ds_inst1_r2_relevant | ds_inst2_r2_relevant;
 
@@ -629,6 +644,8 @@ assign inst1_br_rs_value = (es_inst2_r1_relevant) ? es_inst2_result:
                            (pms_inst1_r1_relevant) ? pms_inst1_result:
                            (ms_inst2_r1_relevant) ? ms_inst2_result:
                            (ms_inst1_r1_relevant) ? ms_inst1_result:
+                           (ws_inst2_r1_relevant) ? ws_inst2_result:
+                           (ws_inst1_r1_relevant) ? ws_inst1_result:
                                                     ds_rf_rdata1;
 assign inst1_br_rt_value = (es_inst2_r2_relevant) ? es_inst2_result:
                            (es_inst1_r2_relevant) ? es_inst1_result:
@@ -636,26 +653,10 @@ assign inst1_br_rt_value = (es_inst2_r2_relevant) ? es_inst2_result:
                            (pms_inst1_r2_relevant) ? pms_inst1_result:
                            (ms_inst2_r2_relevant) ? ms_inst2_result:
                            (ms_inst1_r2_relevant) ? ms_inst1_result:
+                           (ws_inst2_r2_relevant) ? ws_inst2_result:
+                           (ws_inst1_r2_relevant) ? ws_inst1_result:
                                                     ds_rf_rdata2;
 
-// branch
-reg    bp_go;
-assign bp_addr = inst1_pc[9:2];
-assign bp = inst1_br & bp_res & bp_valid & fifo_readygo & ~bp_go;
-assign bp_target_pc = {inst1_pc[31:9], bp_target, 2'b00};
-assign bp_bus = {bp, bp_target_pc};
-
-always @(posedge clk) begin
-    if (reset) begin
-        bp_go <= 1'b0;
-    end
-    else if (fs_to_ds_valid && ds_allowin || clear_all || ds_branch) begin
-        bp_go <= 1'b0;
-    end
-    else if (bp) begin
-        bp_go <= 1'b1;
-    end
-end
 
 // inst 2
 wire [ 5:0] inst2_op;
@@ -734,8 +735,12 @@ wire        inst2_swl;
 wire        inst2_swr;
 wire        inst2_mfc0;
 wire        inst2_mtc0;
+wire        inst2_tlbp;
+wire        inst2_tlbr;
+wire        inst2_tlbwi;
 
 wire        inst2_muldiv;
+wire        inst2_tlb;
 
 assign inst2_op   = fs_inst2[31:26];
 assign inst2_rs   = fs_inst2[25:21];
@@ -818,9 +823,14 @@ assign inst2_swr    = inst2_op_d[6'h2e];
 assign inst2_mfc0   = inst2_op_d[6'h10] & inst2_rs_d[5'h00] & inst2_sa_d[5'h00] & (fs_inst2[5: 3]==3'b0);
 assign inst2_mtc0   = inst2_op_d[6'h10] & inst2_rs_d[5'h04] & inst2_sa_d[5'h00] & (fs_inst2[5: 3]==3'b0);
 
+assign inst2_tlbp   = inst2_op_d[6'h10] & inst2_func_d[6'h08] & inst2_rs_d[5'h10] & inst2_rt_d[5'h00] & inst2_rd_d[5'h00] & inst2_sa_d[5'h00];
+assign inst2_tlbr   = inst2_op_d[6'h10] & inst2_func_d[6'h01] & inst2_rs_d[5'h10] & inst2_rt_d[5'h00] & inst2_rd_d[5'h00] & inst2_sa_d[5'h00];
+assign inst2_tlbwi  = inst2_op_d[6'h10] & inst2_func_d[6'h02] & inst2_rs_d[5'h10] & inst2_rt_d[5'h00] & inst2_rd_d[5'h00] & inst2_sa_d[5'h00];
 
 assign inst2_br = inst2_beq | inst2_bne | inst2_bgez | inst2_bgezal | inst2_bgtz | inst2_blez | inst2_bltz | inst2_bltzal | inst2_j | inst2_jal | inst2_jalr | inst2_jr;
 assign inst2_muldiv = inst2_mul | inst2_mult | inst2_multu | inst2_div | inst2_divu;
+assign inst2_tlb = inst2_tlbp | inst2_tlbr | inst2_tlbwi;
+
 
 assign inst2_valid = ~single_shoot;
 
@@ -878,7 +888,7 @@ assign inst2_r1_relevant = inst2_r1_need & inst1_load_mfc0hilo & ~inst2_rs_d[5'h
 assign inst2_r2_relevant = inst2_r2_need & inst1_load_mfc0hilo & ~inst2_rt_d[5'h00] & (inst2_rt == inst1_dest);
 
 assign self_relevant = inst2_r1_relevant | inst2_r2_relevant;
-assign single_shoot = self_relevant | inst2_br | inst1_muldiv & inst2_muldiv;
+assign single_shoot = self_relevant | inst2_br | inst1_muldiv & inst2_muldiv | inst2_tlb | inst1_tlb;
 
 
 endmodule

@@ -4,13 +4,15 @@ module mem_stage(
     input                           clk            ,
     input                           reset          ,
     //allowin
+    input                           ws_allowin     ,
     output                          ms_allowin     ,
     //from pms
     input                           pms_to_ms_valid,
     input  [`PMS_TO_MS_BUS_WD -1:0] pms_to_ms_bus  ,
 
-    //to rf: for write back
-    output [`WS_TO_RF_BUS_WD -1:0]   ms_to_rf_bus  ,
+    //to ws
+    output                          ms_to_ws_valid ,
+    output [`MS_TO_WS_BUS_WD -1:0]  ms_to_ws_bus   ,
 
     //data relevant
     output [`MS_FORWARD_BUS_WD -1:0] ms_forward_bus,
@@ -19,13 +21,7 @@ module mem_stage(
     input         data_cache_data_ok_01,
     input  [31:0] data_cache_rdata_01,
     input         data_cache_data_ok_02,
-    input  [31:0] data_cache_rdata_02,
-
-    //trace debug interface
-    output [31:0] debug_wb_pc     ,
-    output [ 3:0] debug_wb_rf_wen ,
-    output [ 4:0] debug_wb_rf_wnum,
-    output [31:0] debug_wb_rf_wdata
+    input  [31:0] data_cache_rdata_02
 );
 
 reg         ms_valid;
@@ -84,8 +80,20 @@ wire [31:0] inst2_final_result;
 wire        inst1_ready_go;
 wire        inst2_ready_go;
 
+assign ms_to_ws_bus = {inst2_valid,
+                       inst2_gr_we,
+                       inst2_dest,
+                       inst2_final_result,
+                       inst2_pc,
+
+                       inst1_gr_we,
+                       inst1_dest,
+                       inst1_final_result,
+                       inst1_pc };
+
 assign ms_ready_go    = inst1_ready_go & inst2_ready_go;
-assign ms_allowin     = !ms_valid || ms_ready_go;
+assign ms_allowin     = !ms_valid || ms_ready_go && ws_allowin;
+assign ms_to_ws_valid = ms_valid && ms_ready_go;
 
 always @(posedge clk) begin
     if (reset) begin
@@ -160,7 +168,7 @@ always @(posedge clk) begin
     else if (pms_to_ms_valid && ms_allowin) begin
         inst1_mem_ok <= 1'b0;
     end
-    else if (data_cache_data_ok_01 & ~ms_ready_go) begin
+    else if (data_cache_data_ok_01 & (~ms_ready_go | ~ws_allowin)) begin
         inst1_mem_ok <= 1'b1;
     end
 
@@ -233,7 +241,7 @@ always @(posedge clk) begin
     else if (pms_to_ms_valid && ms_allowin) begin
         inst2_mem_ok <= 1'b0;
     end
-    else if (data_cache_data_ok_02 & ~ms_ready_go) begin
+    else if (data_cache_data_ok_02 & (~ms_ready_go | ~ws_allowin)) begin
         inst2_mem_ok <= 1'b1;
     end
 
@@ -245,38 +253,6 @@ end
 assign inst2_final_result = {32{inst2_res_from_mem}} & inst2_mem_result | {32{~inst2_res_from_mem}} & inst2_alu_result;
 
 assign inst2_ready_go = ~(inst2_res_from_mem | inst2_mem_we) | data_cache_data_ok_02 | inst2_mem_ok | ~inst2_valid;
-
-// regfile
-wire        rf_we_01;
-wire [ 4:0] rf_waddr_01;
-wire [31:0] rf_wdata_01;
-wire        rf_we_02;
-wire [ 4:0] rf_waddr_02;
-wire [31:0] rf_wdata_02;
-
-wire        inst1_write;
-wire        inst2_write;
-wire        double_write;
-wire        write_same_reg;
-
-assign ms_to_rf_bus = {rf_we_02, rf_waddr_02, rf_wdata_02, 
-                       rf_we_01, rf_waddr_01, rf_wdata_01 };
-
-assign inst1_write = ms_valid & inst1_gr_we;
-assign inst2_write = ms_valid & inst2_gr_we & inst2_valid;
-
-assign rf_we_01    = inst1_write;
-assign rf_waddr_01 = inst1_dest;
-assign rf_wdata_01 = inst1_final_result;
-assign rf_we_02    = inst2_write;
-assign rf_waddr_02 = inst2_dest;
-assign rf_wdata_02 = inst2_final_result;
-
-assign debug_wb_pc       = inst1_pc;
-assign debug_wb_rf_wen   = {4{inst1_write}};
-assign debug_wb_rf_wnum  = inst1_dest;
-assign debug_wb_rf_wdata = inst1_final_result;
-
 
 // ms_forward_bus
 assign ms_forward_bus = {ms_valid, //ms_to_ws_valid, 

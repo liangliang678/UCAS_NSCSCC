@@ -7,7 +7,7 @@ module preif_stage(
     input                          fs_allowin     ,   
     //brbus
     input  [`BR_BUS_WD       -1:0] br_bus         ,
-    input  [`BR_BUS_WD       -1:0] if_bus         ,
+
     //fs
     output                         to_fs_valid    ,
     output [`PF_TO_FS_BUS_WD -1:0] preif_to_fs_bus,
@@ -23,17 +23,16 @@ module preif_stage(
     input            inst_cache_addr_ok,
 
     // //TLB search port 0
-    // output [18:0] s0_vpn2,
-    // output        s0_odd_page,
-    // output [ 7:0] s0_asid,
-    // input         s0_found,
-    // input  [ 3:0] s0_index,
-    // input  [19:0] s0_pfn,
-    // input  [ 2:0] s0_c,
-    // input         s0_d,
-    // input         s0_v,
-    // input         tlb_write,
-    // input  [31:0] cp0_entryhi,
+    output [18:0] s0_vpn2,
+    output        s0_odd_page,
+    output [ 7:0] s0_asid,
+    input         s0_found,
+    input  [19:0] s0_pfn,
+    input   [2:0] s0_c,
+    input         s0_d,
+    input         s0_v,
+    input         tlb_write,
+    input  [31:0] cp0_entryhi,
 
     //reflush
     input  pfs_reflush,
@@ -60,6 +59,7 @@ wire        exception_is_tlb_refill;
 
 (* max_fanout = 10 *)reg  [`BR_BUS_WD-1:0] br_bus_r;
 
+
 wire         br_take_branch, br_taken_r;
 wire [ 31:0] br_target, br_target_r;
 wire         br_stall;
@@ -67,28 +67,9 @@ wire         br_stall;
 reg pfs_go_reflush_pc;
 reg [31:0] reflush_pc_r;
 
-(* max_fanout = 10 *)reg  [`BR_BUS_WD-1:0] if_bus_r; 
-wire [31:0] if_target, if_target_r;
-wire        if_taken, if_taken_r;
-
-assign {
-        if_taken,
-        if_target
-       } = if_bus;
-
-always @(posedge clk) begin
-    if(reset)
-        if_bus_r <= 33'b0;
-    else if(pfs_reflush | preif_ready_go)
-        if_bus_r[32] <= 1'b0;                                 
-    else if(if_taken)
-        if_bus_r[32:0] <= if_bus[32:0];    
-end
-
-assign if_taken_r = if_bus_r[32];
-assign if_target_r = if_bus_r[31:0];
 
 // handle branch/jump
+
 assign {
         br_take_branch,       //32:32
         br_target           //31:0
@@ -106,8 +87,6 @@ end
 assign br_target_r = br_bus_r[31:0];
 assign br_taken_r = br_bus_r[32];
 
-// reflush control
-// assign pfs_reflush = pfs_ex | pfs_cancel_in | pfs_eret_in;
 
 always @(posedge clk) begin                                
     if (reset) begin
@@ -138,8 +117,6 @@ assign nextpc         = (pfs_reflush ) ? reflush_pc :
                         (pfs_go_reflush_pc) ? reflush_pc_r :
                         (br_take_branch) ? br_target :                         
                         (br_taken_r) ? br_target_r : 
-                        if_taken ? if_target :
-                        if_taken_r ? if_target_r :
                         seq_pc;                                         //if delay slot in preif, go pc+4
 
 always @(posedge clk) begin
@@ -212,19 +189,56 @@ assign fs_no_inst_wait = pfs_has_exception;
 //     end
 // end
 
-// wire tlb_req_en;
-// assign tlb_req_en = ((tlb_hit | !fs_use_tlb) & (state == 2'b00)) | (state == 2'b10);
+assign fs_use_tlb = ~(nextpc[31] & ~nextpc[30]);
 
-// assign s0_vpn2 = nextpc[31:13];
-// assign s0_odd_page = nextpc[12];
-// assign s0_asid = cp0_entryhi[7:0];
+reg [31:0] nextpc_r;
 
-// assign fs_use_tlb = ~(nextpc[31] & ~nextpc[30]);
+always @(posedge clk) begin
+    nextpc_r <= nextpc;
+end
+
+wire          tlb_req_en;
+wire          tlb_found;
+wire   [19:0] tlb_pfn;
+wire   [ 3:0] tlb_index;
+wire   [2 :0] tlb_c;
+wire          tlb_d;
+wire          tlb_v;
+
+tlb_cache inst_tlb_cache(
+    .reset          (reset),
+    .clk            (clk),
+
+    .s_found        (s0_found),
+    .s_pfn          (s0_pfn),
+    .s_d            (s0_d),
+    .s_v            (s0_v),
+    .s_c            (s0_c),
+
+    .inst_VA        (nextpc),
+    .inst_tlb_req_en(tlb_req_en),
+    .inst_addr_ok   (inst_cache_addr_ok),
+    .inst_tlb_exception(preif_tlb_exception),
+    .inst_use_tlb   (fs_use_tlb),
+    .cp0_entryhi                (cp0_entryhi),
+
+    .tlb_write      (tlb_write),
+    .inst_pfn       (tlb_pfn),
+    .inst_tlb_index (tlb_index),
+    .inst_tlb_c     (tlb_c),
+    .inst_tlb_v     (tlb_v),
+    .inst_tlb_d     (tlb_d),
+    .inst_tlb_found (tlb_found)
+
+);
+assign s0_vpn2 = nextpc_r[31:13];
+assign s0_odd_page = nextpc_r[12];
+assign s0_asid = cp0_entryhi[7:0];
 
 //cache valid
-assign inst_cache_valid     = fs_allowin & ~reset & ~fs_no_inst_wait; //& tlb_req_en;  
+assign inst_cache_valid     = fs_allowin & ~reset & ~fs_no_inst_wait & tlb_req_en;  
 //[tag,index,offset] 20:8:4
-assign inst_addr    = {3'b0, nextpc[28:0]};//fs_use_tlb ? {3'b0,pfn[16:0], nextpc[11:0]} : {3'b0, nextpc[28:0]};
+assign inst_addr    = fs_use_tlb ? {3'b0, tlb_pfn[16:0], nextpc[11:0]} : {3'b0, nextpc[28:0]};
 assign inst_cache_tag   = inst_addr[31:12];
 assign inst_cache_index = inst_addr[11: 5];
 assign inst_cache_offset= inst_addr[ 4: 0];
@@ -235,17 +249,17 @@ assign inst_cache_uncache = nextpc[31] & ~nextpc[30] & nextpc[29];
 // preIF exception
 
 assign exception_adel    = ~(nextpc[1:0] == 0);
-// assign pfs_exception_tlb_refill = ~tlb_found & fs_use_tlb & (state == 2'b10);
-// assign pfs_exception_tlb_invalid = tlb_found & ~tlb_v & fs_use_tlb & (state == 2'b10);
-// assign preif_tlb_exception  = pfs_exception_tlb_refill | pfs_exception_tlb_invalid;
-assign pfs_has_exception  = exception_adel; //| preif_tlb_exception;
+assign pfs_exception_tlb_refill = ~tlb_found & fs_use_tlb & tlb_req_en;
+assign pfs_exception_tlb_invalid = tlb_found & ~tlb_v & fs_use_tlb & tlb_req_en;
+assign preif_tlb_exception  = pfs_exception_tlb_refill | pfs_exception_tlb_invalid;
+assign pfs_has_exception  = exception_adel | preif_tlb_exception;
 
 assign pfs_exception_type = exception_adel ?        5'h4 :
-                            //preif_tlb_exception ?   5'h2 : 
+                            preif_tlb_exception ?   5'h2 : 
                                                     5'h9 ;
 
 assign pfs_badvaddr = nextpc;
-assign exception_is_tlb_refill = 1'b0;//pfs_exception_tlb_refill;
+assign exception_is_tlb_refill = pfs_exception_tlb_refill;
 
 // preIF to fs bus
 assign preif_to_fs_bus = {  exception_is_tlb_refill,        //38:38
