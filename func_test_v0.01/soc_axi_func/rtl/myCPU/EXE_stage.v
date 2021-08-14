@@ -83,6 +83,7 @@ wire [ 4:0] inst1_ds_exccode;
 wire        inst1_es_tlbp;
 wire        inst1_es_tlbr;
 wire        inst1_es_tlbwi;
+wire        inst1_es_tlbwr;
 wire        inst1_es_eret;
 wire        inst1_bd;
 wire        inst1_detect_overflow;
@@ -120,6 +121,7 @@ wire [ 4:0] inst2_ds_exccode;
 wire        inst2_es_tlbp;
 wire        inst2_es_tlbr;
 wire        inst2_es_tlbwi;
+wire        inst2_es_tlbwr;
 wire        inst2_es_eret;
 wire        inst2_bd;
 wire        inst2_detect_overflow;
@@ -155,7 +157,9 @@ wire [31:0] inst2_rs_update_value;
 wire [31:0] inst2_rt_update_value;
 
 
-assign {inst2_valid,        //390
+assign {inst1_es_tlbwr,
+        inst1_es_tlbwr,
+        inst2_valid,        //390
         inst2_mul,          //389
         inst2_refill,       //388
         inst2_ds_except,    //387
@@ -468,6 +472,8 @@ assign inst2_rs_update_value = self_r1_relevant ? es_alu_inst1_result : inst2_rs
 assign inst2_rt_update_value = self_r2_relevant ? es_alu_inst1_result : inst2_rt_value;
 
 assign es_to_pms_bus = {
+                        inst1_es_tlbwr,
+                        inst2_es_tlbwr,
                         es_inst2_valid,             //572
                         inst2_s1_found,
                         inst2_s1_index,
