@@ -158,7 +158,7 @@ wire [31:0] inst2_rt_update_value;
 
 
 assign {inst1_es_tlbwr,
-        inst1_es_tlbwr,
+        inst2_es_tlbwr,
         inst2_valid,        //390
         inst2_mul,          //389
         inst2_refill,       //388
