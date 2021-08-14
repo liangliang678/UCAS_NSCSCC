@@ -359,13 +359,13 @@ alu u_alu_inst2(
 
 wire op_mult;
 wire op_multu;
-assign op_mult = inst2_alu_op[12] | inst1_alu_op[12];
-assign op_multu = inst2_alu_op[13] | inst1_alu_op[13];
+assign op_mult  = (inst2_alu_op[12] & inst2_valid) | inst1_alu_op[12];
+assign op_multu = (inst2_alu_op[13] & inst2_valid) | inst1_alu_op[13];
 
 wire op_div;
 wire op_divu;
-assign op_div  = inst2_alu_op[14] | inst1_alu_op[14];
-assign op_divu = inst2_alu_op[15] | inst1_alu_op[15];
+assign op_div  = (inst2_alu_op[14] & inst2_valid) | inst1_alu_op[14];
+assign op_divu = (inst2_alu_op[15] & inst2_valid) | inst1_alu_op[15];
 
 wire [31:0] mul_src1;
 wire [31:0] mul_src2;
@@ -459,13 +459,13 @@ assign inst1_tlbp_readygo = ~inst1_es_tlbp | (inst1_es_tlbp & inst1_tlb_req_en);
 assign inst2_tlbp_readygo = ~inst2_es_tlbp | (inst2_es_tlbp & inst2_tlb_req_en);
 
 assign inst1_readygo = inst1_div_readygo & inst1_mem_readygo & inst1_tlbp_readygo;
-assign inst2_readygo = inst2_div_readygo & inst2_mem_readygo & inst2_tlbp_readygo;
+assign inst2_readygo = (inst2_div_readygo & inst2_mem_readygo & inst2_tlbp_readygo) | ~inst2_valid;
 
 
 //forward bus
 assign es_forward_bus = {es_valid, //es_to_pms_valid,
-                        inst1_readygo, inst1_hi_op | inst1_lo_op | inst1_cp0_op | inst1_load_op | inst1_mul, inst1_gr_we, inst1_dest, es_alu_inst1_result, 
-                        inst2_readygo, inst2_hi_op | inst2_lo_op | inst2_cp0_op | inst2_load_op | inst2_mul, inst2_gr_we, inst2_dest, es_alu_inst2_result };
+                        inst1_readygo, inst1_hi_op | inst1_lo_op | inst1_cp0_op | inst1_load_op | inst1_mul, inst1_gr_we, inst1_dest, ins1_mov ? inst1_rs_value : es_alu_inst1_result, 
+                        inst2_readygo, inst2_hi_op | inst2_lo_op | inst2_cp0_op | inst2_load_op | inst2_mul, inst2_gr_we, inst2_dest, ins2_mov ? inst2_rs_update_value : es_alu_inst2_result };
 
 // assign {es_valid, es_res_valid, 
 //         es_inst1_mfhilo, es_inst1_mfc0, es_inst1_load, es_inst1_gr_we, es_inst1_dest, es_inst1_result, 
@@ -793,8 +793,8 @@ assign inst2_kseg01 = (inst2_VA[31] & ~inst2_VA[30]);
 assign inst1_cache = inst1_kseg01 ? (inst1_kseg0 & c0_config_k0[0]) : inst1_s1_c[0];
 assign inst2_cache = inst2_kseg01 ? (inst2_kseg0 & c0_config_k0[0]) : inst2_s1_c[0];
 
-assign inst1_use_tlb =es_valid & ~(inst1_VA[31] & ~inst1_VA[30]) & (inst1_load_op | inst1_mem_we);
-assign inst2_use_tlb =es_valid & ~(inst2_VA[31] & ~inst2_VA[30]) & (inst2_load_op | inst2_mem_we);
+assign inst1_use_tlb = es_valid & ~(inst1_VA[31] & ~inst1_VA[30]) & (inst1_load_op | inst1_mem_we);
+assign inst2_use_tlb = inst2_valid & es_valid & ~(inst2_VA[31] & ~inst2_VA[30]) & (inst2_load_op | inst2_mem_we);
 
 assign s1_vpn2 = inst1_es_tlbp ? cp0_entryhi[31:13] : inst1_VA_r[31:13];
 assign s2_vpn2 = inst2_es_tlbp ? cp0_entryhi[31:13] : inst2_VA_r[31:13];
@@ -817,7 +817,7 @@ assign inst1_data_cache_index = inst1_data_addr[11:5];
 assign inst1_data_cache_offset = inst1_data_addr[4:0];
 assign inst1_data_cache_wstrb = (inst1_mem_we & es_valid & ~inst1_es_except) ? inst1_write_strb : 4'h0;
 
-assign inst2_data_cache_valid = inst2_tlb_req_en & (inst2_load_op | inst2_mem_we) & es_valid & ~(inst1_es_except | inst1_es_eret) & ~inst2_es_except  & (inst1_load_op | inst1_mem_we | (inst1_div_readygo & (inst1_alu_op[14] | inst1_alu_op[15])) | (~(self_r1_relevant | self_r2_relevant) | ((self_r1_relevant | self_r2_relevant) & self_relevant_stall)));
+assign inst2_data_cache_valid = inst2_valid & inst2_tlb_req_en & (inst2_load_op | inst2_mem_we) & es_valid & ~(inst1_es_except | inst1_es_eret) & ~inst2_es_except  & (inst1_load_op | inst1_mem_we | (inst1_div_readygo & (inst1_alu_op[14] | inst1_alu_op[15])) | (~(self_r1_relevant | self_r2_relevant) | ((self_r1_relevant | self_r2_relevant) & self_relevant_stall)));
 assign inst2_data_cache_op = inst2_mem_we;
 //assign inst2_data_cache_uncache = inst2_data_addr[31] && ~inst2_data_addr[30] && inst2_data_addr[29];
 assign inst2_data_cache_uncache = ~inst2_cache;
@@ -879,7 +879,7 @@ assign inst1_es_tlb_ex = inst1_es_tlb_refill | inst1_es_tlb_invalid | inst1_es_t
 assign inst2_es_tlb_ex = inst2_es_tlb_refill | inst2_es_tlb_invalid | inst2_es_tlb_modified;
 
 assign inst1_es_Ov = inst1_detect_overflow & es_alu_inst1_overflow;
-assign inst2_es_Ov = inst2_detect_overflow & es_alu_inst2_overflow;
+assign inst2_es_Ov = inst2_detect_overflow & es_alu_inst2_overflow & inst2_valid;
 
 assign inst1_es_except = inst1_ds_except | inst1_es_Ov | (inst1_exception_adel | inst1_exception_ades | inst1_es_tlb_ex);
 assign inst2_es_except = inst2_ds_except | inst2_es_Ov | (inst2_exception_adel | inst2_exception_ades | inst2_es_tlb_ex);
@@ -900,21 +900,6 @@ assign inst2_es_exccode = inst2_ds_except ? inst2_ds_exccode :
 
 assign inst1_es_BadVAddr = inst1_ds_except ? inst1_pc : inst1_VA;
 assign inst2_es_BadVAddr = inst2_ds_except ? inst2_pc : inst2_VA;
-
-
-// assign inst1_pms_except = inst1_es_except | (inst1_exception_adel | inst1_exception_ades);
-// assign inst2_pms_except = inst2_es_except | (inst2_exception_adel | inst2_exception_ades);
-
-// assign inst1_pms_exccode = inst1_es_except ? inst1_es_exccode : 
-//                            inst1_exception_adel ? 5'h4 :
-//                            inst1_exception_ades ? 5'h5 : 5'h0;
-
-// assign inst2_pms_exccode = inst2_es_except ? inst2_es_exccode : 
-//                            inst2_exception_adel ? 5'h4 :
-//                            inst2_exception_ades ? 5'h5 : 5'h0;
-
-// assign inst1_pms_BadVAddr = inst1_es_except ? inst1_es_BadVAddr : inst1_VA;
-// assign inst2_pms_BadVAddr = inst2_es_except ? inst2_es_BadVAddr : inst2_VA;
 
 
 
