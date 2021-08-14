@@ -196,11 +196,15 @@ wire [31:0] cp0_entrylo1;
 wire [2 :0] c0_config_k0;
 wire [11:0] c0_mask;
 wire [3:0]  c0_random_random;
+wire [31:0] c0_status;
+wire [31:0] c0_cause;
 wire        is_TLBR;
 wire [77:0] TLB_rdata;
 wire        is_TLBP;
+wire        is_TLBWR;
 wire        index_write_p;
 wire [ 3:0] index_write_index;
+wire [ 1:0] except_ce;
 
 
 //TLB
@@ -516,6 +520,7 @@ premem_stage premem_stage(
     .pms_pc                     (pms_pc), //pc
     .pms_badvaddr               (pms_badvaddr), //bad vaddr
     .pms_eret                   (pms_eret), //is eret
+    .pms_except_ce              (except_ce),//exception:cpu
 
     //output to pms
     .inst1_c0_rdata             (inst1_c0_rdata),
@@ -528,12 +533,14 @@ premem_stage premem_stage(
     .cp0_entryhi                (cp0_entryhi),
     .cp0_entrylo0               (cp0_entrylo0),
     .cp0_entrylo1               (cp0_entrylo1),
-    .c0_mask                  (c0_mask),
-
+    .c0_mask                    (c0_mask),
+    .c0_status                  (c0_status),
+    .c0_cause                   (c0_cause),
     //TLBR\TLBP to CP0
     .is_TLBR                    (is_TLBR),
     .TLB_rdata                  (TLB_rdata),
     .is_TLBP                    (is_TLBP),
+    .is_TLBWR                   (is_TLBWR),
     .index_write_p              (index_write_p),
     .index_write_index          (index_write_index),
     .c0_random_random            (c0_random_random),
@@ -559,6 +566,7 @@ cp0 cp0(
     .pms_pc                     (pms_pc), //pc
     .pms_badvaddr               (pms_badvaddr), //bad vaddr
     .pms_eret                   (pms_eret), //is eret
+    .except_ce                  (except_ce),//exception:cpu
 
     //output to pms
     .inst1_c0_rdata             (inst1_c0_rdata),
@@ -573,14 +581,16 @@ cp0 cp0(
     .cp0_entrylo0               (cp0_entrylo0),
     .cp0_entrylo1               (cp0_entrylo1),
     .c0_config_k0               (c0_config_k0),
-    .c0_mask             (c0_mask),
-    .c0_random_random             (c0_random_random),
-
+    .c0_mask                    (c0_mask),
+    .c0_random_random           (c0_random_random),
+    .c0_status                  (c0_status),
+    .c0_cause                   (c0_cause),
     //TLBR\TLBP to CP0
     .TLBR_mask                  (r_mask),
     .is_TLBR                    (is_TLBR),
     .TLB_rdata                  (TLB_rdata),
     .is_TLBP                    (is_TLBP),
+    .is_TLBWR                   (is_TLBWR),
     .index_write_p              (index_write_p),
     .index_write_index          (index_write_index)
 );

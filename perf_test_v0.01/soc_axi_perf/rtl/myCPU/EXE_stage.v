@@ -75,6 +75,7 @@ wire        es_ready_go;
 reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
 
 wire [15:0] inst1_imm;
+wire [ 3:0] inst1_trap;
 wire        inst1_movn;
 wire        inst1_movz;
 wire        inst1_mul;
@@ -115,6 +116,7 @@ wire [31:0] inst1_rs_value;
 wire [31:0] inst1_rt_value;
 
 wire [15:0] inst2_imm;
+wire [ 3:0] inst2_trap;
 wire        inst2_movn;
 wire        inst2_movz;
 wire        inst2_mul;
@@ -166,6 +168,7 @@ wire [31:0] inst2_rt_update_value;
 assign {inst1_es_tlbwr,
         inst2_es_tlbwr,
         inst2_valid,        //390
+        inst2_trap,
         inst2_movn,
         inst2_movz,
         inst2_mul,          //389
@@ -207,6 +210,7 @@ assign {inst1_es_tlbwr,
         self_r1_relevant,   //179
         self_r2_relevant,   //178
 
+        inst1_trap,
         inst1_movn,
         inst1_movz,
         inst1_mul,          //177
@@ -878,6 +882,9 @@ wire        inst2_es_tlb_modified;
 wire        inst1_es_tlb_ex;
 wire        inst2_es_tlb_ex;
 
+wire        inst1_trap_ex;
+wire        inst2_trap_ex;
+
 assign inst1_es_tlb_refill = ~inst1_s1_found & inst1_use_tlb & inst1_tlb_req_en;
 assign inst2_es_tlb_refill = ~inst2_s1_found & inst2_use_tlb & inst2_tlb_req_en;
 assign inst1_es_tlb_invalid = inst1_s1_found & ~inst1_s1_v & inst1_use_tlb & inst1_tlb_req_en;
@@ -891,11 +898,22 @@ assign inst2_es_tlb_ex = inst2_es_tlb_refill | inst2_es_tlb_invalid | inst2_es_t
 assign inst1_es_Ov = inst1_detect_overflow & es_alu_inst1_overflow;
 assign inst2_es_Ov = inst2_detect_overflow & es_alu_inst2_overflow & inst2_valid;
 
-assign inst1_es_except = inst1_ds_except | inst1_es_Ov | (inst1_exception_adel | inst1_exception_ades | inst1_es_tlb_ex);
-assign inst2_es_except = inst2_ds_except | inst2_es_Ov | (inst2_exception_adel | inst2_exception_ades | inst2_es_tlb_ex);
+assign inst1_trap_ex = inst1_trap[0] & (es_alu_inst1_result == 32'b0) |
+                       inst1_trap[1] & (~es_alu_inst1_result[0])      |
+                       inst1_trap[2] & (es_alu_inst1_result[0])       |
+                       inst1_trap[3] & (es_alu_inst1_result != 32'b0) ;
+
+assign inst2_trap_ex = (inst2_trap[0] & (es_alu_inst2_result == 32'b0) |
+                        inst2_trap[1] & (~es_alu_inst2_result[0])      |
+                        inst2_trap[2] & (es_alu_inst2_result[0])       |
+                        inst2_trap[3] & (es_alu_inst2_result != 32'b0) ) & inst2_valid;
+
+assign inst1_es_except = inst1_ds_except | inst1_es_Ov | (inst1_exception_adel | inst1_exception_ades | inst1_es_tlb_ex | inst1_trap_ex);
+assign inst2_es_except = inst2_ds_except | inst2_es_Ov | (inst2_exception_adel | inst2_exception_ades | inst2_es_tlb_ex | inst2_trap_ex);
 
 assign inst1_es_exccode = inst1_ds_except ? inst1_ds_exccode : 
                           inst1_es_Ov ? 5'hc : 
+                          inst1_trap_ex ? 5'hd :
                           inst1_exception_adel ? 5'h4 :
                           inst1_exception_ades ? 5'h5 : 
                           ((inst1_es_tlb_refill | inst1_es_tlb_invalid) & inst1_mem_we) ? 5'h3 : 
@@ -903,6 +921,7 @@ assign inst1_es_exccode = inst1_ds_except ? inst1_ds_exccode :
 
 assign inst2_es_exccode = inst2_ds_except ? inst2_ds_exccode : 
                           inst2_es_Ov ? 5'hc : 
+                          inst2_trap_ex ? 5'hd :
                           inst2_exception_adel ? 5'h4 :
                           inst2_exception_ades ? 5'h5 : 
                           ((inst2_es_tlb_refill | inst2_es_tlb_invalid) & inst2_mem_we) ? 5'h3 : 
