@@ -32,6 +32,7 @@ module cp0(
     output [31:0] cp0_entrylo1,
     output [2: 0] c0_config_k0,
     output [11:0] c0_mask,
+    output [3: 0] c0_random_random,
     //TLBR\TLBP to CP0
     input        is_TLBR      ,
     input [77:0] TLB_rdata    ,

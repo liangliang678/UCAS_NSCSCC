@@ -195,6 +195,7 @@ wire [31:0] cp0_entrylo0;
 wire [31:0] cp0_entrylo1;
 wire [2 :0] c0_config_k0;
 wire [11:0] c0_mask;
+wire [3:0]  c0_random_random;
 wire        is_TLBR;
 wire [77:0] TLB_rdata;
 wire        is_TLBP;
@@ -535,6 +536,7 @@ premem_stage premem_stage(
     .is_TLBP                    (is_TLBP),
     .index_write_p              (index_write_p),
     .index_write_index          (index_write_index),
+    .c0_random_random            (c0_random_random),
 
     .pms_mtc0_index             (pms_mtc0_index)
 
@@ -572,6 +574,7 @@ cp0 cp0(
     .cp0_entrylo1               (cp0_entrylo1),
     .c0_config_k0               (c0_config_k0),
     .c0_mask             (c0_mask),
+    .c0_random_random             (c0_random_random),
 
     //TLBR\TLBP to CP0
     .TLBR_mask                  (r_mask),

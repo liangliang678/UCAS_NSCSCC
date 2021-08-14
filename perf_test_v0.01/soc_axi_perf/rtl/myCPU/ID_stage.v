@@ -158,6 +158,8 @@ wire [ 4:0] inst1_ds_exccode;
 wire        inst1_ds_tlbp;
 wire        inst1_ds_tlbr;
 wire        inst1_ds_tlbwi;
+wire        inst1_ds_tlbwr;
+wire        inst1_tlbwr;
 wire        inst1_ds_eret;
 wire        inst1_bd;
 wire        inst1_detect_overflow;
@@ -197,6 +199,8 @@ wire [ 4:0] inst2_ds_exccode;
 wire        inst2_ds_tlbp;
 wire        inst2_ds_tlbr;
 wire        inst2_ds_tlbwi;
+wire        inst2_ds_tlbwr;
+wire        inst2_tlbwr;
 wire        inst2_ds_eret;
 wire        inst2_bd;
 wire        inst2_detect_overflow;
@@ -227,7 +231,9 @@ wire [31:0] inst2_rt_value;
 assign inst1_bd = 1'b0;
 assign inst2_bd = inst1_branch_op | inst1_jump_op;
 
-assign ds_to_es_bus = {inst2_valid,
+assign ds_to_es_bus = {inst1_ds_tlbwr,
+                       inst2_ds_tlbwr,
+                       inst2_valid,
                        inst2_mul,
                        inst2_refill,
                        inst2_ds_except,
@@ -511,7 +517,7 @@ assign inst1_break  = inst1_op_d[6'h00] & inst1_func_d[6'h0d];
 assign inst1_tlbp   = inst1_op_d[6'h10] & inst1_func_d[6'h08] & inst1_rs_d[5'h10] & inst1_rt_d[5'h00] & inst1_rd_d[5'h00] & inst1_sa_d[5'h00];
 assign inst1_tlbr   = inst1_op_d[6'h10] & inst1_func_d[6'h01] & inst1_rs_d[5'h10] & inst1_rt_d[5'h00] & inst1_rd_d[5'h00] & inst1_sa_d[5'h00];
 assign inst1_tlbwi  = inst1_op_d[6'h10] & inst1_func_d[6'h02] & inst1_rs_d[5'h10] & inst1_rt_d[5'h00] & inst1_rd_d[5'h00] & inst1_sa_d[5'h00];
-
+assign inst1_tlbwr  = inst1_op_d[6'h10] & inst1_func_d[6'h06] & inst1_rs_d[5'h10] & inst1_rt_d[5'h00] & inst1_rd_d[5'h00] & inst1_sa_d[5'h00];
 
 assign inst1_alu_op[ 0] = inst1_add | inst1_addu | inst1_addi | inst1_addiu | inst1_load_op | inst1_store_op | inst1_jal | inst1_bgezal | inst1_bltzal | inst1_jalr;
 assign inst1_alu_op[ 1] = inst1_sub | inst1_subu;
@@ -533,6 +539,7 @@ assign inst1_alu_op[15] = inst1_divu;
 assign inst1_ds_tlbp   = inst1_tlbp;
 assign inst1_ds_tlbr   = inst1_tlbr;
 assign inst1_ds_tlbwi  = inst1_tlbwi;
+assign inst1_ds_tlbwr  = inst1_tlbwr;
 assign inst1_ds_eret   = inst1_eret;
 
 assign inst1_load_op   = inst1_lb | inst1_lbu | inst1_lh | inst1_lhu | inst1_lw | inst1_lwl | inst1_lwr;
@@ -553,7 +560,7 @@ assign inst1_dst_is_r31   = inst1_jal | inst1_bgezal | inst1_bltzal | inst1_jalr
 assign inst1_dst_is_rt    = inst1_addi | inst1_addiu | inst1_slti | inst1_sltiu | inst1_andi | inst1_ori | inst1_xori | inst1_lui | inst1_load_op | inst1_mfc0;
 assign inst1_gr_we        = ~inst1_store_op & ~inst1_beq & ~inst1_bne & ~inst1_bgez & ~inst1_bgtz & ~inst1_blez & ~inst1_bltz & ~inst1_jr & ~inst1_j & 
                             ~inst1_div & ~inst1_divu & ~inst1_mult & ~inst1_multu & ~inst1_mthi & ~inst1_mtlo & ~inst1_syscall & ~inst1_break & ~inst1_eret & 
-                            ~inst1_mtc0 & ~inst1_tlbp & ~inst1_tlbr & ~inst1_tlbwi;
+                            ~inst1_mtc0 & ~inst1_tlbp & ~inst1_tlbr & ~inst1_tlbwi & ~inst1_tlbwr;
 assign inst1_mem_we       = inst1_store_op;
 assign inst1_hi_we        = inst1_div | inst1_divu | inst1_mult | inst1_multu | inst1_mthi;
 assign inst1_lo_we        = inst1_div | inst1_divu | inst1_mult | inst1_multu | inst1_mtlo;
@@ -590,7 +597,7 @@ assign inst1_ds_RI = ~inst1_add & ~inst1_addu & ~inst1_addi & ~inst1_addiu & ~in
                      ~inst1_beq & ~inst1_bne & ~inst1_bgez & ~inst1_bgtz & ~inst1_blez & ~inst1_bltz &
                      ~inst1_j & ~inst1_bltzal & ~inst1_bgezal & ~inst1_jalr & ~inst1_jal & ~inst1_jr &
                      ~inst1_mfc0 & ~inst1_mtc0 & ~inst1_eret & ~inst1_syscall & ~inst1_break &
-                     ~inst1_tlbp & ~inst1_tlbr & ~inst1_tlbwi & ~inst1_mul;
+                     ~inst1_tlbp & ~inst1_tlbr & ~inst1_tlbwi & ~inst1_mul & ~inst1_tlbwr;
 
 assign inst1_except  = inst1_ds_Sys | inst1_ds_Bp | inst1_ds_RI;
 assign inst1_exccode = (inst1_ds_RI) ? 5'ha: 
@@ -777,6 +784,7 @@ assign inst2_break  = inst2_op_d[6'h00] & inst2_func_d[6'h0d];
 assign inst2_tlbp   = inst2_op_d[6'h10] & inst2_func_d[6'h08] & inst2_rs_d[5'h10] & inst2_rt_d[5'h00] & inst2_rd_d[5'h00] & inst2_sa_d[5'h00];
 assign inst2_tlbr   = inst2_op_d[6'h10] & inst2_func_d[6'h01] & inst2_rs_d[5'h10] & inst2_rt_d[5'h00] & inst2_rd_d[5'h00] & inst2_sa_d[5'h00];
 assign inst2_tlbwi  = inst2_op_d[6'h10] & inst2_func_d[6'h02] & inst2_rs_d[5'h10] & inst2_rt_d[5'h00] & inst2_rd_d[5'h00] & inst2_sa_d[5'h00];
+assign inst2_tlbwr  = inst2_op_d[6'h10] & inst2_func_d[6'h06] & inst2_rs_d[5'h10] & inst2_rt_d[5'h00] & inst2_rd_d[5'h00] & inst2_sa_d[5'h00];
 
 assign inst2_alu_op[ 0] = inst2_add | inst2_addu | inst2_addi | inst2_addiu | inst2_load_op | inst2_store_op | inst2_jal | inst2_bgezal | inst2_bltzal | inst2_jalr;
 assign inst2_alu_op[ 1] = inst2_sub | inst2_subu;
@@ -798,6 +806,7 @@ assign inst2_alu_op[15] = inst2_divu;
 assign inst2_ds_tlbp   = inst2_tlbp;
 assign inst2_ds_tlbr   = inst2_tlbr;
 assign inst2_ds_tlbwi  = inst2_tlbwi;
+assign inst2_ds_tlbwr  = inst2_tlbwr;
 assign inst2_ds_eret   = inst2_eret;
 
 assign inst2_load_op   = inst2_lb | inst2_lbu | inst2_lh | inst2_lhu | inst2_lw | inst2_lwl | inst2_lwr;
@@ -816,7 +825,7 @@ assign inst2_dst_is_r31   = inst2_jal | inst2_bgezal | inst2_bltzal | inst2_jalr
 assign inst2_dst_is_rt    = inst2_addi | inst2_addiu | inst2_slti | inst2_sltiu | inst2_andi | inst2_ori | inst2_xori | inst2_lui | inst2_load_op | inst2_mfc0;
 assign inst2_gr_we        = ~inst2_store_op & ~inst2_beq & ~inst2_bne & ~inst2_bgez & ~inst2_bgtz & ~inst2_blez & ~inst2_bltz & ~inst2_jr & ~inst2_j & 
                             ~inst2_div & ~inst2_divu & ~inst2_mult & ~inst2_multu & ~inst2_mthi & ~inst2_mtlo & ~inst2_syscall & ~inst2_break & ~inst2_eret & 
-                            ~inst2_mtc0 & ~inst2_tlbp & ~inst2_tlbr & ~inst2_tlbwi;
+                            ~inst2_mtc0 & ~inst2_tlbp & ~inst2_tlbr & ~inst2_tlbwi & ~inst2_tlbwr;
 assign inst2_mem_we       = inst2_store_op;
 assign inst2_hi_we        = inst2_div | inst2_divu | inst2_mult | inst2_multu | inst2_mthi;
 assign inst2_lo_we        = inst2_div | inst2_divu | inst2_mult | inst2_multu | inst2_mtlo;
@@ -853,7 +862,7 @@ assign inst2_ds_RI = ~inst2_add & ~inst2_addu & ~inst2_addi & ~inst2_addiu & ~in
                      ~inst2_beq & ~inst2_bne & ~inst2_bgez & ~inst2_bgtz & ~inst2_blez & ~inst2_bltz &
                      ~inst2_j & ~inst2_bltzal & ~inst2_bgezal & ~inst2_jalr & ~inst2_jal & ~inst2_jr &
                      ~inst2_mfc0 & ~inst2_mtc0 & ~inst2_eret & ~inst2_syscall & ~inst2_break &
-                     ~inst2_tlbp & ~inst2_tlbr & ~inst2_tlbwi & ~inst2_mul;
+                     ~inst2_tlbp & ~inst2_tlbr & ~inst2_tlbwi & ~inst2_mul & ~inst2_tlbwr;
 
 assign inst2_except  = inst2_ds_Sys | inst2_ds_Bp | inst2_ds_RI;
 assign inst2_exccode = (inst2_ds_RI) ? 5'ha: 
