@@ -35,6 +35,7 @@ module cp0(
     output [3: 0] c0_random_random,
     output [31:0] c0_status,
     output [31:0] c0_cause,
+    output reg [31:0] c0_taglo,
     //TLBR\TLBP to CP0
     input        is_TLBR      ,
     input [77:0] TLB_rdata    ,
@@ -65,7 +66,7 @@ module cp0(
 //PrID    15 0  -> 01111 000 
 //Config0 16 0  -> 10000 000
 //Config1 16 1  -> 10000 001
-//TagHi TagLo depends on how CACHE instruction do
+//TagLo   28 0  -> 11100 000
 
 localparam     CR_STATUS  = 8'b01100000;
 localparam     CR_CAUSE   = 8'b01101000;
@@ -86,7 +87,7 @@ localparam     CR_WIRED    = 8'b00110000;
 localparam     CR_PRID     = 8'b01111000;
 localparam     CR_CONFIG0  = 8'b10000000;
 localparam     CR_CONFIG1  = 8'b10000001;
-
+localparam     CR_TagLo    = 8'b11100000;
 
 wire [4:0] wb_excode;
 assign wb_excode = ex_type;
@@ -243,7 +244,7 @@ always @(posedge cp0_clk) begin
         c0_cause_excode <= wb_excode;
 end
 
-assign c0_cause = {c0_cause_bd, c0_cause_ti, 2'b0/*c0_cause_ce*/, 4'b0, c0_cause_iv, 7'b0, c0_cause_ip[7:0], 1'b0, c0_cause_excode, 2'b0};
+assign c0_cause = {c0_cause_bd, c0_cause_ti, c0_cause_ce, 4'b0, c0_cause_iv, 7'b0, c0_cause_ip[7:0], 1'b0, c0_cause_excode, 2'b0};
 
 //EPC
 reg [31:0] c0_epc;
@@ -550,12 +551,19 @@ always @(posedge cp0_clk) begin
         c0_config_k0 <= inst1_c0_wdata[2:0];
 end
 
-//CONFIG1
+//TagLo
+
+always @(posedge cp0_clk) begin
+    if (inst2_mtc0_we && inst2_c0_addr == CR_TagLo) 
+        c0_taglo <= inst2_c0_wdata;
+    else if (inst1_mtc0_we && inst1_c0_addr == CR_TagLo) 
+        c0_taglo <= inst1_c0_wdata;
+end
 
 assign inst1_c0_rdata = {32{(inst1_c0_addr == CR_EPC)}} & c0_epc |
                         {32{(inst1_c0_addr == CR_COUNT)}} & c0_count |
                         {32{(inst1_c0_addr == CR_BADADDR)}} & c0_badvaddr |
-                        {32{(inst1_c0_addr == CR_CAUSE)}} & {c0_cause_bd, c0_cause_ti, 2'b0/*c0_cause_ce*/, 4'b0, c0_cause_iv, 7'b0, c0_cause_ip[7:0], 1'b0, c0_cause_excode, 2'b0} |
+                        {32{(inst1_c0_addr == CR_CAUSE)}} & {c0_cause_bd, c0_cause_ti, c0_cause_ce, 4'b0, c0_cause_iv, 7'b0, c0_cause_ip[7:0], 1'b0, c0_cause_excode, 2'b0} |
                         {32{(inst1_c0_addr == CR_STATUS)}} & {3'b0, c0_status_cu0, 5'b0, c0_status_bev, 6'b0, c0_status_im, 3'b0, c0_status_um, 2'b0, c0_status_exl, c0_status_ie} |
                         {32{(inst1_c0_addr == CR_ENTRYHI)}} & {c0_VPN2, 5'b0, c0_ASID} |
                         {32{(inst1_c0_addr == CR_INDEX)}} & {c0_index_p, 27'b0, c0_index_index} |
@@ -567,12 +575,13 @@ assign inst1_c0_rdata = {32{(inst1_c0_addr == CR_EPC)}} & c0_epc |
                         {32{(inst1_c0_addr == CR_WIRED)}} & {28'b0, c0_wired_wired} |
                         {32{(inst1_c0_addr == CR_PAGEMASK)}} & {8'b0, c0_mask, 13'b0} |
                         {32{(inst1_c0_addr == CR_CONFIG0)}} & {1'b1, 21'b0, 3'b1, 4'b0, c0_config_k0} |
-                        {32{(inst1_c0_addr == CR_CONFIG1)}} & {1'b0, 6'd15, 3'd1, 3'd4, 3'd1, 3'd1, 3'd4, 3'd1, 7'b0} ;
+                        {32{(inst1_c0_addr == CR_CONFIG1)}} & {1'b0, 6'd15, 3'd1, 3'd4, 3'd1, 3'd1, 3'd4, 3'd1, 7'b0} |
+                        {32{(inst1_c0_addr == CR_TagLo)}} & c0_taglo;
 
 assign inst2_c0_rdata = {32{(inst2_c0_addr == CR_EPC)}} & c0_epc |
                         {32{(inst2_c0_addr == CR_COUNT)}} & c0_count |
                         {32{(inst2_c0_addr == CR_BADADDR)}} & c0_badvaddr |
-                        {32{(inst2_c0_addr == CR_CAUSE)}} & {c0_cause_bd, c0_cause_ti, 2'b0/*c0_cause_ce*/, 4'b0, c0_cause_iv, 7'b0, c0_cause_ip[7:0], 1'b0, c0_cause_excode, 2'b0} |
+                        {32{(inst2_c0_addr == CR_CAUSE)}} & {c0_cause_bd, c0_cause_ti, c0_cause_ce, 4'b0, c0_cause_iv, 7'b0, c0_cause_ip[7:0], 1'b0, c0_cause_excode, 2'b0} |
                         {32{(inst2_c0_addr == CR_STATUS)}} & {3'b0, c0_status_cu0, 5'b0, c0_status_bev, 6'b0, c0_status_im, 3'b0, c0_status_um, 2'b0, c0_status_exl, c0_status_ie} |
                         {32{(inst2_c0_addr == CR_ENTRYHI)}} & {c0_VPN2, 5'b0, c0_ASID} |
                         {32{(inst2_c0_addr == CR_INDEX)}} & {c0_index_p, 27'b0, c0_index_index} |
@@ -584,5 +593,6 @@ assign inst2_c0_rdata = {32{(inst2_c0_addr == CR_EPC)}} & c0_epc |
                         {32{(inst2_c0_addr == CR_WIRED)}} & {28'b0, c0_wired_wired} |
                         {32{(inst2_c0_addr == CR_PAGEMASK)}} & {8'b0, c0_mask, 13'b0} |
                         {32{(inst2_c0_addr == CR_CONFIG0)}} & {1'b1, 21'b0, 3'b1, 4'b0, c0_config_k0} |
-                        {32{(inst2_c0_addr == CR_CONFIG1)}} & {1'b0, 6'd15, 3'd1, 3'd4, 3'd1, 3'd1, 3'd4, 3'd1, 7'b0} ;
+                        {32{(inst2_c0_addr == CR_CONFIG1)}} & {1'b0, 6'd15, 3'd1, 3'd4, 3'd1, 3'd1, 3'd4, 3'd1, 7'b0} |
+                        {32{(inst2_c0_addr == CR_TagLo)}} & c0_taglo;
 endmodule

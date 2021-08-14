@@ -36,6 +36,13 @@
     `define CR_ENTRYLO0  8'b00010000
     `define CR_ENTRYLO1  8'b00011000
     `define CR_INDEX     8'b00000000
-
+    `define CR_RANDOM    8'b00001000
+    `define CR_CONTEXT   8'b00100000
+    `define CR_PAGEMASK  8'b00101000
+    `define CR_WIRED     8'b00110000
+    `define CR_PRID      8'b01111000
+    `define CR_CONFIG0   8'b10000000
+    `define CR_CONFIG1   8'b10000001
+    `define CR_TagLo     8'b11100000
 
 `endif

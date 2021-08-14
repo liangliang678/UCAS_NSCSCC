@@ -40,10 +40,16 @@ module exe_stage(
     output           icache_inst_valid   ,
     output [ 2:0]    icache_inst_op      ,
     output [31:0]    icache_inst_addr    ,
+    output [ 20:0]   icache_inst_tag     ,
+    output           icache_inst_v       ,
     input            icache_inst_ok      ,
+
     output           dcache_inst_valid   ,
     output [ 2:0]    dcache_inst_op      ,
     output [31:0]    dcache_inst_addr    ,
+    output [ 20:0]   dcache_inst_tag     ,
+    output           dcache_inst_v       ,
+    output           dcache_inst_d       ,
     input            dcache_inst_ok      ,
 
     //TLB
@@ -71,6 +77,7 @@ module exe_stage(
     input  [31:0]    cp0_entryhi,
     input            pms_mtc0_index,
     input  [2 :0]    c0_config_k0,
+    input  [31:0]    c0_taglo,
     //relevant bus
     output [`ES_FORWARD_BUS_WD -1:0] es_forward_bus,
   
@@ -863,10 +870,15 @@ assign inst2_data_cache_wstrb = (inst2_mem_we & es_valid & ~inst1_es_except & ~i
 assign icache_inst_valid = ((inst1_cache & inst1_tlb_req_en)) & es_valid & (inst1_cache_op[1:0] == 2'b00);
 assign icache_inst_op    = inst1_cache_op[4:2];
 assign icache_inst_addr  = {3'b0, inst1_data_addr[28:0]};
+assign icache_inst_tag   = 0;
+assign icache_inst_v     = 0;
 
 assign dcache_inst_valid = ((inst1_cache & inst1_tlb_req_en)) & es_valid & (inst1_cache_op[1:0] == 2'b01);
 assign dcache_inst_op    = inst1_cache_op[4:2];
 assign dcache_inst_addr  = {3'b0, inst1_data_addr[28:0]};
+assign dcache_inst_tag   = 0;
+assign dcache_inst_v     = 0;
+assign dcache_inst_d     = 0;
 
 // exception
 wire es_inst2_valid;

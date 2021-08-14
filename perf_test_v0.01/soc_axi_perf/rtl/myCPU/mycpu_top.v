@@ -198,6 +198,7 @@ wire [11:0] c0_mask;
 wire [3:0]  c0_random_random;
 wire [31:0] c0_status;
 wire [31:0] c0_cause;
+wire [31:0] c0_taglo;
 wire        is_TLBR;
 wire [77:0] TLB_rdata;
 wire        is_TLBP;
@@ -273,10 +274,17 @@ wire [ 2:0] icache_inst_op;
 wire [31:0] icache_inst_addr;
 wire        icache_inst_ok;
 
+wire [20:0] icache_inst_tag;
+wire        icache_inst_v;
+
 wire        dcache_inst_valid;
 wire [ 2:0] dcache_inst_op;
 wire [31:0] dcache_inst_addr;
 wire        dcache_inst_ok;
+
+wire [20:0] dcache_inst_tag;
+wire        dcache_inst_v;
+wire        dcache_inst_d;
 
 wire        pms_mtc0_index;
 
@@ -436,10 +444,16 @@ exe_stage exe_stage(
     .icache_inst_valid   (icache_inst_valid),
     .icache_inst_op      (icache_inst_op),
     .icache_inst_addr    (icache_inst_addr),
+    .icache_inst_tag     (icache_inst_tag),
+    .icache_inst_v       (icache_inst_v),
     .icache_inst_ok      (icache_inst_ok),
+
     .dcache_inst_valid   (dcache_inst_valid),
     .dcache_inst_op      (dcache_inst_op),
     .dcache_inst_addr    (dcache_inst_addr),
+    .dcache_inst_tag     (dcache_inst_tag),
+    .dcache_inst_v       (dcache_inst_v),
+    .dcache_inst_d       (dcache_inst_d),
     .dcache_inst_ok      (dcache_inst_ok),
 
     //TLB
@@ -467,6 +481,7 @@ exe_stage exe_stage(
     .cp0_entryhi                (cp0_entryhi),
     .pms_mtc0_index             (pms_mtc0_index),
     .c0_config_k0               (c0_config_k0),
+    .c0_taglo                   (c0_taglo),
     //relevant bus
     .es_forward_bus             (es_forward_bus),
   
@@ -562,7 +577,7 @@ premem_stage premem_stage(
     .is_TLBWR                   (is_TLBWR),
     .index_write_p              (index_write_p),
     .index_write_index          (index_write_index),
-    .c0_random_random            (c0_random_random),
+    .c0_random_random           (c0_random_random),
 
     .pms_mtc0_index             (pms_mtc0_index)
 
@@ -604,6 +619,7 @@ cp0 cp0(
     .c0_random_random           (c0_random_random),
     .c0_status                  (c0_status),
     .c0_cause                   (c0_cause),
+    .c0_taglo                   (c0_taglo),
     //TLBR\TLBP to CP0
     .TLBR_mask                  (r_mask),
     .is_TLBR                    (is_TLBR),
@@ -677,6 +693,8 @@ icache2 icache2(
     .cache_inst_valid   (icache_inst_valid),
     .cache_inst_op      (icache_inst_op),
     .cache_inst_addr    (icache_inst_addr),
+    .cache_inst_tag     (icache_inst_tag),
+    .cache_inst_v       (icache_inst_v),
     .cache_inst_ok      (icache_inst_ok),
 
     .rd_req     (inst_cache_rd_req   ),
@@ -738,6 +756,9 @@ dcache2 dcache2(
     .cache_inst_valid   (dcache_inst_valid),
     .cache_inst_op      (dcache_inst_op),
     .cache_inst_addr    (dcache_inst_addr),
+    .cache_inst_tag     (dcache_inst_tag),
+    .cache_inst_v       (dcache_inst_v),
+    .cache_inst_d       (dcache_inst_d),
     .cache_inst_ok      (dcache_inst_ok),
 
     .rd_req     (data_cache_rd_req   ),
