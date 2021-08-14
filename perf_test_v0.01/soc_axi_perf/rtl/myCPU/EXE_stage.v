@@ -267,17 +267,13 @@ end
 wire [31:0] es_alu_inst1_src1   ;
 wire [31:0] es_alu_inst1_src2   ;
 wire [31:0] es_alu_inst1_result ;
-// wire [63:0] es_alu_inst1_div_res;
-// wire [63:0] es_alu_inst1_mul_res;
-// wire        es_alu_inst1_complete ;
+wire [31:0] es_inst1_result     ;
 wire        es_alu_inst1_overflow;
 
 wire [31:0] es_alu_inst2_src1   ;
 wire [31:0] es_alu_inst2_src2   ;
 wire [31:0] es_alu_inst2_result ;
-// wire [63:0] es_alu_inst2_div_res;
-// wire [63:0] es_alu_inst2_mul_res;
-// wire        es_alu_inst2_complete ;
+wire [31:0] es_inst2_result     ;
 wire        es_alu_inst2_overflow;
 
 wire [63:0] es_alu_div_res;
@@ -464,16 +460,15 @@ assign inst2_readygo = (inst2_div_readygo & inst2_mem_readygo & inst2_tlbp_ready
 
 //forward bus
 assign es_forward_bus = {es_valid, //es_to_pms_valid,
-                        inst1_readygo, inst1_hi_op | inst1_lo_op | inst1_cp0_op | inst1_load_op | inst1_mul, inst1_gr_we, inst1_dest, ins1_mov ? inst1_rs_value : es_alu_inst1_result, 
-                        inst2_readygo, inst2_hi_op | inst2_lo_op | inst2_cp0_op | inst2_load_op | inst2_mul, inst2_gr_we, inst2_dest, ins2_mov ? inst2_rs_update_value : es_alu_inst2_result };
-
-// assign {es_valid, es_res_valid, 
-//         es_inst1_mfhilo, es_inst1_mfc0, es_inst1_load, es_inst1_gr_we, es_inst1_dest, es_inst1_result, 
-//         es_inst2_mfhilo, es_inst2_mfc0, es_inst2_load, es_inst2_gr_we, es_inst2_dest, es_inst2_result } = es_forward_bus;
+                        inst1_readygo, inst1_hi_op | inst1_lo_op | inst1_cp0_op | inst1_load_op | inst1_mul, inst1_gr_we, inst1_dest, es_inst1_result, 
+                        inst2_readygo, inst2_hi_op | inst2_lo_op | inst2_cp0_op | inst2_load_op | inst2_mul, inst2_gr_we, inst2_dest, es_inst2_result };
 
 // data bus to pms
 assign inst2_rs_update_value = self_r1_relevant ? es_alu_inst1_result : inst2_rs_value;
 assign inst2_rt_update_value = self_r2_relevant ? es_alu_inst1_result : inst2_rt_value;
+
+assign es_inst1_result = ins1_mov ? inst1_rs_value : es_alu_inst1_result;
+assign es_inst2_result = ins2_mov ? inst2_rs_update_value : es_alu_inst2_result;
 
 assign es_to_pms_bus = {
                         inst1_es_tlbwr,
@@ -502,7 +497,7 @@ assign es_to_pms_bus = {
                         inst2_lo_we,                //505
                         inst2_hl_src_from_mul,      //504
                         inst2_hl_src_from_div,      //503
-                        es_alu_inst2_result,        //471:502
+                        es_inst2_result,        //471:502
                         inst2_gr_we,                //470
                         inst2_mem_we,               //469
                         inst2_dest,                 //464:468
@@ -538,7 +533,7 @@ assign es_to_pms_bus = {
                         inst1_lo_we,                //171
                         inst1_hl_src_from_mul,      //170
                         inst1_hl_src_from_div,      //169
-                        es_alu_inst1_result,        //137:168        
+                        es_inst1_result,        //137:168        
                         inst1_gr_we,                //136
                         inst1_mem_we,               //135
                         inst1_dest,                 //130:134

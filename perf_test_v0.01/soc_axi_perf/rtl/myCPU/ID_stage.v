@@ -462,6 +462,29 @@ wire        inst1_bnel;
 wire        inst1_movn;
 wire        inst1_movz;
 
+// cp1 inst
+wire        movt;
+wire        movf;
+wire        lwc1;
+wire        ldc1;
+wire        swc1;
+wire        sdc1;
+wire        cop2;
+
+// trap inst
+wire        teq;
+wire        tge;
+wire        tgeu;
+wire        tlt;
+wire        tltu;
+wire        tne;
+wire        teqi;
+wire        tgei;
+wire        tgeiu;
+wire        tlti;
+wire        tltiu;
+wire        tnei;
+
 wire        inst1_rt_eq_0;
 
 assign inst1_add    = inst1_op_d[6'h00] & inst1_func_d[6'h20] & inst1_sa_d[5'h00];
