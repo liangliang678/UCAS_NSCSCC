@@ -688,6 +688,15 @@ wire        inst2_jal;
 wire        inst2_jr;
 wire        inst2_jalr;
 
+wire        inst2_beql;
+wire        inst2_bgezall;
+wire        inst2_bgezl;
+wire        inst2_bgtzl;
+wire        inst2_blezl;
+wire        inst2_bltzall;
+wire        inst2_bltzl;
+wire        inst2_bnel;
+
 wire        inst2_add;
 wire        inst2_addi;
 wire        inst2_addu;
@@ -770,6 +779,15 @@ assign inst2_bgezal = inst2_op_d[6'h01] & inst2_rt_d[5'h11];
 assign inst2_jal    = inst2_op_d[6'h03];
 assign inst2_jr     = inst2_op_d[6'h00] & inst2_func_d[6'h08] & inst2_rt_d[5'h00] & inst2_rd_d[5'h00] & inst2_sa_d[5'h00];
 assign inst2_jalr   = inst2_op_d[6'h00] & inst2_func_d[6'h09] & inst2_rt_d[5'h00] & inst2_sa_d[5'h00];
+
+assign inst2_beql   = inst2_op_d[6'h14];
+assign inst2_bgezall= inst2_op_d[6'h01] & inst2_rt_d[5'h13];
+assign inst2_bgezl  = inst2_op_d[6'h01] & inst2_rt_d[5'h03];
+assign inst2_bgtzl  = inst2_op_d[6'h17] & inst2_rt_d[5'h0];
+assign inst2_blezl  = inst2_op_d[6'h16] & inst2_rt_d[5'h0];
+assign inst2_bltzall= inst2_op_d[6'h01] & inst2_rt_d[5'h12];
+assign inst2_bltzl  = inst2_op_d[6'h01] & inst2_rt_d[5'h02];
+assign inst2_bnel   = inst2_op_d[6'h15];
 
 assign inst2_add    = inst2_op_d[6'h00] & inst2_func_d[6'h20] & inst2_sa_d[5'h00];
 assign inst2_addu   = inst2_op_d[6'h00] & inst2_func_d[6'h21] & inst2_sa_d[5'h00];
