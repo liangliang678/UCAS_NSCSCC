@@ -293,7 +293,7 @@ assign ds_to_es_bus = {inst1_ds_tlbwr,
                        self_r1_relevant,
                        self_r2_relevant,
 
-                       inst1_cache_op
+                       inst1_cache_op,
                        inst1_cache,
                        inst1_trap, 
                        inst1_movn,

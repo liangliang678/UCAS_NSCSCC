@@ -24,6 +24,8 @@ module icache2(
     input           cache_inst_valid,
     input  [  2:0]  cache_inst_op,
     input  [ 31:0]  cache_inst_addr,
+    input  [ 20:0]  cache_inst_tag,
+    input           cache_inst_v,
     output          cache_inst_ok,
     // Cache and AXI
     output          rd_req,
@@ -97,9 +99,11 @@ assign tag_way0_en = cache_inst_valid ||
 assign tag_way1_en = cache_inst_valid ||
                      (valid && !uncache && addr_ok) || 
                      (state[3] && ret_valid &&  rp_way);
-assign tag_way0_we = (state[3] && ret_valid && !rp_way);
-assign tag_way1_we = (state[3] && ret_valid &&  rp_way);
-assign tag_din = rb_tag;
+assign tag_way0_we = (state[3] && ret_valid && !rp_way) ||
+                     state[6] && cache_inst_op == 3'b010 && !cache_inst_addr[12];
+assign tag_way1_we = (state[3] && ret_valid &&  rp_way) ||
+                     state[6] && cache_inst_op == 3'b010 &&  cache_inst_addr[12];
+assign tag_din = state[6] ? cache_inst_tag : rb_tag;
 assign tag_addr = cache_inst_valid ? cache_inst_addr[11:5] :
                   state[3]         ? rb_index : index;
 
@@ -124,8 +128,11 @@ generate for (i0=0; i0<128; i0=i0+1) begin :gen_for_V_Way0
         else if (state[3] && ret_valid && !rp_way && rb_index == i0) begin
             V_Way0[i0] <= 1'b1;
         end
-        else if (state[7] && i0 == cache_inst_addr[11:5] && clear_way[0]) begin
+        else if (state[7] && i0 == cache_inst_addr[11:5] && clear_way[0] && cache_inst_op != 3'b010) begin
             V_Way0[i0] <= 1'b0;
+        end
+        else if (state[7] && i0 == cache_inst_addr[11:5] && clear_way[0] && cache_inst_op == 3'b010) begin
+            V_Way0[i0] <= cache_inst_v;
         end
     end
 end endgenerate
@@ -138,8 +145,11 @@ generate for (i1=0; i1<128; i1=i1+1) begin :gen_for_V_Way1
         else if (state[3] && ret_valid &&  rp_way && rb_index == i1) begin
             V_Way1[i1] <= 1'b1;
         end
-        else if (state[7] && i1 == cache_inst_addr[11:5] && clear_way[1]) begin
+        else if (state[7] && i1 == cache_inst_addr[11:5] && clear_way[1] && cache_inst_op != 3'b010) begin
             V_Way1[i1] <= 1'b0;
+        end
+        else if (state[7] && i1 == cache_inst_addr[11:5] && clear_way[1] && cache_inst_op == 3'b010) begin
+            V_Way1[i1] <= cache_inst_v;
         end
     end
 end endgenerate
@@ -235,13 +245,22 @@ always @(posedge clk) begin
     if (!resetn) begin
         clear_way <= 2'b0;
     end
-    else if (cache_inst_op == 3'b000) begin
-        clear_way <= 2'b11;
-    end
-    else if (way0_hit_for_inst) begin
+    else if (cache_inst_op == 3'b000 && !cache_inst_addr[12]) begin
         clear_way <= 2'b01;
     end
-    else if (way1_hit_for_inst) begin
+    else if (cache_inst_op == 3'b000 &&  cache_inst_addr[12]) begin
+        clear_way <= 2'b10;
+    end
+    else if (cache_inst_op == 3'b010 && !cache_inst_addr[12]) begin
+        clear_way <= 2'b01;
+    end
+    else if (cache_inst_op == 3'b010 &&  cache_inst_addr[12]) begin
+        clear_way <= 2'b10;
+    end
+    else if (cache_inst_op == 3'b100 && way0_hit_for_inst) begin
+        clear_way <= 2'b01;
+    end
+    else if (cache_inst_op == 3'b100 && way1_hit_for_inst) begin
         clear_way <= 2'b10;
     end
 end
@@ -274,6 +293,7 @@ assign rdata = ({256{state[1]}} & load_res_final) |
                ({256{state[3]}} & ret_data_final) | 
                ({256{state[5]}} & {224'b0, ret_data[31:0]}); 
 assign rnum = (state[5]) ? 4'b1 : {1'b0, ~(rb_offset[4:2])} + 4'b1;
+assign cache_inst_ok = state[7];
 
 assign rd_req  = (state[4]) || (state[2]);
 assign rd_type = (state[4]) ? 1'b0 : 1'b1;  // 0 for uncache; 1 for cache line
@@ -357,7 +377,10 @@ always @(*) begin
         if (cache_inst_op == 3'b000) begin // Index Invalid
             next_state = `ICLEAR;
         end
-        else if (cache_inst_op == 3'b100) begin // Hit Invalidate
+        else if (cache_inst_op == 3'b010) begin // Index Store Tag
+            next_state = `ICLEAR;
+        end
+        else if (cache_inst_op == 3'b100) begin // Hit Invalid
             if (way0_hit_for_inst || way1_hit_for_inst) begin
                 next_state = `ICLEAR;
             end

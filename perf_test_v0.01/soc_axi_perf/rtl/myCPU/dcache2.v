@@ -49,6 +49,9 @@ module dcache2(
     input           cache_inst_valid,
     input  [  2:0]  cache_inst_op,
     input  [ 31:0]  cache_inst_addr,
+    input  [ 20:0]  cache_inst_tag,
+    input           cache_inst_v,
+    input           cache_inst_d,
     output          cache_inst_ok,
     // Cache and AXI
     output          rd_req,
@@ -166,10 +169,14 @@ assign tag_way1_en = cache_inst_valid ||
                      (data_ok1_raw && dual_req && !rb_uncache2 && wstate[0]) ||
                      (state[1] && wstate[0]) ||
                      (state[5] && ret_valid &&  rp_way);
-assign tag_way0_we = (state[5] && ret_valid && !rp_way);
-assign tag_way1_we = (state[5] && ret_valid &&  rp_way);
-assign tag_way0_din = rb_valid[0] ? rb_tag1 : rb_tag2;
-assign tag_way1_din = rb_valid[0] ? rb_tag1 : rb_tag2;
+assign tag_way0_we = (state[5] && ret_valid && !rp_way) ||
+                     state[10] && cache_inst_op == 3'b010 && !cache_inst_addr[12];
+assign tag_way1_we = (state[5] && ret_valid &&  rp_way) ||
+                     state[10] && cache_inst_op == 3'b010 &&  cache_inst_addr[12];
+assign tag_way0_din = state[10] ? cache_inst_tag : 
+                      rb_valid[0] ? rb_tag1 : rb_tag2;
+assign tag_way1_din = state[10] ? cache_inst_tag : 
+                      rb_valid[0] ? rb_tag1 : rb_tag2;
 assign tag_addr = cache_inst_valid                   ? cache_inst_addr[11:5] :
                   (valid1 && !uncache1 && addr_ok1)  ? index1 : 
                   (valid2 && !uncache2 && addr_ok2)  ? index2 : 
@@ -315,8 +322,11 @@ generate for (id0=0; id0<128; id0=id0+1) begin :gen_for_D_Way0
         else if (state[5] && ret_valid && !rp_way && rb_valid[1] && id0 == rb_index2) begin
             D_Way0[id0] <= rb_op2;
         end
-        else if (state[13] && id0 == cache_inst_addr[11:5] && clear_way[0]) begin
+        else if (state[13] && id0 == cache_inst_addr[11:5] && clear_way[0] && cache_inst_op != 3'b010) begin
             D_Way0[id0] <= 1'b0;
+        end
+        else if (state[13] && id0 == cache_inst_addr[11:5] && clear_way[0] && cache_inst_op == 3'b010) begin
+            D_Way0[id0] <= cache_inst_d;
         end
     end
 end endgenerate
@@ -335,8 +345,11 @@ generate for (id1=0; id1<128; id1=id1+1) begin :gen_for_D_Way1
         else if (state[5] && ret_valid && rp_way && rb_valid[1] && id1 == rb_index2) begin
             D_Way1[id1] <= rb_op2;
         end
-        else if (state[13] && id1 == cache_inst_addr[11:5] && clear_way[1]) begin
+        else if (state[13] && id1 == cache_inst_addr[11:5] && clear_way[1] && cache_inst_op != 3'b010) begin
             D_Way1[id1] <= 1'b0;
+        end
+        else if (state[13] && id1 == cache_inst_addr[11:5] && clear_way[1] && cache_inst_op == 3'b010) begin
+            D_Way1[id1] <= cache_inst_d;
         end
     end
 end endgenerate
@@ -353,8 +366,11 @@ generate for (iv0=0; iv0<128; iv0=iv0+1) begin :gen_for_V_Way0
         else if (state[5] && ret_valid && !rp_way && rb_valid[1] && rb_index2 == iv0) begin
             V_Way0[iv0] <= 1'b1;
         end
-        else if (state[13] && iv0 == cache_inst_addr[11:5] && clear_way[0]) begin
+        else if (state[13] && iv0 == cache_inst_addr[11:5] && clear_way[0] && cache_inst_op != 3'b010) begin
             V_Way0[iv0] <= 1'b0;
+        end
+        else if (state[13] && iv0 == cache_inst_addr[11:5] && clear_way[0] && cache_inst_op == 3'b010) begin
+            V_Way0[iv0] <= cache_inst_v;
         end
     end
 end endgenerate
@@ -370,8 +386,11 @@ generate for (iv1=0; iv1<128; iv1=iv1+1) begin :gen_for_V_Way1
         else if (state[5] && ret_valid && rp_way && rb_valid[1] && rb_index2 == iv1) begin
             V_Way1[iv1] <= 1'b1;
         end
-        else if (state[13] && iv1 == cache_inst_addr[11:5] && clear_way[1]) begin
+        else if (state[13] && iv1 == cache_inst_addr[11:5] && clear_way[1] && cache_inst_op != 3'b010) begin
             V_Way1[iv1] <= 1'b0;
+        end
+        else if (state[13] && iv1 == cache_inst_addr[11:5] && clear_way[1] && cache_inst_op == 3'b010) begin
+            V_Way1[iv1] <= cache_inst_v;
         end
     end
 end endgenerate
@@ -859,13 +878,28 @@ always @(posedge clk) begin
     if (!resetn) begin
         clear_way <= 2'b0;
     end
-    else if (cache_inst_op == 3'b000) begin
-        clear_way <= 2'b11;
-    end
-    else if (way0_hit_for_inst) begin
+    else if (cache_inst_op == 3'b000 && !cache_inst_addr[12]) begin
         clear_way <= 2'b01;
     end
-    else if (way1_hit_for_inst) begin
+    else if (cache_inst_op == 3'b000 &&  cache_inst_addr[12]) begin
+        clear_way <= 2'b10;
+    end
+    else if (cache_inst_op == 3'b010 && !cache_inst_addr[12]) begin
+        clear_way <= 2'b01;
+    end
+    else if (cache_inst_op == 3'b010 &&  cache_inst_addr[12]) begin
+        clear_way <= 2'b10;
+    end
+    else if (cache_inst_op == 3'b100 && way0_hit_for_inst) begin
+        clear_way <= 2'b01;
+    end
+    else if (cache_inst_op == 3'b100 && way1_hit_for_inst) begin
+        clear_way <= 2'b10;
+    end
+    else if (cache_inst_op == 3'b101 && way0_hit_for_inst) begin
+        clear_way <= 2'b01;
+    end
+    else if (cache_inst_op == 3'b101 && way1_hit_for_inst) begin
         clear_way <= 2'b10;
     end
 end
@@ -879,6 +913,7 @@ assign data_ok1 = data_ok1_r;
 assign data_ok2 = data_ok2_r;
 assign rdata1 = rdata1_r;
 assign rdata2 = rdata2_r;
+assign cache_inst_ok = state[13];
 
 assign wr_req   = (state[3] && write_back) || state[8] ||
                   state[11] && D_Way0[cache_inst_addr[11:5]] && V_Way0[cache_inst_addr[11:5]] ||
@@ -1128,7 +1163,18 @@ always@(*) begin
         end
     `ILOOK:
         if (cache_inst_op == 3'b000) begin // Index Writeback Invalid
-            next_state = `IWB0;
+            if (!cache_inst_addr[12]) begin
+                next_state = `IWB0;
+            end
+            else begin
+                next_state = `IWB1;
+            end
+        end
+        else if (cache_inst_op == 3'b010) begin // Index Store Tag
+            next_state = `ICLEAR;
+        end
+        else if (cache_inst_op == 3'b100) begin // Index Store Tag
+            next_state = `ICLEAR;
         end
         else if (cache_inst_op == 3'b101) begin // Hit Writeback Invalidate
             if (way0_hit_for_inst) begin
@@ -1146,20 +1192,10 @@ always@(*) begin
         end
     `IWB0:
         if (!D_Way0[cache_inst_addr[11:5]] || !V_Way0[cache_inst_addr[11:5]]) begin
-            if (cache_inst_op == 3'b101) begin
-                next_state = `ICLEAR;
-            end
-            else begin
-                next_state = `IWB1;
-            end
+            next_state = `ICLEAR;
         end
         else if (wr_req && wr_rdy) begin
-            if (cache_inst_op == 3'b101) begin
-                next_state = `ICLEAR;
-            end
-            else begin
-                next_state = `IWB1;
-            end
+            next_state = `ICLEAR;
         end
         else begin
             next_state = `IWB0;
