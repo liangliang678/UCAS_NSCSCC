@@ -37,6 +37,15 @@ module exe_stage(
     output  [ 31:0]  inst2_data_cache_wdata,
     input            inst2_data_cache_addr_ok,
 
+    output           icache_inst_valid   ,
+    output [ 2:0]    icache_inst_op      ,
+    output [31:0]    icache_inst_addr    ,
+    input            icache_inst_ok      ,
+    output           dcache_inst_valid   ,
+    output [ 2:0]    dcache_inst_op      ,
+    output [31:0]    dcache_inst_addr    ,
+    input            dcache_inst_ok      ,
+
     //TLB
     output [18:0] s1_vpn2,
     output        s1_odd_page,
@@ -157,6 +166,11 @@ wire [ 4:0] inst2_dest;
 wire [31:0] inst2_rs_value;
 wire [31:0] inst2_rt_value;
 
+wire        inst2_cache;
+wire [ 2:0] inst2_cache_op;
+wire        inst1_cache;
+wire [ 2:0] inst1_cache_op;
+
 wire        self_r1_relevant;
 wire        self_r2_relevant;
 wire [31:0] br_target;
@@ -168,6 +182,8 @@ wire [31:0] inst2_rt_update_value;
 assign {inst1_es_tlbwr,
         inst2_es_tlbwr,
         inst2_valid,        //390
+        inst2_cache_op,
+        inst2_cache,
         inst2_trap,
         inst2_movn,
         inst2_movz,
@@ -210,6 +226,8 @@ assign {inst1_es_tlbwr,
         self_r1_relevant,   //179
         self_r2_relevant,   //178
 
+        inst1_cache_op,
+        inst1_cache,
         inst1_trap,
         inst1_movn,
         inst1_movz,
@@ -807,8 +825,8 @@ assign inst2_kseg01 = (inst2_VA[31] & ~inst2_VA[30]);
 assign inst1_cache = inst1_kseg01 ? (inst1_kseg0 & c0_config_k0[0]) : inst1_s1_c[0];
 assign inst2_cache = inst2_kseg01 ? (inst2_kseg0 & c0_config_k0[0]) : inst2_s1_c[0];
 
-assign inst1_use_tlb = es_valid & ~(inst1_VA[31] & ~inst1_VA[30]) & (inst1_load_op | inst1_mem_we);
-assign inst2_use_tlb = inst2_valid & es_valid & ~(inst2_VA[31] & ~inst2_VA[30]) & (inst2_load_op | inst2_mem_we);
+assign inst1_use_tlb = es_valid & ~(inst1_VA[31] & ~inst1_VA[30]) & (inst1_load_op | inst1_mem_we | inst1_cache);
+assign inst2_use_tlb = inst2_valid & es_valid & ~(inst2_VA[31] & ~inst2_VA[30]) & (inst2_load_op | inst2_mem_we | inst2_cache);
 
 assign s1_vpn2 = inst1_es_tlbp ? cp0_entryhi[31:13] : inst1_VA_r[31:13];
 assign s2_vpn2 = inst2_es_tlbp ? cp0_entryhi[31:13] : inst2_VA_r[31:13];
@@ -839,6 +857,16 @@ assign inst2_data_cache_tag = {3'b0,inst2_data_addr[28:12]};
 assign inst2_data_cache_index = inst2_data_addr[11:5];
 assign inst2_data_cache_offset = inst2_data_addr[4:0];
 assign inst2_data_cache_wstrb = (inst2_mem_we & es_valid & ~inst1_es_except & ~inst2_es_except) ? inst2_write_strb : 4'h0;
+
+
+// cache inst
+assign icache_inst_valid = ((inst1_cache & inst1_tlb_req_en)) & es_valid & (inst1_cache_op[1:0] == 2'b00);
+assign icache_inst_op    = inst1_cache_op[4:2];
+assign icache_inst_addr  = {3'b0, inst1_data_addr[28:0]};
+
+assign dcache_inst_valid = ((inst1_cache & inst1_tlb_req_en)) & es_valid & (inst1_cache_op[1:0] == 2'b01);
+assign dcache_inst_op    = inst1_cache_op[4:2];
+assign dcache_inst_addr  = {3'b0, inst1_data_addr[28:0]};
 
 // exception
 wire es_inst2_valid;

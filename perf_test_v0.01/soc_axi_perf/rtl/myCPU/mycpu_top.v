@@ -268,6 +268,16 @@ wire [ 2:0] r_c1;
 wire        r_d1;
 wire        r_v1;
 
+wire        icache_inst_valid;
+wire [ 2:0] icache_inst_op;
+wire [31:0] icache_inst_addr;
+wire        icache_inst_ok;
+
+wire        dcache_inst_valid;
+wire [ 2:0] dcache_inst_op;
+wire [31:0] dcache_inst_addr;
+wire        dcache_inst_ok;
+
 wire        pms_mtc0_index;
 
 preif_stage preif_stage(
@@ -422,6 +432,15 @@ exe_stage exe_stage(
     .inst2_data_cache_wstrb     (inst2_data_cache_wstrb),
     .inst2_data_cache_wdata     (inst2_data_cache_wdata),
     .inst2_data_cache_addr_ok   (inst2_data_cache_addr_ok),
+
+    .icache_inst_valid   (icache_inst_valid),
+    .icache_inst_op      (icache_inst_op),
+    .icache_inst_addr    (icache_inst_addr),
+    .icache_inst_ok      (icache_inst_ok),
+    .dcache_inst_valid   (dcache_inst_valid),
+    .dcache_inst_op      (dcache_inst_op),
+    .dcache_inst_addr    (dcache_inst_addr),
+    .dcache_inst_ok      (dcache_inst_ok),
 
     //TLB
     .s1_vpn2                    (s1_vpn2),
@@ -655,6 +674,11 @@ icache icache(
     .rdata      (inst_cache_rdata    ),
     .rnum       (inst_cache_data_num),
 
+    .cache_inst_valid   (icache_inst_valid),
+    .cache_inst_op      (icache_inst_op),
+    .cache_inst_addr    (icache_inst_addr),
+    .cache_inst_ok      (icache_inst_ok),
+
     .rd_req     (inst_cache_rd_req   ),
     .rd_type    (inst_cache_rd_type  ),
     .rd_addr    (inst_cache_rd_addr  ),
@@ -710,6 +734,11 @@ dcache dcache(
     .addr_ok2    (inst2_data_cache_addr_ok  ),
     .data_ok2    (data_cache_data_ok_02  ),
     .rdata2      (data_cache_rdata_02    ),
+
+    .cache_inst_valid   (dcache_inst_valid),
+    .cache_inst_op      (dcache_inst_op),
+    .cache_inst_addr    (dcache_inst_addr),
+    .cache_inst_ok      (dcache_inst_ok),
 
     .rd_req     (data_cache_rd_req   ),
     .rd_type    (data_cache_rd_type  ),
