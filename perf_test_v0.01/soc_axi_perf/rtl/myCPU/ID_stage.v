@@ -155,7 +155,6 @@ wire [ 4:0] inst1_exccode;
 
 wire        inst1_ds_except;
 wire [ 4:0] inst1_ds_exccode;
-wire        inst1_mov;
 wire        inst1_ds_tlbp;
 wire        inst1_ds_tlbr;
 wire        inst1_ds_tlbwi;
@@ -199,7 +198,6 @@ wire [ 4:0] inst2_exccode;
 
 wire        inst2_ds_except;
 wire [ 4:0] inst2_ds_exccode;
-wire        inst2_mov;
 wire        inst2_ds_tlbp;
 wire        inst2_ds_tlbr;
 wire        inst2_ds_tlbwi;
@@ -238,7 +236,8 @@ assign inst2_bd = inst1_branch_op | inst1_jump_op | inst1_branch_likely;
 assign ds_to_es_bus = {inst1_ds_tlbwr,
                        inst2_ds_tlbwr,
                        inst2_valid_final,
-                       inst2_mov,
+                       inst2_movn,
+                       inst2_movz,
                        inst2_mul,
                        inst2_refill,
                        inst2_ds_except,
@@ -278,7 +277,8 @@ assign ds_to_es_bus = {inst1_ds_tlbwr,
                        self_r1_relevant,
                        self_r2_relevant,
 
-                       inst1_mov,
+                       inst1_movn,
+                       inst1_movz,
                        inst1_mul,
                        inst1_refill,
                        inst1_ds_except,
@@ -617,8 +617,7 @@ assign inst1_dst_is_rt    = inst1_addi | inst1_addiu | inst1_slti | inst1_sltiu 
 assign inst1_gr_we        = ~inst1_store_op & ~inst1_beq & ~inst1_bne & ~inst1_bgez & ~inst1_bgtz & ~inst1_blez & ~inst1_bltz & ~inst1_jr & ~inst1_j & 
                             ~inst1_div & ~inst1_divu & ~inst1_mult & ~inst1_multu & ~inst1_mthi & ~inst1_mtlo & ~inst1_syscall & ~inst1_break & ~inst1_eret & 
                             ~inst1_mtc0 & ~inst1_tlbp & ~inst1_tlbr & ~inst1_tlbwi & ~inst1_tlbwr &
-                            ~inst1_beql & ~inst1_bnel & ~inst1_bgezl & ~inst1_bgtzl & ~inst1_blezl & ~inst1_bltzl & ~inst1_movn & ~inst1_movz 
-                            | inst1_movn & ~inst1_rt_eq_0 | inst1_movz & inst1_rt_eq_0;
+                            ~inst1_beql & ~inst1_bnel & ~inst1_bgezl & ~inst1_bgtzl & ~inst1_blezl & ~inst1_bltzl;
 assign inst1_mem_we       = inst1_store_op;
 assign inst1_hi_we        = inst1_div | inst1_divu | inst1_mult | inst1_multu | inst1_mthi;
 assign inst1_lo_we        = inst1_div | inst1_divu | inst1_mult | inst1_multu | inst1_mtlo;
@@ -638,9 +637,6 @@ assign inst1_detect_overflow  = inst1_add | inst1_addi | inst1_sub;
 assign inst1_dest         = inst1_dst_is_r31 ? 5'd31 :
                             inst1_dst_is_rt  ? inst1_rt : 
                                                inst1_rd;
-
-assign inst1_rt_eq_0 = (inst1_rt_value == 32'b0);
-assign inst1_mov = inst1_movn | inst1_movz;
 
 //exception
 wire inst1_ds_Sys;
@@ -915,8 +911,7 @@ assign inst2_dst_is_rt    = inst2_addi | inst2_addiu | inst2_slti | inst2_sltiu 
 assign inst2_gr_we        = ~inst2_store_op & ~inst2_beq & ~inst2_bne & ~inst2_bgez & ~inst2_bgtz & ~inst2_blez & ~inst2_bltz & ~inst2_jr & ~inst2_j & 
                             ~inst2_div & ~inst2_divu & ~inst2_mult & ~inst2_multu & ~inst2_mthi & ~inst2_mtlo & ~inst2_syscall & ~inst2_break & ~inst2_eret & 
                             ~inst2_mtc0 & ~inst2_tlbp & ~inst2_tlbr & ~inst2_tlbwi & ~inst2_tlbwr &
-                            ~inst2_beql & ~inst2_bnel & ~inst2_bgezl & ~inst2_bgtzl & ~inst2_blezl & ~inst2_bltzl & ~inst2_movn & ~inst2_movz
-                            | inst2_movn & ~inst2_rt_eq_0 | inst2_movz & inst2_rt_eq_0;
+                            ~inst2_beql & ~inst2_bnel & ~inst2_bgezl & ~inst2_bgtzl & ~inst2_blezl & ~inst2_bltzl;
 assign inst2_mem_we       = inst2_store_op;
 assign inst2_hi_we        = inst2_div | inst2_divu | inst2_mult | inst2_multu | inst2_mthi;
 assign inst2_lo_we        = inst2_div | inst2_divu | inst2_mult | inst2_multu | inst2_mtlo;
@@ -936,9 +931,6 @@ assign inst2_detect_overflow  = inst2_add | inst2_addi | inst2_sub;
 assign inst2_dest         = inst2_dst_is_r31 ? 5'd31 :
                             inst2_dst_is_rt  ? inst2_rt : 
                                                inst2_rd;
-
-assign inst2_rt_eq_0 = (inst2_rt_value == 32'b0);
-assign inst2_mov = inst2_movn | inst2_movz;
 
 // exception
 wire inst2_ds_Sys;
