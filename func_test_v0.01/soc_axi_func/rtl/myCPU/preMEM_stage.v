@@ -86,6 +86,7 @@ module premem_stage(
     output        is_TLBP      ,
     output        index_write_p,
     output [ 3:0] index_write_index,
+    input  [ 3:0] c0_random_random,
 
     output       pms_mtc0_index   
 
@@ -132,6 +133,7 @@ wire [31:0] inst1_pms_BadVAddr;
 wire        inst1_pms_tlbp;
 wire        inst1_pms_tlbr;
 wire        inst1_pms_tlbwi;
+wire        inst1_pms_tlbwr;
 wire        inst1_pms_eret;
 wire        inst1_bd;
 wire        inst1_cp0_op;
@@ -165,6 +167,7 @@ wire [31:0] inst2_pms_BadVAddr;
 wire        inst2_pms_tlbp;
 wire        inst2_pms_tlbr;
 wire        inst2_pms_tlbwi;
+wire        inst2_pms_tlbwr;
 wire        inst2_pms_eret;
 wire        inst2_bd;
 wire        inst2_cp0_op;
@@ -207,7 +210,8 @@ wire [31:0] inst2_es_BadVAddr;
 
 wire [63:0] pms_alu_div_res;
 
-assign {
+assign {inst1_pms_tlbwr,
+        inst2_pms_tlbwr,
         inst2_valid,
         inst2_s1_found,
         inst2_s1_index,
@@ -424,9 +428,9 @@ assign is_TLBP              = inst1_pms_tlbp;
 assign index_write_p        = ~inst1_s1_found;
 assign index_write_index    = inst1_s1_index;
 
-assign we = inst1_pms_tlbwi;
+assign we = inst1_pms_tlbwi | inst1_pms_tlbwr;
 assign w_mask = c0_mask;
-assign w_index = cp0_index[3:0];
+assign w_index = inst1_pms_tlbwr ? c0_random_random : cp0_index[3:0];
 assign w_vpn2 = cp0_entryhi[31:13];
 assign w_asid = cp0_entryhi[7:0];
 assign w_g = cp0_entrylo0[0] & cp0_entrylo1[0];
