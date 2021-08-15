@@ -906,9 +906,9 @@ end
 
 // Output
 assign addr_ok1 = (state[0] || (state[2] && cache_hit) || (state[7] && ret_valid) || (state[9] && uncache_write_go)) &&
-                  !dual_req && wstate[0] && !wait_write1 && !wait_write2;
+                  !dual_req && wstate[0] && !wait_write1 && !wait_write2 && !cache_inst_valid;
 assign addr_ok2 = (state[0] || (state[2] && cache_hit) || (state[7] && ret_valid) || (state[9] && uncache_write_go)) &&
-                  !dual_req && wstate[0] && !wait_write1 && !wait_write2;
+                  !dual_req && wstate[0] && !wait_write1 && !wait_write2 && !cache_inst_valid;
 assign data_ok1 = data_ok1_r;
 assign data_ok2 = data_ok2_r;
 assign rdata1 = rdata1_r;

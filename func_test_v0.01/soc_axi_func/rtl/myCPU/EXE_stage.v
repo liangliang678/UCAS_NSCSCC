@@ -278,7 +278,8 @@ assign {inst1_es_tlbwr,
 wire        inst1_readygo;
 wire        inst2_readygo;
 
-assign es_ready_go    = (inst1_readygo & inst2_readygo & ~(pms_mtc0_index & es_valid & (inst1_es_tlbp | inst2_es_tlbp))) | clear_all;
+assign es_ready_go    = (inst1_readygo & inst2_readygo & ~(pms_mtc0_index & es_valid & (inst1_es_tlbp | inst2_es_tlbp)) & 
+                        (icache_inst_valid ? icache_inst_ok : 1'b1) & (dcache_inst_valid ? dcache_inst_ok : 1'b1)) | clear_all;
 assign es_allowin     = !es_valid || es_ready_go && pms_allowin;
 assign es_to_pms_valid = es_valid && es_ready_go;
 
