@@ -507,13 +507,13 @@ wire         way0_hit;
 wire         way1_hit;
 wire         cache_hit;
 
-assign way0_hit1 = way0_v && ~(way0_tag ^ rb_tag1);
-assign way1_hit1 = way1_v && ~(way1_tag ^ rb_tag1);
+assign way0_hit1 = way0_v && (way0_tag == rb_tag1);
+assign way1_hit1 = way1_v && (way1_tag == rb_tag1);
 assign cache_hit1 = rb_valid[0] && (way0_hit1 || way1_hit1);
 assign cache_miss1 = rb_valid[0] && !way0_hit1 && !way1_hit1;
 
-assign way0_hit2 = way0_v && ~(way0_tag ^ rb_tag2);
-assign way1_hit2 = way1_v && ~(way1_tag ^ rb_tag2);
+assign way0_hit2 = way0_v && (way0_tag == rb_tag2);
+assign way1_hit2 = way1_v && (way1_tag == rb_tag2);
 assign cache_hit2 = rb_valid[1] && (way0_hit2 || way1_hit2);
 assign cache_miss2 = rb_valid[1] && !way0_hit2 && !way1_hit2;
 
@@ -870,8 +870,8 @@ end
 
 wire way0_hit_for_inst;
 wire way1_hit_for_inst;
-assign way0_hit_for_inst = V_Way0[cache_inst_addr[11:5]] && ~(tag_way0_dout ^ cache_inst_addr[31:12]);
-assign way1_hit_for_inst = V_Way1[cache_inst_addr[11:5]] && ~(tag_way1_dout ^ cache_inst_addr[31:12]);
+assign way0_hit_for_inst = V_Way0[cache_inst_addr[11:5]] && (tag_way0_dout == cache_inst_addr[31:12]);
+assign way1_hit_for_inst = V_Way1[cache_inst_addr[11:5]] && (tag_way1_dout == cache_inst_addr[31:12]);
 
 reg [1:0] clear_way;
 always @(posedge clk) begin
@@ -1262,10 +1262,10 @@ end
 
 wire wait_write1;
 wire wait_write2;
-assign wait_write1 = state[2] && rb_valid[0] && rb_op1 && ~({rb_index1, rb_offset1} ^ {index1, offset1}) ||
-                     state[2] && rb_valid[1] && rb_op2 && ~({rb_index2, rb_offset2} ^ {index1, offset1});
-assign wait_write2 = state[2] && rb_valid[0] && rb_op1 && ~({rb_index1, rb_offset1} ^ {index2, offset2}) ||
-                     state[2] && rb_valid[1] && rb_op2 && ~({rb_index2, rb_offset2} ^ {index2, offset2});
+assign wait_write1 = state[2] && rb_valid[0] && rb_op1 && ({rb_index1, rb_offset1} == {index1, offset1}) ||
+                     state[2] && rb_valid[1] && rb_op2 && ({rb_index2, rb_offset2} == {index1, offset1});
+assign wait_write2 = state[2] && rb_valid[0] && rb_op1 && ({rb_index1, rb_offset1} == {index2, offset2}) ||
+                     state[2] && rb_valid[1] && rb_op2 && ({rb_index2, rb_offset2} == {index2, offset2});
 
 wire self_raw;
 assign self_raw = dual_req && ({rb_index1, rb_offset1} == {rb_index2, rb_offset2});

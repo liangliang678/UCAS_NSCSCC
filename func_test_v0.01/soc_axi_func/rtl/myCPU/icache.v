@@ -172,8 +172,8 @@ wire         way0_hit;
 wire         way1_hit;
 wire         cache_hit;
 
-assign way0_hit = V_Way0[rb_index] & ~(tag_way0_dout ^ rb_tag);
-assign way1_hit = V_Way1[rb_index] & ~(tag_way1_dout ^ rb_tag);
+assign way0_hit = V_Way0[rb_index] & (tag_way0_dout == rb_tag);
+assign way1_hit = V_Way1[rb_index] & (tag_way1_dout == rb_tag);
 assign cache_hit = (way0_hit | way1_hit);
 
 // Data Select
