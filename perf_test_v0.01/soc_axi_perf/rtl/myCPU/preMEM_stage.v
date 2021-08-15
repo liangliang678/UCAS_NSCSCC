@@ -214,9 +214,13 @@ wire [31:0] inst2_es_BadVAddr;
 
 wire [63:0] pms_alu_div_res;
 
+wire [ 3:0] inst1_trap;
+wire [ 3:0] inst2_trap;
+
 assign {inst1_pms_tlbwr,
         inst2_pms_tlbwr,
         inst2_valid,
+        inst2_trap,
         inst2_s1_found,
         inst2_s1_index,
         inst2_mul,
@@ -253,6 +257,7 @@ assign {inst1_pms_tlbwr,
         br_target,
         pms_alu_div_res,
 
+        inst1_trap,
         inst1_s1_found,
         inst1_s1_index,
         inst1_mul,
@@ -288,11 +293,25 @@ assign {inst1_pms_tlbwr,
        } = es_to_pms_bus_r;
 
 // exception
-assign inst1_pms_except = inst1_es_except;
-assign inst2_pms_except = inst2_es_except;
+wire        inst1_trap_ex;
+wire        inst2_trap_ex;
 
-assign inst1_pms_exccode = inst1_es_exccode;                   
-assign inst2_pms_exccode = inst2_es_exccode;
+assign inst1_trap_ex = inst1_trap[0] & (pms_alu_inst1_result == 32'b0) |
+                       inst1_trap[1] & (~pms_alu_inst1_result[0])      |
+                       inst1_trap[2] & (pms_alu_inst1_result[0])       |
+                       inst1_trap[3] & (pms_alu_inst1_result != 32'b0) ;
+
+assign inst2_trap_ex = (inst2_trap[0] & (pms_alu_inst2_result == 32'b0) |
+                        inst2_trap[1] & (~pms_alu_inst2_result[0])      |
+                        inst2_trap[2] & (pms_alu_inst2_result[0])       |
+                        inst2_trap[3] & (pms_alu_inst2_result != 32'b0) ) & inst2_valid;
+
+
+assign inst1_pms_except = inst1_es_except | inst1_trap_ex;
+assign inst2_pms_except = inst2_es_except | inst2_trap_ex;
+
+assign inst1_pms_exccode = inst1_es_except ? inst1_es_exccode : 5'hd;                   
+assign inst2_pms_exccode = inst2_es_except ? inst2_es_exccode : 5'hd;
                       
 
 assign inst1_pms_BadVAddr = inst1_es_BadVAddr;
