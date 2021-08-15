@@ -274,7 +274,7 @@ wire [ 2:0] icache_inst_op;
 wire [31:0] icache_inst_addr;
 wire        icache_inst_ok;
 
-wire [20:0] icache_inst_tag;
+wire [19:0] icache_inst_tag;
 wire        icache_inst_v;
 
 wire        dcache_inst_valid;
@@ -282,7 +282,7 @@ wire [ 2:0] dcache_inst_op;
 wire [31:0] dcache_inst_addr;
 wire        dcache_inst_ok;
 
-wire [20:0] dcache_inst_tag;
+wire [19:0] dcache_inst_tag;
 wire        dcache_inst_v;
 wire        dcache_inst_d;
 
@@ -676,7 +676,7 @@ wb_stage wb_stage(
 );
 
 
-icache2 icache2(
+icache icache(
     .clk        (aclk   ),
     .resetn     (aresetn),
 
@@ -724,7 +724,7 @@ prefetcher1 prefetcher1(
     .axi_ret_data      (axi_ret_data  ),
     .axi_ret_half      (axi_ret_half  )
 );
-dcache2 dcache2(
+dcache dcache(
     .clk        (aclk   ),
     .resetn     (aresetn),
 

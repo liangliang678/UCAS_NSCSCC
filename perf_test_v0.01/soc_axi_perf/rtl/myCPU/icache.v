@@ -1,9 +1,11 @@
-`define  IDLE    6'b000001
-`define  LOOKUP  6'b000010
-`define  REPLACE 6'b000100
-`define  REFILL  6'b001000
-`define  UREQ    6'b010000
-`define  URESP   6'b100000
+`define  IDLE    8'b00000001
+`define  LOOKUP  8'b00000010
+`define  REPLACE 8'b00000100
+`define  REFILL  8'b00001000
+`define  UREQ    8'b00010000
+`define  URESP   8'b00100000
+`define  ILOOK   8'b01000000
+`define  ICLEAR  8'b10000000
 
 module icache(
     input           clk,
@@ -18,6 +20,13 @@ module icache(
     output          data_ok,
     output [ 255:0] rdata,
     output [   3:0] rnum,
+    // Cache and CPU Inst
+    input           cache_inst_valid,
+    input  [  2:0]  cache_inst_op,
+    input  [ 31:0]  cache_inst_addr,
+    input  [ 20:0]  cache_inst_tag,
+    input           cache_inst_v,
+    output          cache_inst_ok,
     // Cache and AXI
     output          rd_req,
     output          rd_type,
@@ -84,23 +93,31 @@ reg V_Way0 [127:0];
 reg V_Way1 [127:0];
 
 // RAM Port
-assign tag_way0_en = (valid && !uncache && addr_ok) || 
+assign tag_way0_en = cache_inst_valid ||
+                     (valid && !uncache && addr_ok) || 
                      (state[3] && ret_valid && !rp_way);
-assign tag_way1_en = (valid && !uncache && addr_ok) || 
+assign tag_way1_en = cache_inst_valid ||
+                     (valid && !uncache && addr_ok) || 
                      (state[3] && ret_valid &&  rp_way);
-assign tag_way0_we = (state[3] && ret_valid && !rp_way);
-assign tag_way1_we = (state[3] && ret_valid &&  rp_way);
-assign tag_din = rb_tag;
-assign tag_addr = (state[3]) ? rb_index : index;
+assign tag_way0_we = (state[3] && ret_valid && !rp_way) ||
+                     state[6] && cache_inst_op == 3'b010 && !cache_inst_addr[12];
+assign tag_way1_we = (state[3] && ret_valid &&  rp_way) ||
+                     state[6] && cache_inst_op == 3'b010 &&  cache_inst_addr[12];
+assign tag_din = state[6] ? cache_inst_tag : rb_tag;
+assign tag_addr = cache_inst_valid ? cache_inst_addr[11:5] :
+                  state[3]         ? rb_index : index;
 
-assign data_way0_en = (valid && !uncache && addr_ok) ||
+assign data_way0_en = cache_inst_valid ||
+                      (valid && !uncache && addr_ok) ||
                       (state[3] && ret_valid && !rp_way);
-assign data_way1_en = (valid && !uncache && addr_ok) ||
+assign data_way1_en = cache_inst_valid ||
+                      (valid && !uncache && addr_ok) ||
                       (state[3] && ret_valid &&  rp_way);                             
 assign data_way0_we = (state[3] && ret_valid && !rp_way);
 assign data_way1_we = (state[3] && ret_valid &&  rp_way);
 assign data_din = ret_data;
-assign data_addr = (state[3]) ? rb_index : index;
+assign data_addr = cache_inst_valid ? cache_inst_addr[11:5] :
+                   state[3]         ? rb_index : index;
 
 genvar i0;
 generate for (i0=0; i0<128; i0=i0+1) begin :gen_for_V_Way0
@@ -110,6 +127,12 @@ generate for (i0=0; i0<128; i0=i0+1) begin :gen_for_V_Way0
         end
         else if (state[3] && ret_valid && !rp_way && rb_index == i0) begin
             V_Way0[i0] <= 1'b1;
+        end
+        else if (state[7] && i0 == cache_inst_addr[11:5] && clear_way[0] && cache_inst_op != 3'b010) begin
+            V_Way0[i0] <= 1'b0;
+        end
+        else if (state[7] && i0 == cache_inst_addr[11:5] && clear_way[0] && cache_inst_op == 3'b010) begin
+            V_Way0[i0] <= cache_inst_v;
         end
     end
 end endgenerate
@@ -121,6 +144,12 @@ generate for (i1=0; i1<128; i1=i1+1) begin :gen_for_V_Way1
         end
         else if (state[3] && ret_valid &&  rp_way && rb_index == i1) begin
             V_Way1[i1] <= 1'b1;
+        end
+        else if (state[7] && i1 == cache_inst_addr[11:5] && clear_way[1] && cache_inst_op != 3'b010) begin
+            V_Way1[i1] <= 1'b0;
+        end
+        else if (state[7] && i1 == cache_inst_addr[11:5] && clear_way[1] && cache_inst_op == 3'b010) begin
+            V_Way1[i1] <= cache_inst_v;
         end
     end
 end endgenerate
@@ -143,8 +172,8 @@ wire         way0_hit;
 wire         way1_hit;
 wire         cache_hit;
 
-assign way0_hit = V_Way0[rb_index] & (tag_way0_dout == rb_tag);
-assign way1_hit = V_Way1[rb_index] & (tag_way1_dout == rb_tag);
+assign way0_hit = V_Way0[rb_index] & ~(tag_way0_dout ^ rb_tag);
+assign way1_hit = V_Way1[rb_index] & ~(tag_way1_dout ^ rb_tag);
 assign cache_hit = (way0_hit | way1_hit);
 
 // Data Select
@@ -205,6 +234,37 @@ always @(posedge clk) begin
     end
 end
 
+// Cache Inst
+wire way0_hit_for_inst;
+wire way1_hit_for_inst;
+assign way0_hit_for_inst = V_Way0[cache_inst_addr[11:5]] && (tag_way0_dout == cache_inst_addr[31:12]);
+assign way1_hit_for_inst = V_Way1[cache_inst_addr[11:5]] && (tag_way1_dout == cache_inst_addr[31:12]);
+
+reg [1:0] clear_way;
+always @(posedge clk) begin
+    if (!resetn) begin
+        clear_way <= 2'b0;
+    end
+    else if (cache_inst_op == 3'b000 && !cache_inst_addr[12]) begin
+        clear_way <= 2'b01;
+    end
+    else if (cache_inst_op == 3'b000 &&  cache_inst_addr[12]) begin
+        clear_way <= 2'b10;
+    end
+    else if (cache_inst_op == 3'b010 && !cache_inst_addr[12]) begin
+        clear_way <= 2'b01;
+    end
+    else if (cache_inst_op == 3'b010 &&  cache_inst_addr[12]) begin
+        clear_way <= 2'b10;
+    end
+    else if (cache_inst_op == 3'b100 && way0_hit_for_inst) begin
+        clear_way <= 2'b01;
+    end
+    else if (cache_inst_op == 3'b100 && way1_hit_for_inst) begin
+        clear_way <= 2'b10;
+    end
+end
+
 // Output
 wire [255:0] load_res_final;
 wire [255:0] ret_data_final;
@@ -225,7 +285,7 @@ assign ret_data_final = {256{rb_offset[4:2] == 3'b000}} & ret_data |
                         {256{rb_offset[4:2] == 3'b110}} & {192'b0, ret_data[255:192]} |
                         {256{rb_offset[4:2] == 3'b111}} & {224'b0, ret_data[255:224]};
 
-assign addr_ok = (state[0] || (state[1] && cache_hit) || (state[5] && ret_valid));
+assign addr_ok = (state[0] || (state[1] && cache_hit) || (state[5] && ret_valid)) && !cache_inst_valid;
 assign data_ok = (state[1]) && cache_hit || 
                  (state[3]) && ret_valid ||
                  (state[5]) && ret_valid;
@@ -233,14 +293,15 @@ assign rdata = ({256{state[1]}} & load_res_final) |
                ({256{state[3]}} & ret_data_final) | 
                ({256{state[5]}} & {224'b0, ret_data[31:0]}); 
 assign rnum = (state[5]) ? 4'b1 : {1'b0, ~(rb_offset[4:2])} + 4'b1;
+assign cache_inst_ok = state[7];
 
 assign rd_req  = (state[4]) || (state[2]);
 assign rd_type = (state[4]) ? 1'b0 : 1'b1;  // 0 for uncache; 1 for cache line
 assign rd_addr = (state[4]) ? {rb_tag, rb_index, rb_offset} : {rb_tag, rb_index, 5'b0};
 
 // Main FSM
-reg [5:0] state;
-reg [5:0] next_state;
+reg [7:0] state;
+reg [7:0] next_state;
 
 always @(posedge clk) begin
     if (!resetn) begin
@@ -253,7 +314,10 @@ end
 always @(*) begin
 	case(state)
 	`IDLE:
-        if (valid && uncache && addr_ok) begin
+        if (cache_inst_valid) begin
+            next_state = `ILOOK;
+        end
+        else if (valid && uncache && addr_ok) begin
             next_state = `UREQ;
         end
 		else if (valid && !uncache && addr_ok) begin
@@ -309,6 +373,26 @@ always @(*) begin
         else begin
             next_state = `URESP;
         end
+    `ILOOK:
+        if (cache_inst_op == 3'b000) begin // Index Invalid
+            next_state = `ICLEAR;
+        end
+        else if (cache_inst_op == 3'b010) begin // Index Store Tag
+            next_state = `ICLEAR;
+        end
+        else if (cache_inst_op == 3'b100) begin // Hit Invalid
+            if (way0_hit_for_inst || way1_hit_for_inst) begin
+                next_state = `ICLEAR;
+            end
+            else begin
+                next_state = `IDLE;
+            end
+        end
+        else begin
+            next_state = `IDLE;
+        end
+    `ICLEAR:
+        next_state = `IDLE;
 	default:
 		next_state = `IDLE;
 	endcase
