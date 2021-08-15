@@ -174,9 +174,9 @@ wire [31:0] inst2_rs_value;
 wire [31:0] inst2_rt_value;
 
 wire        inst2_cache;
-wire [ 2:0] inst2_cache_op;
+wire [ 4:0] inst2_cache_op;
 wire        inst1_cache;
-wire [ 2:0] inst1_cache_op;
+wire [ 4:0] inst1_cache_op;
 
 wire        self_r1_relevant;
 wire        self_r2_relevant;
@@ -478,7 +478,7 @@ wire inst2_mem_readygo;
 wire inst1_tlbp_readygo;
 wire inst2_tlbp_readygo;
 
-assign inst1_mem_readygo = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_valid & inst1_data_cache_addr_ok) | inst1_es_except; //不访�??? 访存请求接受 有例�???
+assign inst1_mem_readygo = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_valid & inst1_data_cache_addr_ok) | inst1_es_except; //不访�???? 访存请求接受 有例�????
 assign inst2_mem_readygo = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_valid & inst2_data_cache_addr_ok) | (inst1_es_except | inst1_es_eret | inst2_es_except);
 
 assign inst1_div_readygo = ~(inst1_alu_op[14] | inst1_alu_op[15]) | (div_complete);
@@ -747,8 +747,8 @@ wire   [ 2:0] inst2_s1_c;
 wire          inst2_s1_d;
 wire          inst2_s1_v;
 wire          inst2_use_tlb;
-wire          inst1_cache;
-wire          inst2_cache;
+wire          inst1_cached;
+wire          inst2_cached;
 wire [31:0] inst1_data_addr;
 wire [31:0] inst2_data_addr;
 wire [31:0] inst1_VA;
@@ -829,8 +829,8 @@ assign inst2_kseg0 =(inst2_VA[31] & ~inst2_VA[30] & ~inst2_VA[29]);
 assign inst1_kseg01 =(inst1_VA[31] & ~inst1_VA[30] );
 assign inst2_kseg01 = (inst2_VA[31] & ~inst2_VA[30]);
 
-assign inst1_cache = inst1_kseg01 ? (inst1_kseg0 & c0_config_k0[0]) : inst1_s1_c[0];
-assign inst2_cache = inst2_kseg01 ? (inst2_kseg0 & c0_config_k0[0]) : inst2_s1_c[0];
+assign inst1_cached = inst1_kseg01 ? (inst1_kseg0 & c0_config_k0[0]) : inst1_s1_c[0];
+assign inst2_cached = inst2_kseg01 ? (inst2_kseg0 & c0_config_k0[0]) : inst2_s1_c[0];
 
 assign inst1_use_tlb = es_valid & ~(inst1_VA[31] & ~inst1_VA[30]) & (inst1_load_op | inst1_mem_we | inst1_cache);
 assign inst2_use_tlb = inst2_valid & es_valid & ~(inst2_VA[31] & ~inst2_VA[30]) & (inst2_load_op | inst2_mem_we | inst2_cache);
@@ -850,7 +850,7 @@ assign inst2_data_addr = inst2_use_tlb ? {inst2_s1_pfn[19:0], inst2_VA[11:0]} : 
 assign inst1_data_cache_valid = inst1_tlb_req_en & (inst1_load_op | inst1_mem_we) & es_valid & ~inst1_es_except & (inst2_load_op | inst2_mem_we | inst2_div_readygo);
 assign inst1_data_cache_op = inst1_mem_we;
 //assign inst1_data_cache_uncache = inst1_data_addr[31] && ~inst1_data_addr[30] && inst1_data_addr[29];//FIXME: use tlb_c
-assign inst1_data_cache_uncache = ~inst1_cache;
+assign inst1_data_cache_uncache = ~inst1_cached;
 assign inst1_data_cache_tag = {3'b0,inst1_data_addr[28:12]};
 assign inst1_data_cache_index = inst1_data_addr[11:5];
 assign inst1_data_cache_offset = inst1_data_addr[4:0];
@@ -859,7 +859,7 @@ assign inst1_data_cache_wstrb = (inst1_mem_we & es_valid & ~inst1_es_except) ? i
 assign inst2_data_cache_valid = inst2_valid & inst2_tlb_req_en & (inst2_load_op | inst2_mem_we) & es_valid & ~(inst1_es_except | inst1_es_eret) & ~inst2_es_except  & (inst1_load_op | inst1_mem_we | (inst1_div_readygo & (inst1_alu_op[14] | inst1_alu_op[15])) | (~(self_r1_relevant | self_r2_relevant) | ((self_r1_relevant | self_r2_relevant) & self_relevant_stall)));
 assign inst2_data_cache_op = inst2_mem_we;
 //assign inst2_data_cache_uncache = inst2_data_addr[31] && ~inst2_data_addr[30] && inst2_data_addr[29];
-assign inst2_data_cache_uncache = ~inst2_cache;
+assign inst2_data_cache_uncache = ~inst2_cached;
 assign inst2_data_cache_tag = {3'b0,inst2_data_addr[28:12]};
 assign inst2_data_cache_index = inst2_data_addr[11:5];
 assign inst2_data_cache_offset = inst2_data_addr[4:0];
