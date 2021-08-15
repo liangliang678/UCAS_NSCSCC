@@ -489,7 +489,8 @@ assign inst2_div_readygo = ~(inst2_alu_op[14] | inst2_alu_op[15]) & ~(self_r1_re
 assign inst1_tlbp_readygo = ~inst1_es_tlbp | (inst1_es_tlbp & inst1_tlb_req_en);
 assign inst2_tlbp_readygo = ~inst2_es_tlbp | (inst2_es_tlbp & inst2_tlb_req_en);
 
-assign inst1_readygo = inst1_div_readygo & inst1_mem_readygo & inst1_tlbp_readygo;
+assign inst1_readygo = inst1_div_readygo & inst1_mem_readygo & inst1_tlbp_readygo & 
+                       (~inst1_cache | icache_inst_ok | dcache_inst_ok);
 assign inst2_readygo = (inst2_div_readygo & inst2_mem_readygo & inst2_tlbp_readygo) | ~inst2_valid;
 
 // mov
