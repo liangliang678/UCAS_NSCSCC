@@ -41,8 +41,7 @@ reg tlb_found;
 reg tlb_valid;
 
 wire tlb_hit;
-//assign tlb_hit = tlb_valid & (inst_VA[31:13] == vpn2) & (inst_VA[12] == odd_page) & (cp0_entryhi[7:0] == asid);
-assign tlb_hit = tlb_valid & ~(inst_VA[31:13] ^ vpn2) & (inst_VA[12] == odd_page) & (cp0_entryhi[7:0] == asid);
+assign tlb_hit = tlb_valid & (inst_VA[31:13] == vpn2) & (inst_VA[12] == odd_page) & (cp0_entryhi[7:0] == asid);
 
 always @(posedge clk) begin
     if(reset)   state <= 2'd0;
