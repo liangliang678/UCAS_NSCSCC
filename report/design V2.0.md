@@ -16,9 +16,15 @@
 
 ## 总体设计思路
 
+
+
 流水线与ICache和DCacahe交互，发出访存请求，接收访存响应和数据。ICache和DCache通过仲裁器对外发出访存请求，接收访存响应和数据。
 
 ## 流水线功能设计
+
+<img src="pic\pipeline_structure.png" alt="pipeline_structure" style="zoom:50%;" />
+
+<center>图1 流水线结构图
 
 CPU 采用双发射静态七级流水结构，流水线分为 preIF、IF、ID、EXE、preMEM、MEM、WB 七级。区别于传统的五级流水线结构，我们的设计将取指和访存都划分为两级流水，将请求和响应分开，以实现理想情况下无阻塞流水线，同时可以获得更高主频。
 
@@ -53,11 +59,19 @@ WB 级负责写回寄存器，有两种工作模式：一种每拍可以同时�
 
 ## 流水级级间设计
 
+<img src="pic\between_pipeline.png" alt="between_pipeline" style="zoom:75%;" />
+
+<center>图2 级间控制信号
+
 ### 流水级控制信号
 
 流水线前后级通过 to_next_valid 和 allowin 信号进行控制。每个流水级自身也有 valid 和 readygo 信号控制自身流水级。valid 表明流水级的数据是否有效，readygo 表明该流水线是否处理完成，可以流向下一流水级。to_next_valid = valid & readygo，表示可以进入下一个流水级且数据有效。allowin 表明下一个流水级是否允许数据进入。当一对 to_next_valid / allowin 信号同时有效，指令和数据从前一流水级流入后一流水级。
 
 ### 前递设计
+
+<img src="pic\foward_pass.png" alt="foward_pass" style="zoom:67%;" />
+
+<center>图3 前递通路设计
 
 EXE、preMEM、MEM、WB 级均向 ID 级发送前递数据，在 ID 生成正真的 rs_value、rt_value。同时，IF也有接收前递数据，用于生成转移指令所需 rs_value、rt_value。
 
@@ -89,6 +103,8 @@ Index
 
 ![访存子系统总体结构](pic/mem_structure.png)
 
+<center>图4 访存结构图
+
 ### ICache
 
 #### 概述
@@ -98,7 +114,10 @@ ICache使用两路组相联的组织形式，Cache行大小32B，每路128行，
 
 ![ICache结构](pic/icache_structure.png)
 
+<center>图5 ICache设计
+
 #### 针对双发射的优化
+
 ICache会返回请求地址所处的Cache行的全部数据，即返回1-8条有效指令。返回的指令暂存于指令FIFO中。因取指速率远大于发射速率，一般不会因指令不足而造成阻塞。
 
 #### FSM
@@ -128,7 +147,10 @@ DCache采用写回写分配的策略，将需要写回的Cache行的数据暂存
 
 ![DCache结构](pic/dcache_structure.png)
 
+<center>图6 DCache设计
+
 #### 针对双发射的优化
+
 CPU核会同时发出两个Cache请求，在这种情况下，DCache总是同时接受两个请求，在内部进行处理。对两个相同操作（2读/2写）的且处于同一Cache行的请求，DCache可以并行执行；其他情况下DCache串行执行两个请求，效率和单发射时相同。
 
 之所以只并行处理同一Cache行的请求，是因为大多数连续的访存指令都是访问连续的内存空间（例如将寄存器存入栈中，进行memcpy操作等），若增加对非同一Cache行的两个请求并行处理的支持，则需要考虑两个不同Cache行的缺失/一个Cache命中一个Cache缺失的情况，增加状态机和控制逻辑的复杂度。
