@@ -257,6 +257,6 @@ assign inst2_ready_go = ~(inst2_res_from_mem | inst2_mem_we) | data_cache_data_o
 // ms_forward_bus
 assign ms_forward_bus = {ms_valid, //ms_to_ws_valid, 
                          inst1_ready_go, inst1_res_from_mem, inst1_gr_we, inst1_dest, inst1_final_result, 
-                         inst2_ready_go, inst2_res_from_mem, inst2_gr_we, inst2_dest, inst2_final_result };
+                         inst2_ready_go, inst2_res_from_mem, inst2_gr_we & inst2_valid, inst2_dest, inst2_final_result };
 
 endmodule

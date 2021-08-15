@@ -478,7 +478,7 @@ wire inst2_mem_readygo;
 wire inst1_tlbp_readygo;
 wire inst2_tlbp_readygo;
 
-assign inst1_mem_readygo = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_valid & inst1_data_cache_addr_ok) | inst1_es_except; //不访�???? 访存请求接受 有例�????
+assign inst1_mem_readygo = ~(inst1_load_op | inst1_mem_we) | (inst1_load_op | inst1_mem_we) & (inst1_data_cache_valid & inst1_data_cache_addr_ok) | inst1_es_except; //不访�???? 访存请求接受 有例�????
 assign inst2_mem_readygo = ~(inst2_load_op | inst2_mem_we) | (inst2_load_op | inst2_mem_we) & (inst2_data_cache_valid & inst2_data_cache_addr_ok) | (inst1_es_except | inst1_es_eret | inst2_es_except);
 
 assign inst1_div_readygo = ~(inst1_alu_op[14] | inst1_alu_op[15]) | (div_complete);
@@ -497,10 +497,10 @@ wire      inst1_rt_eq_0;
 wire      inst2_rt_eq_0;
 
 assign inst1_rt_eq_0 = (inst1_rt_value == 32'b0);
-assign inst1_rt_eq_0 = (inst2_rt_update_value == 32'b0);
+assign inst2_rt_eq_0 = (inst2_rt_update_value == 32'b0);
 
 assign inst1_gr_we_final = (inst1_movn | inst1_movz) ? (inst1_movn & ~inst1_rt_eq_0 | inst1_movz & inst1_rt_eq_0) : inst1_gr_we;
-assign inst2_gr_we_final = (inst2_movn | inst2_movz) ? (inst2_movn & ~inst2_rt_eq_0 | inst2_movz & inst2_rt_eq_0) : inst2_gr_we;
+assign inst2_gr_we_final = (inst2_movn | inst2_movz) ? (inst2_movn & ~inst2_rt_eq_0 | inst2_movz & inst2_rt_eq_0) : inst2_gr_we & inst2_valid;
 
 //forward bus
 assign es_forward_bus = {es_valid, //es_to_pms_valid,
@@ -508,8 +508,8 @@ assign es_forward_bus = {es_valid, //es_to_pms_valid,
                         inst2_readygo, inst2_hi_op | inst2_lo_op | inst2_cp0_op | inst2_load_op | inst2_mul, inst2_gr_we_final, inst2_dest, es_inst2_result };
 
 // data bus to pms
-assign inst2_rs_update_value = self_r1_relevant ? es_alu_inst1_result : inst2_rs_value;
-assign inst2_rt_update_value = self_r2_relevant ? es_alu_inst1_result : inst2_rt_value;
+assign inst2_rs_update_value = self_r1_relevant ? es_alu_inst2_rs : inst2_rs_value;
+assign inst2_rt_update_value = self_r2_relevant ? es_alu_inst2_rt : inst2_rt_value;
 
 assign es_inst1_result = (inst1_movn | inst1_movz) ? inst1_rs_value : es_alu_inst1_result;
 assign es_inst2_result = (inst2_movn | inst2_movz) ? inst2_rs_update_value : es_alu_inst2_result;
