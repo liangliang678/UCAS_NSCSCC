@@ -214,13 +214,9 @@ wire [31:0] inst2_es_BadVAddr;
 
 wire [63:0] pms_alu_div_res;
 
-wire [ 3:0] inst1_trap;
-wire [ 3:0] inst2_trap;
-
 assign {inst1_pms_tlbwr,
         inst2_pms_tlbwr,
         inst2_valid,
-        inst2_trap,
         inst2_s1_found,
         inst2_s1_index,
         inst2_mul,
@@ -257,7 +253,6 @@ assign {inst1_pms_tlbwr,
         br_target,
         pms_alu_div_res,
 
-        inst1_trap,
         inst1_s1_found,
         inst1_s1_index,
         inst1_mul,
@@ -293,25 +288,11 @@ assign {inst1_pms_tlbwr,
        } = es_to_pms_bus_r;
 
 // exception
-wire        inst1_trap_ex;
-wire        inst2_trap_ex;
+assign inst1_pms_except = inst1_es_except;
+assign inst2_pms_except = inst2_es_except;
 
-assign inst1_trap_ex = inst1_trap[0] & (pms_alu_inst1_result == 32'b0) |
-                       inst1_trap[1] & (~pms_alu_inst1_result[0])      |
-                       inst1_trap[2] & (pms_alu_inst1_result[0])       |
-                       inst1_trap[3] & (pms_alu_inst1_result != 32'b0) ;
-
-assign inst2_trap_ex = (inst2_trap[0] & (pms_alu_inst2_result == 32'b0) |
-                        inst2_trap[1] & (~pms_alu_inst2_result[0])      |
-                        inst2_trap[2] & (pms_alu_inst2_result[0])       |
-                        inst2_trap[3] & (pms_alu_inst2_result != 32'b0) ) & inst2_valid;
-
-
-assign inst1_pms_except = inst1_es_except | inst1_trap_ex;
-assign inst2_pms_except = inst2_es_except | inst2_trap_ex;
-
-assign inst1_pms_exccode = inst1_es_except ? inst1_es_exccode : 5'hd;                   
-assign inst2_pms_exccode = inst2_es_except ? inst2_es_exccode : 5'hd;
+assign inst1_pms_exccode = inst1_es_exccode;                   
+assign inst2_pms_exccode = inst2_es_exccode;
                       
 
 assign inst1_pms_BadVAddr = inst1_es_BadVAddr;
@@ -321,33 +302,33 @@ assign inst2_pms_BadVAddr = inst2_es_BadVAddr;
 wire [31:0] exception_1_refush_pc;
 wire [31:0] exception_2_refush_pc;
 
-wire [31:0] reflush_pc_miss;
-wire [31:0] reflush_pc_intr;
-wire [31:0] reflush_pc_other;
+// wire [31:0] reflush_pc_miss;
+// wire [31:0] reflush_pc_intr;
+// wire [31:0] reflush_pc_other;
 
-assign reflush_pc_miss = {32{!c0_status[22] && !c0_status[1]}} & 32'h80000000 |
-                         {32{!c0_status[22] &&  c0_status[1]}} & 32'h80000180 |
-                         {32{ c0_status[22] && !c0_status[1]}} & 32'hbfc00200 |
-                         {32{ c0_status[22] &&  c0_status[1]}} & 32'hbfc00380 ;
+// assign reflush_pc_miss = {32{!c0_status[22] && !c0_status[1]}} & 32'h80000000 |
+//                          {32{!c0_status[22] &&  c0_status[1]}} & 32'h80000180 |
+//                          {32{ c0_status[22] && !c0_status[1]}} & 32'hbfc00200 |
+//                          {32{ c0_status[22] &&  c0_status[1]}} & 32'hbfc00380 ;
 
-assign reflush_pc_intr = {32{!c0_status[22] && !c0_cause[23]}} & 32'h8000_0180 |
-                         {32{!c0_status[22] &&  c0_cause[23]}} & 32'h8000_0200 |
-                         {32{ c0_status[22] && !c0_cause[23]}} & 32'hbfc0_0380 |
-                         {32{ c0_status[22] &&  c0_cause[23]}} & 32'hbfc0_0400 ;
+// assign reflush_pc_intr = {32{!c0_status[22] && !c0_cause[23]}} & 32'h8000_0180 |
+//                          {32{!c0_status[22] &&  c0_cause[23]}} & 32'h8000_0200 |
+//                          {32{ c0_status[22] && !c0_cause[23]}} & 32'hbfc0_0380 |
+//                          {32{ c0_status[22] &&  c0_cause[23]}} & 32'hbfc0_0400 ;
 
-assign reflush_pc_other = {32{!c0_status[22]}} & 32'h8000_0180 |
-                          {32{ c0_status[22]}} & 32'hbfc0_0380 ;
+// assign reflush_pc_other = {32{!c0_status[22]}} & 32'h8000_0180 |
+//                           {32{ c0_status[22]}} & 32'hbfc0_0380 ;
 
 
-assign exception_1_refush_pc = inst1_refill ? reflush_pc_miss :
-                               (inst1_pms_except & inst1_pms_exccode == 0) ? reflush_pc_intr :
+assign exception_1_refush_pc = inst1_refill ? 32'hbfc00200 :
+                               inst1_pms_except ? 32'hbfc00380 :
                                inst1_pms_eret ? pms_epc :
-                               reflush_pc_other;
+                               br_target;
 
-assign exception_2_refush_pc = inst2_refill ? reflush_pc_miss :
-                               (inst2_pms_except & inst2_pms_exccode == 0) ? reflush_pc_intr :
+assign exception_2_refush_pc = inst2_refill ? 32'hbfc00200 :
+                               inst2_pms_except ? 32'hbfc00380 :
                                inst2_pms_eret ? pms_epc :
-                               reflush_pc_other;
+                               br_target;
 
 assign reflush_pc = {32{inst1_pms_except | inst1_pms_eret}} & {exception_1_refush_pc} |
                     {32{inst2_pms_except | inst2_pms_eret}} & {exception_2_refush_pc} ;
@@ -557,7 +538,7 @@ assign pms_inst2_result = inst2_cp0_op ? pms_inst2_cp0_final_res :
 assign pms_forward_bus = {
     pms_valid,
     inst1_load_op, inst1_gr_we, inst1_dest, pms_inst1_result,
-    inst2_load_op, inst2_gr_we & inst2_valid, inst2_dest, pms_inst2_result
+    inst2_load_op, inst2_gr_we, inst2_dest, pms_inst2_result
 };
 // assign {pms_valid, 
 //         pms_inst1_load, pms_inst1_gr_we, pms_inst1_dest, pms_inst1_result, 

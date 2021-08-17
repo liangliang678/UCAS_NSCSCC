@@ -43,7 +43,7 @@ module id_stage(
 reg         ds_valid;
 wire        ds_ready_go;
 
-reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
+(* max_fanout = 50 *)reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 
 wire [31:0] inst1_pc;
 wire [31:0] inst1_inst;

@@ -128,6 +128,6 @@ assign debug_wb_rf_wdata = rf_wdata_01;
 // ws_forward_bus
 assign ws_forward_bus = { ws_valid, 
                           inst1_gr_we, inst1_dest, inst1_final_result, 
-                          inst2_gr_we & inst2_valid, inst2_dest, inst2_final_result };
+                          inst2_gr_we, inst2_dest, inst2_final_result };
 
 endmodule
